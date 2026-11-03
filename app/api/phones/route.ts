@@ -80,6 +80,7 @@ export interface MetaData {
     id: string;
     name: string;
     brand: string;
+    variantStorage?: string;
     lowestPrice: number;
     highestPrice: number;
     savings: number;
@@ -337,7 +338,10 @@ export async function GET() {
 
         group.storesCount = group.stores.length;
         group.variantsCount = group.variants.length;
-        group.maxSavings = group.highestPrice - group.lowestPrice;
+        group.maxSavings = Math.max(
+          0,
+          ...group.variants.map((v) => (v.offers.length > 1 ? v.highestPrice - v.lowestPrice : 0))
+        );
       }
     };
 
@@ -494,8 +498,13 @@ export async function GET() {
       .map((m) => {
         const hist = getRealModelHistory(m.id, m.lowestPrice, historyStore);
         historyStore[m.id] = hist.points;
+        const realMaxSavings = Math.max(
+          0,
+          ...m.variants.map((v) => (v.offers.length > 1 ? v.highestPrice - v.lowestPrice : 0))
+        );
         return {
           ...m,
+          maxSavings: realMaxSavings,
           history: hist.points,
           trend: hist.trend,
           priceChangePercent: hist.changePercent,
@@ -551,24 +560,46 @@ export async function GET() {
         store: m.variants[0]?.offers[0]?.store || m.stores[0] || 'ELKO',
       }));
 
-    // Real measured price difference between stores right now (Top Savings)
-    const topSavings = models
-      .filter((m) => m.maxSavings > 5000)
-      .sort((a, b) => b.maxSavings - a.maxSavings)
-      .slice(0, 4)
-      .map((m) => {
-        const sortedOffers = m.variants.flatMap((v) => v.offers).sort((a, b) => a.price - b.price);
-        return {
-          id: m.id,
-          name: m.name,
-          brand: m.brand,
-          lowestPrice: m.lowestPrice,
-          highestPrice: m.highestPrice,
-          savings: m.maxSavings,
-          cheapestStore: sortedOffers[0]?.store || m.stores[0],
-          expensiveStore: sortedOffers[sortedOffers.length - 1]?.store || m.stores[m.stores.length - 1],
-        };
-      });
+    // Real measured price difference between stores right now (Top Savings - compared strictly per-variant/storage!)
+    const candidateSavings: {
+      id: string;
+      name: string;
+      brand: string;
+      variantStorage: string;
+      lowestPrice: number;
+      highestPrice: number;
+      savings: number;
+      cheapestStore: string;
+      expensiveStore: string;
+    }[] = [];
+
+    for (const m of models) {
+      for (const v of m.variants) {
+        if (v.offers.length > 1 && v.highestPrice > v.lowestPrice) {
+          const sortedOffers = [...v.offers].sort((a, b) => a.price - b.price);
+          const cheapest = sortedOffers[0];
+          const expensive = sortedOffers[sortedOffers.length - 1];
+          const diff = expensive.price - cheapest.price;
+          if (diff >= 500) {
+            candidateSavings.push({
+              id: m.id,
+              name: `${m.name} ${v.storage !== 'Standard' ? v.storage : ''}`.trim(),
+              brand: m.brand,
+              variantStorage: v.storage,
+              lowestPrice: cheapest.price,
+              highestPrice: expensive.price,
+              savings: diff,
+              cheapestStore: cheapest.store,
+              expensiveStore: expensive.store,
+            });
+          }
+        }
+      }
+    }
+
+    const topSavings = candidateSavings
+      .sort((a, b) => b.savings - a.savings)
+      .slice(0, 4);
 
     // Store-level price indexes & daily drop/hike summaries
     const storeSummaries: StoreDailySummary[] = allStores

@@ -80,6 +80,7 @@ export interface MetaData {
     id: string;
     name: string;
     brand: string;
+    variantStorage?: string;
     lowestPrice: number;
     highestPrice: number;
     savings: number;
@@ -224,9 +225,11 @@ export default function Home() {
     fetchPhones();
   }, [fetchPhones]);
 
-  const handleSelectModel = (model: PhoneModelGroup) => {
+  const handleSelectModel = (model: PhoneModelGroup, defaultStorage?: string) => {
     setSelectedModel(model);
-    if (model.variants.length > 0) {
+    if (defaultStorage && model.variants.some((v) => v.storage === defaultStorage)) {
+      setSelectedStorage(defaultStorage);
+    } else if (model.variants.length > 0) {
       setSelectedStorage(model.variants[0].storage);
     } else {
       setSelectedStorage('');
@@ -588,8 +591,8 @@ export default function Home() {
                     const model = models.find((m) => m.id === item.id);
                     return (
                       <div
-                        key={item.id}
-                        onClick={() => model && handleSelectModel(model)}
+                        key={`${item.id}-${item.variantStorage || ''}`}
+                        onClick={() => model && handleSelectModel(model, item.variantStorage)}
                         className="cursor-pointer bg-slate-900/80 hover:bg-slate-900 border border-slate-800 hover:border-amber-500/60 rounded-xl p-3 transition shadow-sm hover:shadow-md flex flex-col justify-between group"
                       >
                         <div>
@@ -605,7 +608,7 @@ export default function Home() {
                             {item.name}
                           </h4>
                           <span className="text-[10px] text-slate-400 mt-1 block">
-                            Ódýrast hjá <strong className="text-emerald-400">{item.cheapestStore}</strong>
+                            Ódýrast hjá <strong className="text-emerald-400">{item.cheapestStore}</strong> (vs {item.expensiveStore})
                           </span>
                         </div>
 
