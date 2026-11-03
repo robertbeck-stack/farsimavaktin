@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import fs from 'fs';
+import path from 'path';
 
 export interface StoreOffer {
   store: string;
@@ -54,6 +56,16 @@ export interface MetaData {
     currentPrice: number;
     dropPercent: number;
     store: string;
+  }[];
+  topSavings: {
+    id: string;
+    name: string;
+    brand: string;
+    lowestPrice: number;
+    highestPrice: number;
+    savings: number;
+    cheapestStore: string;
+    expensiveStore: string;
   }[];
   allTimeLowsCount: number;
   status: string;
@@ -115,42 +127,33 @@ function normalizeModelName(title: string, brand: string): string {
   return fullName.replace(/\s+/g, ' ').trim();
 }
 
-function generateHistory(lowestPrice: number, brand: string, name: string): { points: PricePoint[]; trend: 'DOWN' | 'UP' | 'SAME'; changePercent: number; changeAmount: number } {
-  const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  const dropFactor = ((hash % 18) + 6) / 100;
-  const originalPrice = Math.round((lowestPrice / (1 - dropFactor)) / 500) * 500;
-  const changeAmount = lowestPrice - originalPrice;
-  const changePercent = Math.round((changeAmount / originalPrice) * 100);
+function getRealModelHistory(
+  modelId: string,
+  currentPrice: number,
+  historyStore: Record<string, PricePoint[]>
+): { points: PricePoint[]; trend: 'DOWN' | 'UP' | 'SAME'; changePercent: number; changeAmount: number } {
+  const today = new Date().toISOString().slice(0, 10);
+  const existing = historyStore[modelId] ? [...historyStore[modelId]] : [];
 
-  const dates = [
-    '2025-11-15',
-    '2025-12-20',
-    '2026-01-10',
-    '2026-02-14',
-    '2026-03-25',
-    '2026-05-01',
-    '2026-07-15',
-    '2026-09-01',
-    '2026-11-03',
-  ];
-
-  const points: PricePoint[] = [];
-  const totalSteps = dates.length;
-
-  for (let i = 0; i < totalSteps; i++) {
-    const progress = i / (totalSteps - 1);
-    let p = originalPrice - (originalPrice - lowestPrice) * Math.pow(progress, 0.85);
-    if (i === 4 || i === 6) p = p * 0.96;
-    if (i === totalSteps - 1) p = lowestPrice;
-    points.push({
-      date: dates[i],
-      price: Math.round(p / 100) * 100,
-    });
+  const lastEntry = existing[existing.length - 1];
+  if (!lastEntry) {
+    existing.push({ date: today, price: currentPrice });
+  } else if (lastEntry.date === today) {
+    if (currentPrice !== lastEntry.price) {
+      lastEntry.price = currentPrice;
+    }
+  } else {
+    existing.push({ date: today, price: currentPrice });
   }
 
+  const initialPrice = existing[0]?.price || currentPrice;
+  const changeAmount = currentPrice - initialPrice;
+  const changePercent = initialPrice > 0 ? Math.round((changeAmount / initialPrice) * 100) : 0;
+  const trend = changeAmount < 0 ? 'DOWN' : changeAmount > 0 ? 'UP' : 'SAME';
+
   return {
-    points,
-    trend: changeAmount < 0 ? 'DOWN' : 'SAME',
+    points: existing,
+    trend,
     changePercent,
     changeAmount,
   };
@@ -261,7 +264,6 @@ export async function GET() {
       };
 
       if (!modelMap.has(modelId)) {
-        const hist = generateHistory(price, brand, modelName);
         modelMap.set(modelId, {
           id: modelId,
           name: modelName,
@@ -280,10 +282,10 @@ export async function GET() {
               offers: [offer],
             },
           ],
-          history: hist.points,
-          trend: hist.trend,
-          priceChangePercent: hist.changePercent,
-          priceChangeAmount: hist.changeAmount,
+          history: [],
+          trend: 'SAME',
+          priceChangePercent: 0,
+          priceChangeAmount: 0,
           maxSavings: 0,
         });
       } else {
@@ -424,7 +426,45 @@ export async function GET() {
       processItem(sp.title, sp.price, 'Síminn', sp.href, sp.image);
     }
 
-    const models = Array.from(modelMap.values()).sort((a, b) => b.lowestPrice - a.lowestPrice);
+    // Load persistent real price history ledger
+    const historyFile = path.join(process.cwd(), 'data', 'price_history.json');
+    let historyStore: Record<string, PricePoint[]> = {};
+    try {
+      if (fs.existsSync(historyFile)) {
+        const raw = fs.readFileSync(historyFile, 'utf-8');
+        const parsed = JSON.parse(raw);
+        historyStore = parsed.history || {};
+      }
+    } catch {
+      historyStore = {};
+    }
+
+    const models = Array.from(modelMap.values())
+      .map((m) => {
+        const hist = getRealModelHistory(m.id, m.lowestPrice, historyStore);
+        historyStore[m.id] = hist.points;
+        return {
+          ...m,
+          history: hist.points,
+          trend: hist.trend,
+          priceChangePercent: hist.changePercent,
+          priceChangeAmount: hist.changeAmount,
+        };
+      })
+      .sort((a, b) => b.lowestPrice - a.lowestPrice);
+
+    // Save updated ledger (persists on disk in dev & server builds)
+    try {
+      fs.mkdirSync(path.dirname(historyFile), { recursive: true });
+      fs.writeFileSync(
+        historyFile,
+        JSON.stringify({ updatedAt: new Date().toISOString(), history: historyStore }, null, 2),
+        'utf-8'
+      );
+    } catch {
+      // Gracefully continue in read-only environments
+    }
+
     const allStores = Array.from(new Set(models.flatMap((m) => m.stores))).sort();
     const allBrands: ('Apple' | 'Samsung' | 'Xiaomi' | 'Google' | 'OnePlus' | 'Ulefone' | 'Motorola' | 'Aðrir')[] = [
       'Apple',
@@ -437,8 +477,9 @@ export async function GET() {
       'Aðrir',
     ];
 
+    // Real measured price drops over time
     const biggestDrops = models
-      .filter((m) => m.priceChangePercent < -5)
+      .filter((m) => m.priceChangePercent < 0)
       .sort((a, b) => a.priceChangePercent - b.priceChangePercent)
       .slice(0, 4)
       .map((m) => ({
@@ -448,8 +489,27 @@ export async function GET() {
         oldPrice: m.lowestPrice - m.priceChangeAmount,
         currentPrice: m.lowestPrice,
         dropPercent: m.priceChangePercent,
-        store: m.stores[0] || 'ELKO',
+        store: m.variants[0]?.offers[0]?.store || m.stores[0] || 'ELKO',
       }));
+
+    // Real measured price difference between stores right now (Top Savings)
+    const topSavings = models
+      .filter((m) => m.maxSavings > 5000)
+      .sort((a, b) => b.maxSavings - a.maxSavings)
+      .slice(0, 4)
+      .map((m) => {
+        const sortedOffers = m.variants.flatMap((v) => v.offers).sort((a, b) => a.price - b.price);
+        return {
+          id: m.id,
+          name: m.name,
+          brand: m.brand,
+          lowestPrice: m.lowestPrice,
+          highestPrice: m.highestPrice,
+          savings: m.maxSavings,
+          cheapestStore: sortedOffers[0]?.store || m.stores[0],
+          expensiveStore: sortedOffers[sortedOffers.length - 1]?.store || m.stores[m.stores.length - 1],
+        };
+      });
 
     const durationMs = Date.now() - startTime;
 
@@ -462,7 +522,8 @@ export async function GET() {
       storesList: allStores,
       brandsList: allBrands,
       biggestDrops,
-      allTimeLowsCount: models.filter((m) => m.priceChangePercent < -10).length,
+      topSavings,
+      allTimeLowsCount: models.filter((m) => m.priceChangePercent < 0).length,
       status: 'SUCCESS',
       sourcesScanned: queryUrls.length + 2,
     };

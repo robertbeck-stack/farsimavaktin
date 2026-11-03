@@ -57,6 +57,16 @@ export interface MetaData {
     dropPercent: number;
     store: string;
   }[];
+  topSavings?: {
+    id: string;
+    name: string;
+    brand: string;
+    lowestPrice: number;
+    highestPrice: number;
+    savings: number;
+    cheapestStore: string;
+    expensiveStore: string;
+  }[];
   allTimeLowsCount: number;
   status: string;
   sourcesScanned?: number;
@@ -109,7 +119,51 @@ export default function Home() {
       if (!res.ok) throw new Error('Mistókst að sækja gögn');
       const data = await res.json();
 
-      setModels(data.models || []);
+      // Synchronize client-side persistent price history ledger
+      let syncedModels: PhoneModelGroup[] = data.models || [];
+      try {
+        const localHistoryRaw = localStorage.getItem('farsimar_price_history_v1');
+        const localHistory: Record<string, PricePoint[]> = localHistoryRaw ? JSON.parse(localHistoryRaw) : {};
+        const today = new Date().toISOString().slice(0, 10);
+
+        syncedModels = (data.models || []).map((m: PhoneModelGroup) => {
+          let hist = localHistory[m.id] && localHistory[m.id].length > (m.history?.length || 0)
+            ? localHistory[m.id]
+            : (m.history && m.history.length > 0 ? m.history : [{ date: today, price: m.lowestPrice }]);
+
+          const lastPoint = hist[hist.length - 1];
+          if (!lastPoint) {
+            hist = [{ date: today, price: m.lowestPrice }];
+          } else if (lastPoint.date === today) {
+            if (lastPoint.price !== m.lowestPrice) {
+              lastPoint.price = m.lowestPrice;
+            }
+          } else {
+            hist.push({ date: today, price: m.lowestPrice });
+          }
+          localHistory[m.id] = hist;
+
+          const initial = hist[0]?.price || m.lowestPrice;
+          const current = m.lowestPrice;
+          const diff = current - initial;
+          const pct = initial > 0 ? Math.round((diff / initial) * 100) : 0;
+          const trend: 'DOWN' | 'UP' | 'SAME' = diff < 0 ? 'DOWN' : diff > 0 ? 'UP' : 'SAME';
+
+          return {
+            ...m,
+            history: hist,
+            trend,
+            priceChangePercent: pct,
+            priceChangeAmount: diff,
+          };
+        });
+
+        localStorage.setItem('farsimar_price_history_v1', JSON.stringify(localHistory));
+      } catch {
+        syncedModels = data.models || [];
+      }
+
+      setModels(syncedModels);
       setMeta(data.meta || null);
       setRawJsonPayload(data);
 
@@ -288,7 +342,33 @@ export default function Home() {
 
   // SVG Line Chart generation for price history
   const renderTrendSvg = (points: PricePoint[], width = 360, height = 120) => {
-    if (!points || points.length < 2) return null;
+    if (!points || points.length === 0) return null;
+
+    if (points.length === 1) {
+      const p = points[0];
+      const y = height / 2;
+      return (
+        <div className="relative py-2">
+          <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-24 overflow-visible">
+            <line
+              x1={20}
+              y1={y}
+              x2={width - 20}
+              y2={y}
+              stroke="#3b82f6"
+              strokeWidth="2.5"
+              strokeDasharray="4 4"
+            />
+            <circle cx={width / 2} cy={y} r={6} fill="#3b82f6" stroke="#1d4ed8" strokeWidth="2" />
+          </svg>
+          <div className="flex justify-between items-center text-[11px] text-slate-400 mt-1 px-1">
+            <span>Fyrsta skráning: {p.date}</span>
+            <span className="font-semibold text-blue-400">Grunnverð: {formatPrice(p.price)}</span>
+          </div>
+        </div>
+      );
+    }
+
     const prices = points.map((p) => p.price);
     const min = Math.min(...prices);
     const max = Math.max(...prices);
@@ -308,7 +388,8 @@ export default function Home() {
     const areaD = `${pathD} L ${coords[coords.length - 1].x} ${height - padding} L ${coords[0].x} ${height - padding} Z`;
 
     const isDrop = points[points.length - 1].price < points[0].price;
-    const strokeColor = isDrop ? '#10b981' : '#6366f1';
+    const isUp = points[points.length - 1].price > points[0].price;
+    const strokeColor = isDrop ? '#10b981' : isUp ? '#f43f5e' : '#6366f1';
 
     return (
       <div className="relative">
@@ -327,7 +408,7 @@ export default function Home() {
               cx={c.x}
               cy={c.y}
               r={i === 0 || i === coords.length - 1 ? 5 : 3}
-              fill={i === coords.length - 1 ? '#34d399' : '#1e293b'}
+              fill={i === coords.length - 1 ? (isDrop ? '#34d399' : isUp ? '#fb7185' : '#818cf8') : '#1e293b'}
               stroke={strokeColor}
               strokeWidth="2"
             />
@@ -335,7 +416,7 @@ export default function Home() {
         </svg>
         <div className="flex justify-between text-[11px] text-slate-400 mt-1 px-1">
           <span>{points[0].date} ({formatPrice(points[0].price)})</span>
-          <span className="font-semibold text-emerald-400">
+          <span className={`font-semibold ${isDrop ? 'text-emerald-400' : isUp ? 'text-rose-400' : 'text-blue-400'}`}>
             Nú: {points[points.length - 1].date} ({formatPrice(points[points.length - 1].price)})
           </span>
         </div>
@@ -410,15 +491,15 @@ export default function Home() {
         {/* VIEW 1: PHONES & TRENDS */}
         {activeView === 'list' && (
           <>
-            {/* TREND SPOTLIGHT: Biggest Price Drops (Mest lækkað í verði) */}
-            {meta?.biggestDrops && meta.biggestDrops.length > 0 && (
+            {/* TREND SPOTLIGHT: Real Price Drops or Top Savings between stores */}
+            {meta?.biggestDrops && meta.biggestDrops.length > 0 ? (
               <div className="space-y-2.5">
                 <div className="flex items-center justify-between text-xs font-bold text-slate-300">
                   <span className="flex items-center gap-1.5">
-                    <span className="text-emerald-400">🔥</span> MEST LÆKKAÐ Í VERÐI (TREND)
+                    <span className="text-emerald-400">📉</span> MEST LÆKKAÐ YFIR TÍMA (RAUNVERULEG LÆKKUN)
                   </span>
                   <span className="text-[11px] text-slate-400 font-normal">
-                    {meta.allTimeLowsCount} símar á sögulegu lágmarksverði
+                    {meta.allTimeLowsCount} símar hafa lækkað í verði frá upphafi mælinga
                   </span>
                 </div>
 
@@ -458,7 +539,57 @@ export default function Home() {
                   })}
                 </div>
               </div>
-            )}
+            ) : meta?.topSavings && meta.topSavings.length > 0 ? (
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between text-xs font-bold text-slate-300">
+                  <span className="flex items-center gap-1.5">
+                    <span className="text-amber-400">💰</span> MESTUR VERÐMUNUR MILLI BÚÐA Í DAG (SPARNAÐUR)
+                  </span>
+                  <span className="text-[11px] text-slate-400 font-normal">
+                    Berðu saman verslanir og sparaðu allt að {formatPrice(meta.topSavings[0]?.savings || 0)}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  {meta.topSavings.map((item) => {
+                    const model = models.find((m) => m.id === item.id);
+                    return (
+                      <div
+                        key={item.id}
+                        onClick={() => model && handleSelectModel(model)}
+                        className="cursor-pointer bg-slate-900/80 hover:bg-slate-900 border border-slate-800 hover:border-amber-500/60 rounded-xl p-3 transition shadow-sm hover:shadow-md flex flex-col justify-between group"
+                      >
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-800 text-slate-300">
+                              {item.brand}
+                            </span>
+                            <span className="text-xs font-extrabold text-amber-400 bg-amber-950 px-2 py-0.5 rounded border border-amber-800/80">
+                              💰 Sparar {formatPrice(item.savings)}
+                            </span>
+                          </div>
+                          <h4 className="text-xs font-semibold text-slate-100 line-clamp-1 group-hover:text-blue-400 transition">
+                            {item.name}
+                          </h4>
+                          <span className="text-[10px] text-slate-400 mt-1 block">
+                            Ódýrast hjá <strong className="text-emerald-400">{item.cheapestStore}</strong>
+                          </span>
+                        </div>
+
+                        <div className="pt-2 mt-2 border-t border-slate-800/60 flex items-baseline justify-between">
+                          <span className="text-[11px] text-slate-500 line-through">
+                            {formatPrice(item.highestPrice)}
+                          </span>
+                          <span className="text-sm font-extrabold text-emerald-400">
+                            {formatPrice(item.lowestPrice)}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
 
             {/* COMPACT FILTER BAR */}
             <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-3 sm:p-4 space-y-3 shadow-md">
@@ -593,9 +724,17 @@ export default function Home() {
                           <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-800 text-slate-300">
                             {model.brand}
                           </span>
-                          {model.priceChangePercent < 0 && (
+                          {model.priceChangePercent < 0 ? (
                             <span className="text-[10px] font-bold text-emerald-400 bg-emerald-950/80 px-1.5 py-0.2 rounded border border-emerald-800/60">
                               📉 {model.priceChangePercent}%
+                            </span>
+                          ) : model.priceChangePercent > 0 ? (
+                            <span className="text-[10px] font-bold text-rose-400 bg-rose-950/80 px-1.5 py-0.2 rounded border border-rose-800/60">
+                              📈 +{model.priceChangePercent}%
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-slate-400 bg-slate-900 px-1.5 py-0.2 rounded border border-slate-800 font-medium">
+                              ● Óbreytt verð
                             </span>
                           )}
                         </div>
@@ -803,139 +942,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* RAW JSON MODAL / INSPECTOR */}
-        {showRawJsonModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md animate-in fade-in duration-150">
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
-              {/* Header */}
-              <div className="p-4 sm:p-5 border-b border-slate-800 flex items-center justify-between gap-4 bg-slate-950/80">
-                <div className="flex items-center gap-3">
-                  <span className="text-xl p-2 rounded-xl bg-blue-950/80 border border-blue-800 text-blue-400 font-mono">
-                    {'{ }'}
-                  </span>
-                  <div>
-                    <h2 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
-                      Hrágögn úr skanna <span className="text-xs font-mono text-slate-400 font-normal hidden sm:inline">(Raw JSON Payload)</span>
-                    </h2>
-                    <p className="text-[11px] text-slate-400">
-                      {meta?.lastRun ? `Keyrt: ${formatDate(meta.lastRun)}` : ''} · {meta?.totalModels || 0} líkön · {meta?.durationMs || 0} ms svarstími
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={handleCopyJson}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-200 transition"
-                  >
-                    {copiedRaw ? (
-                      <>
-                        <span className="text-emerald-400">✓</span>
-                        <span className="text-emerald-400 font-bold">Afritað!</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>📋</span>
-                        <span>Afrita JSON</span>
-                      </>
-                    )}
-                  </button>
-
-                  <button
-                    onClick={handleDownloadJson}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-200 transition"
-                  >
-                    <span>⬇️</span>
-                    <span className="hidden sm:inline">Sækja .json</span>
-                  </button>
-
-                  <a
-                    href="/api/phones"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-200 transition"
-                  >
-                    <span>🔗</span>
-                    <span className="hidden sm:inline">/api/phones</span>
-                  </a>
-
-                  <button
-                    onClick={() => setShowRawJsonModal(false)}
-                    className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold transition ml-1"
-                  >
-                    ✕
-                  </button>
-                </div>
-              </div>
-
-              {/* Sub-bar: Tabs & Filter */}
-              <div className="px-4 py-3 border-b border-slate-800/80 bg-slate-950/50 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 text-xs">
-                {/* Tabs */}
-                <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-lg border border-slate-800">
-                  <button
-                    onClick={() => setRawJsonTab('all')}
-                    className={`px-3 py-1 rounded font-semibold transition ${
-                      rawJsonTab === 'all' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-400 hover:text-slate-200'
-                    }`}
-                  >
-                    Allur JSON pakki
-                  </button>
-                  <button
-                    onClick={() => setRawJsonTab('meta')}
-                    className={`px-3 py-1 rounded font-semibold transition ${
-                      rawJsonTab === 'meta' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-400 hover:text-slate-200'
-                    }`}
-                  >
-                    Aðeins Meta & Kerfi
-                  </button>
-                  <button
-                    onClick={() => setRawJsonTab('sample')}
-                    className={`px-3 py-1 rounded font-semibold transition ${
-                      rawJsonTab === 'sample' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-400 hover:text-slate-200'
-                    }`}
-                  >
-                    Sýnishorn af líkönum
-                  </button>
-                </div>
-
-                {/* Filter input */}
-                <div className="relative flex-1 sm:max-w-xs">
-                  <input
-                    type="text"
-                    placeholder="Sía línur í JSON (t.d. Pixel, Nova, price)..."
-                    value={rawSearchFilter}
-                    onChange={(e) => setRawSearchFilter(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
-                  />
-                  {rawSearchFilter && (
-                    <button
-                      onClick={() => setRawSearchFilter('')}
-                      className="absolute right-2 top-1 text-slate-400 hover:text-white text-[10px] bg-slate-800 px-1.5 py-0.5 rounded"
-                    >
-                      X
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Code viewer */}
-              <div className="p-4 flex-1 overflow-auto bg-slate-950 font-mono text-[11px] leading-relaxed text-emerald-400/95 selection:bg-blue-700 selection:text-white">
-                <pre className="whitespace-pre overflow-x-auto">{rawFormattedJson}</pre>
-              </div>
-
-              {/* Footer */}
-              <div className="p-3 border-t border-slate-800 bg-slate-950 flex items-center justify-between text-[11px] text-slate-400">
-                <span>
-                  Línufjöldi: <strong className="text-white">{rawFormattedJson.split('\n').length}</strong> línur
-                </span>
-                <span className="text-slate-500">
-                  {rawSearchFilter ? `(Síað eftir: "${rawSearchFilter}")` : 'Öll gögn sýnd eins og þau berast úr bakenda'}
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* MODAL / INSPECTOR: Undirtegundir, Verð eftir búðum og Verðþróunargraf */}
         {selectedModel && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-150">
@@ -960,9 +966,17 @@ export default function Home() {
                       <span className="text-xs font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-300">
                         {selectedModel.brand}
                       </span>
-                      {selectedModel.priceChangePercent < 0 && (
+                      {selectedModel.priceChangePercent < 0 ? (
                         <span className="text-xs font-bold text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800">
-                          📉 {selectedModel.priceChangePercent}% frá upphafi
+                          📉 {selectedModel.priceChangePercent}% ({formatPrice(Math.abs(selectedModel.priceChangeAmount))} lækkun)
+                        </span>
+                      ) : selectedModel.priceChangePercent > 0 ? (
+                        <span className="text-xs font-bold text-rose-400 bg-rose-950 px-2 py-0.5 rounded border border-rose-800">
+                          📈 +{selectedModel.priceChangePercent}% (+{formatPrice(selectedModel.priceChangeAmount)} hækkun)
+                        </span>
+                      ) : (
+                        <span className="text-xs font-medium text-slate-300 bg-slate-800/90 px-2 py-0.5 rounded border border-slate-700">
+                          ● Verð óbreytt frá {selectedModel.history[0]?.date || 'í dag'}
                         </span>
                       )}
                     </div>
