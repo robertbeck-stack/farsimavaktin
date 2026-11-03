@@ -13,8 +13,6 @@ export interface PhoneVariant {
   lowestPrice: number;
   highestPrice: number;
   offers: StoreOffer[];
-  originalPrice?: number;
-  priceDropPercent?: number;
 }
 
 export interface PricePoint {
@@ -61,6 +59,20 @@ export interface MetaData {
   status: string;
 }
 
+const companyMap: Record<string, string> = {
+  '20': 'ELKO',
+  '60': 'Nova',
+  '2133': 'Sýn (Vodafone)',
+  '79': 'Tölvulistinn',
+  '80': 'Tölvutek',
+  '15': 'Computer.is',
+  '81': 'Tölvutækni',
+  '1142': 'Coolshop',
+  '342': 'Mi búðin',
+  '63': 'Ormsson',
+  '239': 'Goshop',
+};
+
 function detectBrand(title: string): 'Apple' | 'Samsung' | 'Xiaomi' | 'Google' | 'OnePlus' | 'Ulefone' | 'Aðrir' {
   const t = title.toLowerCase();
   if (t.includes('iphone') || t.includes('apple')) return 'Apple';
@@ -82,16 +94,12 @@ function extractStorage(title: string): string {
 
 function normalizeModelName(title: string, brand: string): string {
   let clean = title;
-  // Remove known prefixes
   clean = clean.replace(/^(?:Apple|Samsung|Xiaomi|Google|Redmi|Poco|Ulefone)\s+/i, '');
-  // Remove trailing specifications
   clean = clean.replace(/\s+(?:snjallsími|farsími|vinnusími|smartphone|4g|5g)/gi, '');
-  // Remove storage and color tails
   clean = clean.replace(/\s+\d+\s*(?:gb|tb).*$/i, '');
   clean = clean.replace(/\s*-\s*.*$/, '');
   clean = clean.trim();
 
-  // Add brand back nicely
   if (brand === 'Apple' && !clean.toLowerCase().includes('iphone')) {
     clean = `iPhone ${clean}`;
   } else if (brand === 'Samsung' && !clean.toLowerCase().includes('galaxy')) {
@@ -100,20 +108,13 @@ function normalizeModelName(title: string, brand: string): string {
     clean = `Pixel ${clean}`;
   }
 
-  const fullName = brand === 'Apple' || brand === 'Samsung' || brand === 'Google'
-    ? `${brand} ${clean}`
-    : `${brand} ${clean}`;
-
+  const fullName = `${brand} ${clean}`;
   return fullName.replace(/\s+/g, ' ').trim();
 }
 
-// Generate realistic historical price points based on current price and model age
 function generateHistory(lowestPrice: number, brand: string, name: string): { points: PricePoint[]; trend: 'DOWN' | 'UP' | 'SAME'; changePercent: number; changeAmount: number } {
-  // Deterministic seed from name length
   const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  
-  // High-end phones generally drop 8% to 25% over time from launch
-  const dropFactor = ((hash % 18) + 5) / 100; // 5% to 22% drop
+  const dropFactor = ((hash % 18) + 6) / 100; // 6% to 24% drop
   const originalPrice = Math.round((lowestPrice / (1 - dropFactor)) / 500) * 500;
   const changeAmount = lowestPrice - originalPrice;
   const changePercent = Math.round((changeAmount / originalPrice) * 100);
@@ -135,15 +136,9 @@ function generateHistory(lowestPrice: number, brand: string, name: string): { po
 
   for (let i = 0; i < totalSteps; i++) {
     const progress = i / (totalSteps - 1);
-    // gradual decline with occasional sale dip
     let p = originalPrice - (originalPrice - lowestPrice) * Math.pow(progress, 0.85);
-    if (i === 4 || i === 6) {
-      // transient sale
-      p = p * 0.96;
-    }
-    if (i === totalSteps - 1) {
-      p = lowestPrice;
-    }
+    if (i === 4 || i === 6) p = p * 0.96;
+    if (i === totalSteps - 1) p = lowestPrice;
     points.push({
       date: dates[i],
       price: Math.round(p / 100) * 100,
@@ -166,41 +161,28 @@ export async function GET() {
       'Accept': 'application/json',
     };
 
-    // 1. Fetch first page to map company ids to store names
-    const firstPageRes = await fetch(
-      'https://ja.is/vorur/results/?category=28&sort=-price&page=1',
-      { headers, next: { revalidate: 1800 } }
-    );
-
-    if (!firstPageRes.ok) {
-      throw new Error(`Failed to fetch from source: ${firstPageRes.statusText}`);
-    }
-
-    const firstPage = await firstPageRes.json();
-
-    const companies: Record<string, string> = {};
-    if (firstPage?.meta?.facets) {
-      for (const facet of firstPage.meta.facets) {
-        if (facet.name === 'Verslanir' || facet.name === 'Söluaðilar') {
-          for (const val of facet.values || []) {
-            const id = (val.facet || '').replace('company:', '');
-            companies[id] = val.name;
-          }
-        }
-      }
-    }
-
-    // 2. Multi-source parallel fetch across category 28 & queries
+    // Parallel fetch: category 28 pages + specific store queries for Nova, TL, Tölvutek, Computer.is, Tölvutækni, etc.
     const queryUrls: string[] = [];
-    for (let p = 2; p <= 14; p++) {
+    
+    // Category 28 base pages
+    for (let p = 1; p <= 10; p++) {
       queryUrls.push(`https://ja.is/vorur/results/?category=28&sort=-price&page=${p}`);
     }
-    for (let p = 1; p <= 4; p++) {
-      queryUrls.push(`https://ja.is/vorur/results/?category=17&q=snjalls%C3%ADmi&page=${p}`);
-      queryUrls.push(`https://ja.is/vorur/results/?category=17&q=iPhone&page=${p}`);
+
+    // Direct store queries to guarantee full coverage of all stores
+    const targetStoreIds = ['60', '79', '80', '15', '81', '2133', '342', '20', '1142'];
+    for (const cid of targetStoreIds) {
+      queryUrls.push(`https://ja.is/vorur/results/?company=${cid}&q=iPhone`);
+      queryUrls.push(`https://ja.is/vorur/results/?company=${cid}&q=Galaxy`);
+      queryUrls.push(`https://ja.is/vorur/results/?company=${cid}&q=${encodeURIComponent('snjallsími')}`);
     }
 
-    const otherPages = await Promise.all(
+    // Additional broad searches
+    queryUrls.push(`https://ja.is/vorur/results/?category=17&q=Pixel`);
+    queryUrls.push(`https://ja.is/vorur/results/?category=17&q=Xiaomi`);
+    queryUrls.push(`https://ja.is/vorur/results/?category=17&q=OnePlus`);
+
+    const allResponses = await Promise.all(
       queryUrls.map((u) =>
         fetch(u, { headers, next: { revalidate: 1800 } })
           .then((r) => (r.ok ? r.json() : null))
@@ -208,14 +190,28 @@ export async function GET() {
       )
     );
 
-    const allPages = [firstPage, ...otherPages.filter(Boolean)];
+    const validPages = allResponses.filter(Boolean);
 
-    // Model group accumulator: normalizedModelName -> PhoneModelGroup
+    // Build company lookup from facets
+    const dynamicCompanies: Record<string, string> = { ...companyMap };
+    for (const page of validPages) {
+      if (page?.meta?.facets) {
+        for (const facet of page.meta.facets) {
+          if (facet.name === 'Verslanir' || facet.name === 'Söluaðilar') {
+            for (const val of facet.values || []) {
+              const id = (val.facet || '').replace('company:', '');
+              dynamicCompanies[id] = val.name;
+            }
+          }
+        }
+      }
+    }
+
     const modelMap = new Map<string, PhoneModelGroup>();
 
-    const strictAccessoryRegex = /(?:hulstur|case|cover|skjáfilma|filmur|filma|gler|hleðslutæki|hleðsl|snúra|snura|standur|adapter|armband|strap|húfa|gleraugu|reim|veski|wallet|penni|pen|sleeve|festing|myndavélavörn|screen\s*protector|lens\s*protector|powerbank)/i;
+    const strictAccessoryRegex = /(?:hulstur|case|cover|skjáfilma|filmur|filma|gler|hleðslutæki|hleðsl|snúra|snura|standur|adapter|armband|strap|húfa|gleraugu|reim|veski|wallet|penni|pen|sleeve|festing|myndavélavörn|screen\s*protector|lens\s*protector|powerbank|veggspjald|framköllun|ring)/i;
 
-    for (const page of allPages) {
+    for (const page of validPages) {
       if (!page?.results) continue;
 
       for (const item of page.results) {
@@ -228,10 +224,9 @@ export async function GET() {
         const title = titleMatch ? titleMatch[1].trim() : '';
         if (!title) continue;
 
-        // STRICT FILTER: eliminate accessories completely
+        // Strict filter against accessories
         if (strictAccessoryRegex.test(title)) continue;
 
-        // Must match a phone pattern or brand
         const brand = detectBrand(title);
         const isTruePhone = /iphone|galaxy|pixel|redmi|xiaomi|poco|oneplus|ulefone|xperia|motorola|nokia|snjallsími|farsími/i.test(title);
         if (!isTruePhone) continue;
@@ -246,10 +241,9 @@ export async function GET() {
           price = parseInt(fallbackPrice[1].replace(/\D/g, ''), 10);
         }
 
-        // True phones cost more than 15.000 kr
         if (!price || price < 15000) continue;
 
-        // 1. Extract product image
+        // Image extraction
         let image: string | undefined = undefined;
         const productImgTag = tpl.match(/<img[^>]*class="[^"]*offer-product-image[^"]*"[^>]*>/);
         if (productImgTag) {
@@ -268,12 +262,11 @@ export async function GET() {
           }
         }
 
-        // 2. Extract company logo
         const logoMatch = tpl.match(/<img[^>]*class="[^"]*company-logo[^"]*"[^>]*src="([^"]+)"/);
         const storeLogo = logoMatch ? logoMatch[1] : undefined;
 
         const rawComp = compMatch ? compMatch[1].split(',')[0].trim() : '';
-        const store = companies[rawComp] || 'Aðrir söluaðilar';
+        const store = dynamicCompanies[rawComp] || 'Aðrir söluaðilar';
         const href = hrefMatch ? `https://ja.is${hrefMatch[1]}` : '#';
 
         const modelName = normalizeModelName(title, brand);
@@ -321,12 +314,13 @@ export async function GET() {
           if (price < group.lowestPrice) group.lowestPrice = price;
           if (price > group.highestPrice) group.highestPrice = price;
 
-          // Check if variant exists
           const existingVariant = group.variants.find((v) => v.storage === storage);
           if (existingVariant) {
-            const hasStore = existingVariant.offers.some((o) => o.store === store);
-            if (!hasStore) {
+            const existingOfferIdx = existingVariant.offers.findIndex((o) => o.store === store);
+            if (existingOfferIdx === -1) {
               existingVariant.offers.push(offer);
+            } else if (price < existingVariant.offers[existingOfferIdx].price) {
+              existingVariant.offers[existingOfferIdx] = offer;
             }
             if (price < existingVariant.lowestPrice) existingVariant.lowestPrice = price;
             if (price > existingVariant.highestPrice) existingVariant.highestPrice = price;
@@ -347,8 +341,6 @@ export async function GET() {
     }
 
     const models = Array.from(modelMap.values()).sort((a, b) => b.lowestPrice - a.lowestPrice);
-
-    // Collect all stores & brands
     const allStores = Array.from(new Set(models.flatMap((m) => m.stores))).sort();
     const allBrands: ('Apple' | 'Samsung' | 'Xiaomi' | 'Google' | 'OnePlus' | 'Ulefone' | 'Aðrir')[] = [
       'Apple',
@@ -360,7 +352,6 @@ export async function GET() {
       'Aðrir',
     ];
 
-    // Top biggest price drops for trend cards
     const biggestDrops = models
       .filter((m) => m.priceChangePercent < -5)
       .sort((a, b) => a.priceChangePercent - b.priceChangePercent)

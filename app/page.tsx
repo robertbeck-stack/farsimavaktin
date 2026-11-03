@@ -164,19 +164,18 @@ export default function Home() {
   };
 
   const getStoreBadgeColor = (store: string) => {
-    switch (store.toLowerCase()) {
-      case 'elko':
-        return 'bg-blue-950 text-blue-300 border-blue-800';
-      case 'mi búðin':
-        return 'bg-amber-950 text-amber-300 border-amber-800';
-      case 'sýn':
-      case 'vodafone':
-        return 'bg-rose-950 text-rose-300 border-rose-800';
-      case 'coolshop':
-        return 'bg-purple-950 text-purple-300 border-purple-800';
-      default:
-        return 'bg-slate-800 text-slate-300 border-slate-700';
-    }
+    const s = store.toLowerCase();
+    if (s.includes('elko')) return 'bg-blue-950 text-blue-300 border-blue-800';
+    if (s.includes('nova')) return 'bg-emerald-950 text-emerald-300 border-emerald-800';
+    if (s.includes('sýn') || s.includes('vodafone')) return 'bg-rose-950 text-rose-300 border-rose-800';
+    if (s.includes('tölvulistinn')) return 'bg-indigo-950 text-indigo-300 border-indigo-800';
+    if (s.includes('tölvutek')) return 'bg-amber-950 text-amber-300 border-amber-800';
+    if (s.includes('computer')) return 'bg-cyan-950 text-cyan-300 border-cyan-800';
+    if (s.includes('tölvutækni')) return 'bg-violet-950 text-violet-300 border-violet-800';
+    if (s.includes('mi búðin')) return 'bg-orange-950 text-orange-300 border-orange-800';
+    if (s.includes('coolshop')) return 'bg-purple-950 text-purple-300 border-purple-800';
+    if (s.includes('ormsson')) return 'bg-sky-950 text-sky-300 border-sky-800';
+    return 'bg-slate-800 text-slate-300 border-slate-700';
   };
 
   const currentVariant = useMemo(() => {
