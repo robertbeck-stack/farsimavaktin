@@ -5,6 +5,7 @@ export interface PhoneItem {
   title: string;
   price: number;
   store: string;
+  storeLogo?: string;
   url: string;
   image?: string;
 }
@@ -68,14 +69,38 @@ export async function GET() {
         const titleMatch = tpl.match(/data-event-title="([^"]+)"/);
         const compMatch = tpl.match(/data-event-product-company-ids="\[(.*?)\]"/);
         const hrefMatch = tpl.match(/href="([^"]+)"/);
-        const imgMatch = tpl.match(/<img[^>]+src="([^">]+)"/);
         const idMatch = tpl.match(/data-event-product-id="([^"]+)"/);
+
+        // 1. Extract product image (must NOT be the company logo)
+        let image: string | undefined = undefined;
+        const productImgTag = tpl.match(/<img[^>]*class="[^"]*offer-product-image[^"]*"[^>]*>/);
+        if (productImgTag) {
+          const srcMatch = productImgTag[0].match(/(?:src|data-src)="([^"]+)"/);
+          if (srcMatch) {
+            image = srcMatch[1];
+          }
+        }
+
+        // Fallback: look for image inside offer-product-container or any non-logo img
+        if (!image) {
+          const allImgTags = tpl.match(/<img[^>]+src="([^"]+)"/g) || [];
+          for (const tag of allImgTags) {
+            const src = tag.match(/src="([^"]+)"/)?.[1];
+            if (src && !src.toLowerCase().includes('logo') && !src.toLowerCase().includes('logos')) {
+              image = src;
+              break;
+            }
+          }
+        }
+
+        // 2. Extract company logo if available
+        const logoMatch = tpl.match(/<img[^>]*class="[^"]*company-logo[^"]*"[^>]*src="([^"]+)"/);
+        const storeLogo = logoMatch ? logoMatch[1] : undefined;
 
         const title = titleMatch ? titleMatch[1] : 'Óþekktur sími';
         const rawComp = compMatch ? compMatch[1].split(',')[0].trim() : '';
         const store = companies[rawComp] || 'Aðrir söluaðilar';
         const href = hrefMatch ? `https://ja.is${hrefMatch[1]}` : '#';
-        const image = imgMatch ? imgMatch[1] : undefined;
         const id = idMatch ? idMatch[1] : `${title}-${store}`;
 
         if (seenIds.has(id)) continue;
@@ -102,6 +127,7 @@ export async function GET() {
             title,
             price,
             store,
+            storeLogo,
             url: href,
             image,
           });

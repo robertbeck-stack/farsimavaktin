@@ -7,6 +7,7 @@ interface PhoneItem {
   title: string;
   price: number;
   store: string;
+  storeLogo?: string;
   url: string;
   image?: string;
 }
@@ -256,25 +257,34 @@ export default function Home() {
                 className="group bg-slate-900/70 hover:bg-slate-900 border border-slate-800/80 hover:border-slate-700 rounded-2xl p-5 flex flex-col justify-between transition-all duration-200 shadow-md hover:shadow-xl hover:shadow-black/40 hover:-translate-y-0.5"
               >
                 <div>
-                  {/* Store Badge */}
+                  {/* Store Badge with Logo */}
                   <div className="flex items-center justify-between mb-3">
                     <span
-                      className={`text-[11px] px-2.5 py-1 rounded-md border font-semibold tracking-wide ${getStoreBadgeColor(
+                      className={`inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-md border font-semibold tracking-wide ${getStoreBadgeColor(
                         phone.store
                       )}`}
                     >
+                      {phone.storeLogo && (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img
+                          src={phone.storeLogo}
+                          alt={phone.store}
+                          className="w-3.5 h-3.5 object-contain rounded-xs"
+                          loading="lazy"
+                        />
+                      )}
                       {phone.store}
                     </span>
                   </div>
 
                   {/* Phone Image */}
-                  <div className="w-full h-44 bg-slate-950/60 rounded-xl mb-4 flex items-center justify-center p-3 border border-slate-800/40 overflow-hidden">
+                  <div className="w-full h-48 bg-white/5 rounded-xl mb-4 flex items-center justify-center p-3 border border-slate-800/60 overflow-hidden relative">
                     {phone.image ? (
                       /* eslint-disable-next-line @next/next/no-img-element */
                       <img
                         src={phone.image}
                         alt={phone.title}
-                        className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-300"
+                        className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-300 drop-shadow-md"
                         loading="lazy"
                       />
                     ) : (
