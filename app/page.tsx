@@ -338,6 +338,27 @@ export default function Home() {
     return 'bg-slate-800 text-slate-300 border-slate-700';
   };
 
+  const getStoreFavicon = (store: string): string | null => {
+    const s = store.toLowerCase();
+    if (s.includes('elko')) return 'https://www.google.com/s2/favicons?domain=elko.is&sz=64';
+    if (s.includes('nova')) return 'https://www.google.com/s2/favicons?domain=nova.is&sz=64';
+    if (s.includes('síminn') || s.includes('siminn')) return 'https://www.google.com/s2/favicons?domain=siminn.is&sz=64';
+    if (s.includes('sýn') || s.includes('vodafone')) return 'https://www.google.com/s2/favicons?domain=syn.is&sz=64';
+    if (s.includes('emobi')) return 'https://www.google.com/s2/favicons?domain=emobi.is&sz=64';
+    if (s.includes('mi búðin') || s.includes('mibudin')) return 'https://www.google.com/s2/favicons?domain=mibudin.is&sz=64';
+    if (s.includes('tölvulistinn')) return 'https://www.google.com/s2/favicons?domain=tl.is&sz=64';
+    if (s.includes('tölvutek')) return 'https://www.google.com/s2/favicons?domain=tolvutek.is&sz=64';
+    if (s.includes('computer')) return 'https://www.google.com/s2/favicons?domain=computer.is&sz=64';
+    if (s.includes('tölvutækni')) return 'https://www.google.com/s2/favicons?domain=tolvutaekni.is&sz=64';
+    if (s.includes('coolshop')) return 'https://www.google.com/s2/favicons?domain=coolshop.is&sz=64';
+    if (s.includes('ormsson')) return 'https://www.google.com/s2/favicons?domain=ormsson.is&sz=64';
+    if (s.includes('ofar')) return 'https://www.google.com/s2/favicons?domain=ofar.is&sz=64';
+    if (s.includes('heimilistæki')) return 'https://www.google.com/s2/favicons?domain=ht.is&sz=64';
+    if (s.includes('goshop')) return 'https://icon.horse/icon/goshop.is';
+    if (s.includes('tunglskin')) return 'https://icon.horse/icon/tunglskin.is';
+    return null;
+  };
+
   const currentVariant = useMemo(() => {
     if (!selectedModel) return null;
     return (
@@ -663,8 +684,21 @@ export default function Home() {
                           <h4 className="text-xs font-semibold text-slate-100 line-clamp-1 group-hover:text-blue-400 transition">
                             {item.name}
                           </h4>
-                          <span className="text-[10px] text-slate-400 mt-1 block">
-                            Ódýrast hjá <strong className="text-emerald-400">{item.cheapestStore}</strong> (vs {item.expensiveStore})
+                          <span className="text-[10px] text-slate-400 mt-1 flex items-center gap-1 flex-wrap">
+                            Ódýrast hjá
+                            <strong className="text-emerald-400 inline-flex items-center gap-1">
+                              {getStoreFavicon(item.cheapestStore) && (
+                                /* eslint-disable-next-line @next/next/no-img-element */
+                                <img
+                                  src={getStoreFavicon(item.cheapestStore)!}
+                                  alt={item.cheapestStore}
+                                  className="w-3.5 h-3.5 rounded-xs object-contain"
+                                  loading="lazy"
+                                />
+                              )}
+                              {item.cheapestStore}
+                            </strong>
+                            (vs {item.expensiveStore})
                           </span>
                         </div>
 
@@ -877,10 +911,32 @@ export default function Home() {
                               {v.storage}
                             </span>
                           ))}
-                          <span className="text-[10px] text-slate-500 ml-1">
-                            • {model.stores.slice(0, 4).join(', ')}
-                            {model.stores.length > 4 && ` +${model.stores.length - 4}`}
-                          </span>
+                          <span className="text-[10px] text-slate-600 mx-0.5">•</span>
+                          {model.stores.slice(0, 4).map((st) => {
+                            const fav = getStoreFavicon(st);
+                            return (
+                              <span
+                                key={st}
+                                className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.2 rounded bg-slate-950/80 border border-slate-800/80 text-slate-300"
+                              >
+                                {fav && (
+                                  /* eslint-disable-next-line @next/next/no-img-element */
+                                  <img
+                                    src={fav}
+                                    alt={st}
+                                    className="w-3 h-3 rounded-xs object-contain shrink-0"
+                                    loading="lazy"
+                                  />
+                                )}
+                                {st}
+                              </span>
+                            );
+                          })}
+                          {model.stores.length > 4 && (
+                            <span className="text-[10px] text-slate-500">
+                              +{model.stores.length - 4}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -934,7 +990,16 @@ export default function Home() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-slate-800/80 text-xs">
                 <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800">
                   <span className="text-slate-400 block text-[11px]">Flest lægstu verð á markaðnum</span>
-                  <span className="text-sm font-bold text-emerald-400 mt-1 block">
+                  <span className="text-sm font-bold text-emerald-400 mt-1 flex items-center gap-1.5">
+                    {getStoreFavicon(meta?.storeSummaries?.[0]?.store || 'Nova') && (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img
+                        src={getStoreFavicon(meta?.storeSummaries?.[0]?.store || 'Nova')!}
+                        alt={meta?.storeSummaries?.[0]?.store || 'Nova'}
+                        className="w-4 h-4 rounded-xs object-contain shrink-0"
+                        loading="lazy"
+                      />
+                    )}
                     {meta?.storeSummaries?.[0]?.store || 'Nova'} ({meta?.storeSummaries?.[0]?.cheapestCount || 0} símar)
                   </span>
                 </div>
@@ -968,7 +1033,16 @@ export default function Home() {
                       {/* Top Header */}
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
-                          <span className={`text-xs px-3 py-1 rounded-lg border font-bold ${getStoreBadgeColor(st.store)}`}>
+                          <span className={`inline-flex items-center gap-1.5 text-xs px-3 py-1 rounded-lg border font-bold ${getStoreBadgeColor(st.store)}`}>
+                            {getStoreFavicon(st.store) && (
+                              /* eslint-disable-next-line @next/next/no-img-element */
+                              <img
+                                src={getStoreFavicon(st.store)!}
+                                alt={st.store}
+                                className="w-4 h-4 rounded-xs object-contain shrink-0"
+                                loading="lazy"
+                              />
+                            )}
                             {st.store}
                           </span>
                           {isLeader && (
@@ -1191,9 +1265,20 @@ export default function Home() {
                 {meta?.storesList.map((st) => (
                   <span
                     key={st}
-                    className={`text-xs px-3 py-1.5 rounded-lg border font-semibold ${getStoreBadgeColor(st)}`}
+                    className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border font-semibold ${getStoreBadgeColor(st)}`}
                   >
-                    ● {st}
+                    {getStoreFavicon(st) ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img
+                        src={getStoreFavicon(st)!}
+                        alt={st}
+                        className="w-3.5 h-3.5 rounded-xs object-contain shrink-0"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <span>●</span>
+                    )}
+                    {st}
                   </span>
                 ))}
               </div>
@@ -1386,12 +1471,12 @@ export default function Home() {
                             className="p-3 flex items-center justify-between gap-3 hover:bg-slate-900/60 transition"
                           >
                             <div className="flex items-center gap-2.5">
-                              {offer.storeLogo && (
+                              {(getStoreFavicon(offer.store) || offer.storeLogo) && (
                                 /* eslint-disable-next-line @next/next/no-img-element */
                                 <img
-                                  src={offer.storeLogo}
+                                  src={(getStoreFavicon(offer.store) || offer.storeLogo)!}
                                   alt={offer.store}
-                                  className="w-5 h-5 object-contain"
+                                  className="w-5 h-5 rounded-xs object-contain shrink-0"
                                   loading="lazy"
                                 />
                               )}
@@ -1729,7 +1814,16 @@ export default function Home() {
                             className="bg-slate-950/70 border border-slate-800/60 rounded-lg p-2.5 text-xs space-y-1"
                           >
                             <div className="flex items-center justify-between">
-                              <span className={`px-2 py-0.5 rounded font-semibold text-[11px] border ${getStoreBadgeColor(st.store)}`}>
+                              <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded font-semibold text-[11px] border ${getStoreBadgeColor(st.store)}`}>
+                                {getStoreFavicon(st.store) && (
+                                  /* eslint-disable-next-line @next/next/no-img-element */
+                                  <img
+                                    src={getStoreFavicon(st.store)!}
+                                    alt={st.store}
+                                    className="w-3.5 h-3.5 rounded-xs object-contain shrink-0"
+                                    loading="lazy"
+                                  />
+                                )}
                                 {st.store}
                               </span>
                               <span className="text-slate-400 font-mono text-[11px]">
