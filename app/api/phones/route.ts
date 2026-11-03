@@ -6,7 +6,26 @@ export interface StoreOffer {
   store: string;
   storeLogo?: string;
   price: number;
+  previousPrice?: number;
+  priceChange?: number;
   url: string;
+}
+
+export interface StoreDailySummary {
+  store: string;
+  totalPhones: number;
+  cheapestCount: number;
+  dropsCount: number;
+  hikesCount: number;
+  unchangedCount: number;
+  netChangeAmount: number;
+  biggestDrop?: {
+    modelName: string;
+    oldPrice: number;
+    newPrice: number;
+    dropAmount: number;
+    dropPercent: number;
+  };
 }
 
 export interface PhoneVariant {
@@ -67,6 +86,7 @@ export interface MetaData {
     cheapestStore: string;
     expensiveStore: string;
   }[];
+  storeSummaries: StoreDailySummary[];
   allTimeLowsCount: number;
   status: string;
   sourcesScanned: number;
@@ -429,14 +449,45 @@ export async function GET() {
     // Load persistent real price history ledger
     const historyFile = path.join(process.cwd(), 'data', 'price_history.json');
     let historyStore: Record<string, PricePoint[]> = {};
+    let storeOffersStore: Record<string, PricePoint[]> = {};
     try {
       if (fs.existsSync(historyFile)) {
         const raw = fs.readFileSync(historyFile, 'utf-8');
         const parsed = JSON.parse(raw);
         historyStore = parsed.history || {};
+        storeOffersStore = parsed.storeOffers || {};
       }
     } catch {
       historyStore = {};
+      storeOffersStore = {};
+    }
+
+    const today = new Date().toISOString().slice(0, 10);
+
+    // Track per-store price changes for every offer
+    for (const m of modelMap.values()) {
+      for (const v of m.variants) {
+        for (const offer of v.offers) {
+          const storeKey = `${m.id}::${v.storage}::${offer.store}`;
+          const existing = storeOffersStore[storeKey] ? [...storeOffersStore[storeKey]] : [];
+          const last = existing[existing.length - 1];
+
+          if (last) {
+            offer.previousPrice = last.price;
+            offer.priceChange = offer.price - last.price;
+            if (last.date === today) {
+              last.price = offer.price;
+            } else {
+              existing.push({ date: today, price: offer.price });
+            }
+          } else {
+            offer.previousPrice = offer.price;
+            offer.priceChange = 0;
+            existing.push({ date: today, price: offer.price });
+          }
+          storeOffersStore[storeKey] = existing;
+        }
+      }
     }
 
     const models = Array.from(modelMap.values())
@@ -458,7 +509,15 @@ export async function GET() {
       fs.mkdirSync(path.dirname(historyFile), { recursive: true });
       fs.writeFileSync(
         historyFile,
-        JSON.stringify({ updatedAt: new Date().toISOString(), history: historyStore }, null, 2),
+        JSON.stringify(
+          {
+            updatedAt: new Date().toISOString(),
+            history: historyStore,
+            storeOffers: storeOffersStore,
+          },
+          null,
+          2
+        ),
         'utf-8'
       );
     } catch {
@@ -511,6 +570,68 @@ export async function GET() {
         };
       });
 
+    // Store-level price indexes & daily drop/hike summaries
+    const storeSummaries: StoreDailySummary[] = allStores
+      .map((storeName) => {
+        let totalPhones = 0;
+        let cheapestCount = 0;
+        let dropsCount = 0;
+        let hikesCount = 0;
+        let unchangedCount = 0;
+        let netChangeAmount = 0;
+        let bestDrop: StoreDailySummary['biggestDrop'] = undefined;
+
+        for (const m of models) {
+          if (!m.stores.includes(storeName)) continue;
+          totalPhones++;
+
+          const hasLowest = m.variants.some((v) =>
+            v.offers.some((o) => o.store === storeName && o.price === m.lowestPrice)
+          );
+          if (hasLowest) {
+            cheapestCount++;
+          }
+
+          for (const v of m.variants) {
+            const storeOffer = v.offers.find((o) => o.store === storeName);
+            if (storeOffer && typeof storeOffer.priceChange === 'number') {
+              const ch = storeOffer.priceChange;
+              netChangeAmount += ch;
+              if (ch < 0) {
+                dropsCount++;
+                const dropAmt = Math.abs(ch);
+                const dropPct = storeOffer.previousPrice ? Math.round((dropAmt / storeOffer.previousPrice) * 100) : 0;
+                if (!bestDrop || dropAmt > bestDrop.dropAmount) {
+                  bestDrop = {
+                    modelName: `${m.name} (${v.storage})`,
+                    oldPrice: storeOffer.previousPrice || storeOffer.price,
+                    newPrice: storeOffer.price,
+                    dropAmount: dropAmt,
+                    dropPercent: dropPct,
+                  };
+                }
+              } else if (ch > 0) {
+                hikesCount++;
+              } else {
+                unchangedCount++;
+              }
+            }
+          }
+        }
+
+        return {
+          store: storeName,
+          totalPhones,
+          cheapestCount,
+          dropsCount,
+          hikesCount,
+          unchangedCount,
+          netChangeAmount,
+          biggestDrop: bestDrop,
+        };
+      })
+      .sort((a, b) => b.cheapestCount - a.cheapestCount);
+
     const durationMs = Date.now() - startTime;
 
     const meta: MetaData = {
@@ -523,6 +644,7 @@ export async function GET() {
       brandsList: allBrands,
       biggestDrops,
       topSavings,
+      storeSummaries,
       allTimeLowsCount: models.filter((m) => m.priceChangePercent < 0).length,
       status: 'SUCCESS',
       sourcesScanned: queryUrls.length + 2,

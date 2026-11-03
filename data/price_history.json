@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-11-03T22:43:56.117Z",
+  "updatedAt": "2026-11-03T22:51:13.183Z",
   "history": {
     "samsung-galaxy-z-fold8-ultra": [
       {
@@ -554,6 +554,1100 @@
       }
     ],
     "samsung-galaxy-flip-8": [
+      {
+        "date": "2026-11-03",
+        "price": 229990
+      }
+    ]
+  },
+  "storeOffers": {
+    "samsung-galaxy-z-fold8-ultra::1TB::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 489995
+      }
+    ],
+    "samsung-galaxy-z-fold8-ultra::1TB::Emobi": [
+      {
+        "date": "2026-11-03",
+        "price": 429900
+      }
+    ],
+    "samsung-galaxy-z-fold8-ultra::Standard::Nova": [
+      {
+        "date": "2026-11-03",
+        "price": 379990
+      }
+    ],
+    "samsung-galaxy-z-fold8-ultra::512GB::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 419995
+      }
+    ],
+    "samsung-galaxy-z-fold8-ultra::512GB::Emobi": [
+      {
+        "date": "2026-11-03",
+        "price": 364900
+      }
+    ],
+    "samsung-galaxy-z-fold8-ultra::256GB::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 379995
+      }
+    ],
+    "samsung-galaxy-z-fold8::1TB::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 459995
+      }
+    ],
+    "samsung-galaxy-z-fold8::Standard::Nova": [
+      {
+        "date": "2026-11-03",
+        "price": 339990
+      }
+    ],
+    "samsung-galaxy-z-fold8::512GB::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 379995
+      }
+    ],
+    "samsung-galaxy-z-fold8::512GB::Emobi": [
+      {
+        "date": "2026-11-03",
+        "price": 324900
+      }
+    ],
+    "samsung-galaxy-z-fold8::256GB::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 349995
+      }
+    ],
+    "samsung-galaxy-z-fold8::256GB::Emobi": [
+      {
+        "date": "2026-11-03",
+        "price": 299900
+      }
+    ],
+    "apple-iphone-18-pro-max::2TB::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 459995
+      }
+    ],
+    "apple-iphone-18-pro-max::Standard::Nova": [
+      {
+        "date": "2026-11-03",
+        "price": 249990
+      }
+    ],
+    "apple-iphone-18-pro-max::Standard::Sýn": [
+      {
+        "date": "2026-11-03",
+        "price": 249990
+      }
+    ],
+    "apple-iphone-18-pro-max::1TB::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 359995
+      }
+    ],
+    "apple-iphone-18-pro-max::512GB::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 289995
+      }
+    ],
+    "apple-iphone-18-pro-max::256GB::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 249995
+      }
+    ],
+    "samsung-galaxy-fold8-ultra::512GB::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 419995
+      }
+    ],
+    "samsung-galaxy-fold8-ultra::256GB::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 379995
+      }
+    ],
+    "samsung-galaxy-fold8-ultra::Standard::Sýn": [
+      {
+        "date": "2026-11-03",
+        "price": 379990
+      }
+    ],
+    "apple-iphone-duo::512GB::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 389995
+      }
+    ],
+    "apple-iphone-duo::Standard::Nova": [
+      {
+        "date": "2026-11-03",
+        "price": 359990
+      }
+    ],
+    "apple-iphone-duo::Standard::Sýn": [
+      {
+        "date": "2026-11-03",
+        "price": 359990
+      }
+    ],
+    "apple-iphone-duo::256GB::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 359995
+      }
+    ],
+    "samsung-galaxy-z-fold8-ultra-8::256GB::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 379995
+      }
+    ],
+    "samsung-galaxy-fold7::Standard::Sýn": [
+      {
+        "date": "2026-11-03",
+        "price": 349990
+      }
+    ],
+    "samsung-galaxy-fold7::Standard::Nova": [
+      {
+        "date": "2026-11-03",
+        "price": 309990
+      }
+    ],
+    "samsung-galaxy-fold8::Standard::Sýn": [
+      {
+        "date": "2026-11-03",
+        "price": 349990
+      }
+    ],
+    "apple-iphone-18-pro::1TB::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 339995
+      }
+    ],
+    "apple-iphone-18-pro::Standard::Nova": [
+      {
+        "date": "2026-11-03",
+        "price": 229990
+      }
+    ],
+    "apple-iphone-18-pro::Standard::Sýn": [
+      {
+        "date": "2026-11-03",
+        "price": 229990
+      }
+    ],
+    "apple-iphone-18-pro::512GB::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 269995
+      }
+    ],
+    "apple-iphone-18-pro::256GB::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 229995
+      }
+    ],
+    "apple-iphone-18-pro::256GB::Emobi": [
+      {
+        "date": "2026-11-03",
+        "price": 229900
+      }
+    ],
+    "apple-iphone-18-pro::256GB::Síminn": [
+      {
+        "date": "2026-11-03",
+        "price": 229990
+      }
+    ],
+    "samsung-galaxy-s26-ultra::1TB::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 329995
+      }
+    ],
+    "samsung-galaxy-s26-ultra::1TB::Emobi": [
+      {
+        "date": "2026-11-03",
+        "price": 324900
+      }
+    ],
+    "samsung-galaxy-s26-ultra::Standard::Nova": [
+      {
+        "date": "2026-11-03",
+        "price": 254990
+      }
+    ],
+    "samsung-galaxy-s26-ultra::Standard::Sýn": [
+      {
+        "date": "2026-11-03",
+        "price": 254990
+      }
+    ],
+    "samsung-galaxy-s26-ultra::512GB::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 279994
+      }
+    ],
+    "samsung-galaxy-s26-ultra::512GB::Emobi": [
+      {
+        "date": "2026-11-03",
+        "price": 274900
+      }
+    ],
+    "samsung-galaxy-s26-ultra::256GB::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 254995
+      }
+    ],
+    "samsung-galaxy-s26-ultra::256GB::Emobi": [
+      {
+        "date": "2026-11-03",
+        "price": 254900
+      }
+    ],
+    "samsung-galaxy-s26-ultra::256GB::Síminn": [
+      {
+        "date": "2026-11-03",
+        "price": 249990
+      }
+    ],
+    "google-pixel-11-pro-fold::Standard::Nova": [
+      {
+        "date": "2026-11-03",
+        "price": 319990
+      }
+    ],
+    "google-pixel-10-pro-fold::Standard::Nova": [
+      {
+        "date": "2026-11-03",
+        "price": 289989
+      }
+    ],
+    "samsung-galaxy-s25-ultra::Standard::Nova": [
+      {
+        "date": "2026-11-03",
+        "price": 229990
+      }
+    ],
+    "samsung-galaxy-z-flip8::512GB::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 269995
+      }
+    ],
+    "samsung-galaxy-z-flip8::Standard::Nova": [
+      {
+        "date": "2026-11-03",
+        "price": 229990
+      }
+    ],
+    "samsung-galaxy-z-flip8::256GB::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 229995
+      }
+    ],
+    "samsung-galaxy-z-flip8::256GB::Emobi": [
+      {
+        "date": "2026-11-03",
+        "price": 174900
+      }
+    ],
+    "samsung-galaxy-z-fold7::512GB::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 269994
+      }
+    ],
+    "samsung-galaxy-z-fold7::256GB::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 249995
+      }
+    ],
+    "apple-iphone-17-pro-max::Standard::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 209995
+      }
+    ],
+    "apple-iphone-17-pro-max::Standard::Sýn": [
+      {
+        "date": "2026-11-03",
+        "price": 229990
+      }
+    ],
+    "apple-iphone-17-pro-max::512GB::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 209995
+      }
+    ],
+    "apple-iphone-17-pro-max::512GB::Emobi": [
+      {
+        "date": "2026-11-03",
+        "price": 269900
+      }
+    ],
+    "apple-iphone-17-pro-max::256GB::Emobi": [
+      {
+        "date": "2026-11-03",
+        "price": 229900
+      }
+    ],
+    "apple-iphone-17-pro-max::256GB::Síminn": [
+      {
+        "date": "2026-11-03",
+        "price": 249990
+      }
+    ],
+    "xiaomi-17-ultra::512GB::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 259994
+      }
+    ],
+    "xiaomi-17-ultra::512GB::Sýn": [
+      {
+        "date": "2026-11-03",
+        "price": 259990
+      }
+    ],
+    "xiaomi-17-ultra::512GB::Nova": [
+      {
+        "date": "2026-11-03",
+        "price": 219990
+      }
+    ],
+    "xiaomi-17-ultra-16-512gb-leica-white::512GB::Mi búðin": [
+      {
+        "date": "2026-11-03",
+        "price": 259990
+      }
+    ],
+    "a-rir-oppo-find-x10-pro-max::512GB::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 249995
+      }
+    ],
+    "samsung-galaxy-s26-::Standard::Nova": [
+      {
+        "date": "2026-11-03",
+        "price": 214990
+      }
+    ],
+    "samsung-galaxy-s26-::Standard::Sýn": [
+      {
+        "date": "2026-11-03",
+        "price": 214990
+      }
+    ],
+    "samsung-galaxy-s26-::512GB::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 244994
+      }
+    ],
+    "samsung-galaxy-s26-::512GB::Emobi": [
+      {
+        "date": "2026-11-03",
+        "price": 244900
+      }
+    ],
+    "samsung-galaxy-s26-::256GB::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 214994
+      }
+    ],
+    "samsung-galaxy-s26-::256GB::Emobi": [
+      {
+        "date": "2026-11-03",
+        "price": 214900
+      }
+    ],
+    "apple-iphone-17-pro::Standard::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 189995
+      }
+    ],
+    "apple-iphone-17-pro::Standard::Sýn": [
+      {
+        "date": "2026-11-03",
+        "price": 209990
+      }
+    ],
+    "apple-iphone-17-pro::512GB::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 189995
+      }
+    ],
+    "apple-iphone-17-pro::256GB::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 189995
+      }
+    ],
+    "apple-iphone-17-pro::256GB::Emobi": [
+      {
+        "date": "2026-11-03",
+        "price": 209900
+      }
+    ],
+    "google-pixel-11-pro-xl::Standard::Nova": [
+      {
+        "date": "2026-11-03",
+        "price": 224990
+      }
+    ],
+    "google-pixel-11-pro-xl::256GB::Emobi": [
+      {
+        "date": "2026-11-03",
+        "price": 219900
+      }
+    ],
+    "a-rir-oppo-find-x9-ultra::512GB::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 229994
+      }
+    ],
+    "samsung-galaxy-flip8::Standard::Sýn": [
+      {
+        "date": "2026-11-03",
+        "price": 229990
+      }
+    ],
+    "xiaomi-15-ultra::Standard::Nova": [
+      {
+        "date": "2026-11-03",
+        "price": 229990
+      }
+    ],
+    "a-rir-oppo-find-x10::512GB::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 209995
+      }
+    ],
+    "samsung-galaxy-s25-::512GB::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 209994
+      }
+    ],
+    "samsung-galaxy-s25-::Standard::Nova": [
+      {
+        "date": "2026-11-03",
+        "price": 209990
+      }
+    ],
+    "google-pixel-11-pro::Standard::Nova": [
+      {
+        "date": "2026-11-03",
+        "price": 189990
+      }
+    ],
+    "google-pixel-11-pro::256GB::Emobi": [
+      {
+        "date": "2026-11-03",
+        "price": 184900
+      }
+    ],
+    "google-pixel-10-pro-xl::Standard::Nova": [
+      {
+        "date": "2026-11-03",
+        "price": 204989
+      }
+    ],
+    "apple-iphone-17::512GB::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 199995
+      }
+    ],
+    "apple-iphone-17::256GB::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 169995
+      }
+    ],
+    "apple-iphone-17::Standard::Sýn": [
+      {
+        "date": "2026-11-03",
+        "price": 169990
+      }
+    ],
+    "apple-iphone-17::128GB::Síminn": [
+      {
+        "date": "2026-11-03",
+        "price": 159990
+      }
+    ],
+    "samsung-galaxy-s25-edge::512GB::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 199994
+      }
+    ],
+    "samsung-galaxy-s25-edge::Standard::Nova": [
+      {
+        "date": "2026-11-03",
+        "price": 189990
+      }
+    ],
+    "samsung-galaxy-s25-edge::256GB::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 189994
+      }
+    ],
+    "samsung-galaxy-s26::512GB::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 199995
+      }
+    ],
+    "samsung-galaxy-s26::512GB::Emobi": [
+      {
+        "date": "2026-11-03",
+        "price": 194900
+      }
+    ],
+    "samsung-galaxy-s26::Standard::Nova": [
+      {
+        "date": "2026-11-03",
+        "price": 169990
+      }
+    ],
+    "samsung-galaxy-s26::Standard::Sýn": [
+      {
+        "date": "2026-11-03",
+        "price": 169990
+      }
+    ],
+    "samsung-galaxy-s26::256GB::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 169994
+      }
+    ],
+    "samsung-galaxy-s26::256GB::Emobi": [
+      {
+        "date": "2026-11-03",
+        "price": 169900
+      }
+    ],
+    "samsung-galaxy-s26::128GB::Emobi": [
+      {
+        "date": "2026-11-03",
+        "price": 149900
+      }
+    ],
+    "ulefone-armor-28-ultra::1TB::Mi búðin": [
+      {
+        "date": "2026-11-03",
+        "price": 169990
+      }
+    ],
+    "xiaomi-17::512GB::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 189994
+      }
+    ],
+    "xiaomi-17::512GB::Sýn": [
+      {
+        "date": "2026-11-03",
+        "price": 189990
+      }
+    ],
+    "xiaomi-17::512GB::Nova": [
+      {
+        "date": "2026-11-03",
+        "price": 189990
+      }
+    ],
+    "xiaomi-17-12-512gb-leica-black::512GB::Mi búðin": [
+      {
+        "date": "2026-11-03",
+        "price": 189990
+      }
+    ],
+    "apple-iphone-air::Standard::Nova": [
+      {
+        "date": "2026-11-03",
+        "price": 139990
+      }
+    ],
+    "apple-iphone-air::Standard::Sýn": [
+      {
+        "date": "2026-11-03",
+        "price": 139990
+      }
+    ],
+    "apple-iphone-air::512GB::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 159994
+      }
+    ],
+    "samsung-galaxy-s26-fe::256GB::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 169995
+      }
+    ],
+    "samsung-galaxy-s26-fe::256GB::Emobi": [
+      {
+        "date": "2026-11-03",
+        "price": 134900
+      }
+    ],
+    "samsung-galaxy-s26-fe::128GB::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 149995
+      }
+    ],
+    "samsung-galaxy-s26-fe::128GB::Emobi": [
+      {
+        "date": "2026-11-03",
+        "price": 114900
+      }
+    ],
+    "apple-iphone-17e::512GB::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 169995
+      }
+    ],
+    "apple-iphone-17e::256GB::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 129995
+      }
+    ],
+    "apple-iphone-17e::256GB::Sýn": [
+      {
+        "date": "2026-11-03",
+        "price": 109990
+      }
+    ],
+    "samsung-galaxy-z-flip7::512GB::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 169994
+      }
+    ],
+    "samsung-galaxy-z-flip7::256GB::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 159994
+      }
+    ],
+    "samsung-galaxy-s25::256GB::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 159995
+      }
+    ],
+    "samsung-galaxy-s25::128GB::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 149995
+      }
+    ],
+    "apple-iphone-16-plus::128GB::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 149995
+      }
+    ],
+    "xiaomi-17t-pro::512GB::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 149994
+      }
+    ],
+    "google-pixel-11::Standard::Nova": [
+      {
+        "date": "2026-11-03",
+        "price": 169990
+      }
+    ],
+    "google-pixel-11::256GB::Emobi": [
+      {
+        "date": "2026-11-03",
+        "price": 154900
+      }
+    ],
+    "google-pixel-10::Standard::Nova": [
+      {
+        "date": "2026-11-03",
+        "price": 139989
+      }
+    ],
+    "google-pixel-9::Standard::Tunglskin": [
+      {
+        "date": "2026-11-03",
+        "price": 179990
+      }
+    ],
+    "google-pixel-10a::Standard::Nova": [
+      {
+        "date": "2026-11-03",
+        "price": 89990
+      }
+    ],
+    "google-pixel-10a::128GB::Emobi": [
+      {
+        "date": "2026-11-03",
+        "price": 89900
+      }
+    ],
+    "google-pixel-10a::256GB::Emobi": [
+      {
+        "date": "2026-11-03",
+        "price": 99900
+      }
+    ],
+    "google-pixel-10-pro::Standard::Nova": [
+      {
+        "date": "2026-11-03",
+        "price": 164989
+      }
+    ],
+    "google-pixel-8-pro::Standard::Tunglskin": [
+      {
+        "date": "2026-11-03",
+        "price": 169990
+      }
+    ],
+    "google-pixel-9-pro-xl::Standard::Tunglskin": [
+      {
+        "date": "2026-11-03",
+        "price": 209990
+      }
+    ],
+    "oneplus-oneplus-12::Standard::Tunglskin": [
+      {
+        "date": "2026-11-03",
+        "price": 159990
+      }
+    ],
+    "oneplus-oneplus-nord-3::16GB::Tunglskin": [
+      {
+        "date": "2026-11-03",
+        "price": 99990
+      }
+    ],
+    "xiaomi-redmi-a7-pro::128GB::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 29995
+      }
+    ],
+    "xiaomi-smart-pet-food-2-g-lud-raf-rari::Standard::Rafha": [
+      {
+        "date": "2026-11-03",
+        "price": 19950
+      }
+    ],
+    "xiaomi-dust-mite-vacuum-cleaner-2-pro-rykmaurasuga::Standard::Mi búðin": [
+      {
+        "date": "2026-11-03",
+        "price": 21990
+      }
+    ],
+    "xiaomi-note-15::128GB::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 41994
+      }
+    ],
+    "xiaomi-smart-air-purifier-4-compact-lofhreinsir::Standard::Heimilistæki": [
+      {
+        "date": "2026-11-03",
+        "price": 17995
+      }
+    ],
+    "xiaomi-note-12-pro-200mp::Standard::Tunglskin": [
+      {
+        "date": "2026-11-03",
+        "price": 89990
+      }
+    ],
+    "xiaomi-b::256GB::Mi búðin": [
+      {
+        "date": "2026-11-03",
+        "price": 50994
+      }
+    ],
+    "xiaomi-note-11-pro-::Standard::Tunglskin": [
+      {
+        "date": "2026-11-03",
+        "price": 79990
+      }
+    ],
+    "xiaomi-12::Standard::Tunglskin": [
+      {
+        "date": "2026-11-03",
+        "price": 37990
+      }
+    ],
+    "xiaomi-15c-4-128gb-moonlight-blue::128GB::Mi búðin": [
+      {
+        "date": "2026-11-03",
+        "price": 21241
+      }
+    ],
+    "xiaomi-note-17-pro-6-256gb-purple::256GB::Mi búðin": [
+      {
+        "date": "2026-11-03",
+        "price": 74990
+      }
+    ],
+    "xiaomi-note-17-6-128gb-sky-teal::128GB::Mi búðin": [
+      {
+        "date": "2026-11-03",
+        "price": 54990
+      }
+    ],
+    "motorola-moto-edge-50-pro-6-67-::12GB::Ofar": [
+      {
+        "date": "2026-11-03",
+        "price": 59950
+      }
+    ],
+    "motorola-moto-edge-50-ultra-6-67-::16GB::Ofar": [
+      {
+        "date": "2026-11-03",
+        "price": 104950
+      }
+    ],
+    "ulefone-armor-22-pro-8-128gb::128GB::Mi búðin": [
+      {
+        "date": "2026-11-03",
+        "price": 39990
+      }
+    ],
+    "ulefone-armor-x31-pro::256GB::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 47995
+      }
+    ],
+    "ulefone::Standard::Mi búðin": [
+      {
+        "date": "2026-11-03",
+        "price": 29990
+      }
+    ],
+    "ulefone-armor-24-pro-12-256gb::256GB::Mi búðin": [
+      {
+        "date": "2026-11-03",
+        "price": 64990
+      }
+    ],
+    "ulefone-rugone-xever-8::256GB::Mi búðin": [
+      {
+        "date": "2026-11-03",
+        "price": 74990
+      }
+    ],
+    "apple-iphone-16::Standard::Sýn": [
+      {
+        "date": "2026-11-03",
+        "price": 129990
+      }
+    ],
+    "apple-iphone-16::128GB::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 129995
+      }
+    ],
+    "apple-iphone-16e::Standard::Sýn": [
+      {
+        "date": "2026-11-03",
+        "price": 109990
+      }
+    ],
+    "samsung-tire-12-5-80r15-3-galaxy-imp::Standard::Fast Parts": [
+      {
+        "date": "2026-11-03",
+        "price": 20900
+      }
+    ],
+    "samsung-galaxy-a37::Standard::Sýn": [
+      {
+        "date": "2026-11-03",
+        "price": 69990
+      }
+    ],
+    "samsung-galaxy-a37::256GB::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 89995
+      }
+    ],
+    "samsung-galaxy-a37::256GB::Emobi": [
+      {
+        "date": "2026-11-03",
+        "price": 86900
+      }
+    ],
+    "samsung-galaxy-a37::128GB::Emobi": [
+      {
+        "date": "2026-11-03",
+        "price": 66900
+      }
+    ],
+    "samsung-tire-405-70r18-galaxy-multi-tough-r::Standard::Fast Parts": [
+      {
+        "date": "2026-11-03",
+        "price": 74600
+      }
+    ],
+    "samsung-tire-420-85r34-galaxy-earth-pro-radial-853::Standard::Fast Parts": [
+      {
+        "date": "2026-11-03",
+        "price": 91000
+      }
+    ],
+    "samsung-tire-380-70r28-galaxy-earth-pro-radial-700::Standard::Fast Parts": [
+      {
+        "date": "2026-11-03",
+        "price": 63200
+      }
+    ],
+    "a-rir-oppo-a7-pro::256GB::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 76995
+      }
+    ],
+    "xiaomi-note-17-pro-6-256gb-black::256GB::Mi búðin": [
+      {
+        "date": "2026-11-03",
+        "price": 74990
+      }
+    ],
+    "xiaomi-note-17-pro-max-8-256gb-black::256GB::Mi búðin": [
+      {
+        "date": "2026-11-03",
+        "price": 89990
+      }
+    ],
+    "xiaomi-a7-pro-4-64gb-mist-blue::64GB::Mi búðin": [
+      {
+        "date": "2026-11-03",
+        "price": 26990
+      }
+    ],
+    "xiaomi-17t::256GB::Mi búðin": [
+      {
+        "date": "2026-11-03",
+        "price": 114990
+      }
+    ],
+    "samsung-galaxy-a27::128GB::ELKO": [
+      {
+        "date": "2026-11-03",
+        "price": 57995
+      }
+    ],
+    "samsung-galaxy-a27::128GB::Emobi": [
+      {
+        "date": "2026-11-03",
+        "price": 42900
+      }
+    ],
+    "samsung-galaxy-a18::128GB::Emobi": [
+      {
+        "date": "2026-11-03",
+        "price": 46900
+      }
+    ],
+    "motorola-edge-70-pro::256GB::Emobi": [
+      {
+        "date": "2026-11-03",
+        "price": 89900
+      }
+    ],
+    "samsung-galaxy-a57::256GB::Emobi": [
+      {
+        "date": "2026-11-03",
+        "price": 99900
+      }
+    ],
+    "samsung-galaxy-a57::128GB::Emobi": [
+      {
+        "date": "2026-11-03",
+        "price": 79900
+      }
+    ],
+    "samsung-galaxy-tab-active5-pro::256GB::Emobi": [
+      {
+        "date": "2026-11-03",
+        "price": 124900
+      }
+    ],
+    "motorola-signature::512GB::Emobi": [
+      {
+        "date": "2026-11-03",
+        "price": 159900
+      }
+    ],
+    "motorola-edge-70::512GB::Emobi": [
+      {
+        "date": "2026-11-03",
+        "price": 89900
+      }
+    ],
+    "motorola-edge-60-neo::256GB::Emobi": [
+      {
+        "date": "2026-11-03",
+        "price": 69900
+      }
+    ],
+    "samsung-galaxy-tab-s11::256GB::Emobi": [
+      {
+        "date": "2026-11-03",
+        "price": 189900
+      }
+    ],
+    "xiaomi-redmi-15c::256GB::Emobi": [
+      {
+        "date": "2026-11-03",
+        "price": 28900
+      }
+    ],
+    "samsung-galaxy-flip-8::256GB::Síminn": [
       {
         "date": "2026-11-03",
         "price": 229990

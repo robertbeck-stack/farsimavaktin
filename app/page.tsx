@@ -6,7 +6,26 @@ export interface StoreOffer {
   store: string;
   storeLogo?: string;
   price: number;
+  previousPrice?: number;
+  priceChange?: number;
   url: string;
+}
+
+export interface StoreDailySummary {
+  store: string;
+  totalPhones: number;
+  cheapestCount: number;
+  dropsCount: number;
+  hikesCount: number;
+  unchangedCount: number;
+  netChangeAmount: number;
+  biggestDrop?: {
+    modelName: string;
+    oldPrice: number;
+    newPrice: number;
+    dropAmount: number;
+    dropPercent: number;
+  };
 }
 
 export interface PhoneVariant {
@@ -67,6 +86,7 @@ export interface MetaData {
     cheapestStore: string;
     expensiveStore: string;
   }[];
+  storeSummaries?: StoreDailySummary[];
   allTimeLowsCount: number;
   status: string;
   sourcesScanned?: number;
@@ -89,8 +109,8 @@ export default function Home() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Active view: 'list' or 'logs'
-  const [activeView, setActiveView] = useState<'list' | 'logs'>('list');
+  // Active view: 'list' | 'stores' | 'logs'
+  const [activeView, setActiveView] = useState<'list' | 'stores' | 'logs'>('list');
 
   // Filters & State
   const [search, setSearch] = useState('');
@@ -443,7 +463,7 @@ export default function Home() {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* View Switcher: Vörulisti vs Logs */}
+            {/* View Switcher: Vörulisti vs Verslanagreining vs Logs */}
             <div className="bg-slate-950 border border-slate-800 p-0.5 rounded-lg flex items-center text-xs">
               <button
                 onClick={() => setActiveView('list')}
@@ -454,6 +474,19 @@ export default function Home() {
                 }`}
               >
                 📱 Vörur ({models.length})
+              </button>
+              <button
+                onClick={() => setActiveView('stores')}
+                className={`px-3 py-1.5 rounded-md font-semibold transition flex items-center gap-1.5 ${
+                  activeView === 'stores'
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <span>🏪 Verslanir</span>
+                {meta?.storeSummaries && meta.storeSummaries.some((s) => s.dropsCount > 0) && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                )}
               </button>
               <button
                 onClick={() => setActiveView('logs')}
@@ -783,7 +816,158 @@ export default function Home() {
           </>
         )}
 
-        {/* VIEW 2: LOGS & KEYRSLUFERILL */}
+        {/* VIEW 2: VERSLANAGREINING & VERÐBREYTINGAR PER BÚÐ */}
+        {activeView === 'stores' && (
+          <div className="space-y-6 animate-in fade-in duration-150">
+            {/* Store Analytics Header */}
+            <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 shadow-lg space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-base font-bold text-white flex items-center gap-2">
+                    <span>🏪</span> Verslanagreining og Verðbreytingar dagsins
+                  </h2>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Fylgstu með hvaða verslanir eru að lækka eða hækka verð í dag og hver býður ódýrustu símana á markaðnum.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-slate-300">
+                    {meta?.totalStores || 0} verslanir virkar
+                  </span>
+                </div>
+              </div>
+
+              {/* KPI Summary Row */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-slate-800/80 text-xs">
+                <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800">
+                  <span className="text-slate-400 block text-[11px]">Flest lægstu verð á markaðnum</span>
+                  <span className="text-sm font-bold text-emerald-400 mt-1 block">
+                    {meta?.storeSummaries?.[0]?.store || 'Nova'} ({meta?.storeSummaries?.[0]?.cheapestCount || 0} símar)
+                  </span>
+                </div>
+                <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800">
+                  <span className="text-slate-400 block text-[11px]">Heildarverðlækkanir í dag</span>
+                  <span className="text-sm font-bold text-cyan-400 mt-1 block">
+                    {meta?.storeSummaries?.reduce((acc, s) => acc + s.dropsCount, 0) || 0} símar lækkuðu
+                  </span>
+                </div>
+                <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800">
+                  <span className="text-slate-400 block text-[11px]">Heildarverðhækkanir í dag</span>
+                  <span className="text-sm font-bold text-rose-400 mt-1 block">
+                    {meta?.storeSummaries?.reduce((acc, s) => acc + s.hikesCount, 0) || 0} símar hækkuðu
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Stores Scoreboard Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {(meta?.storeSummaries || []).map((st) => {
+                const isLeader =
+                  st.cheapestCount > 0 &&
+                  st.cheapestCount === (meta?.storeSummaries?.[0]?.cheapestCount || 0);
+                return (
+                  <div
+                    key={st.store}
+                    className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 shadow-md flex flex-col justify-between space-y-4 hover:border-slate-700 transition"
+                  >
+                    <div>
+                      {/* Top Header */}
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <span className={`text-xs px-3 py-1 rounded-lg border font-bold ${getStoreBadgeColor(st.store)}`}>
+                            {st.store}
+                          </span>
+                          {isLeader && (
+                            <span className="text-[10px] font-extrabold px-2 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800">
+                              🏆 Verðleiðtogi
+                            </span>
+                          )}
+                        </div>
+
+                        <span className="text-xs text-slate-400 font-mono">
+                          {st.totalPhones} símar í boði
+                        </span>
+                      </div>
+
+                      {/* Store Metrics */}
+                      <div className="grid grid-cols-2 gap-2 text-xs mb-3">
+                        <div className="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800/60">
+                          <span className="text-[10px] text-slate-400 block">Lægst verð á markaði</span>
+                          <span className="text-xs font-bold text-emerald-400 mt-0.5 block">
+                            ★ Í {st.cheapestCount} líkönum
+                          </span>
+                        </div>
+
+                        <div className="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800/60">
+                          <span className="text-[10px] text-slate-400 block">Heildarbreyting í dag</span>
+                          <span
+                            className={`text-xs font-bold mt-0.5 block ${
+                              st.netChangeAmount < 0
+                                ? 'text-emerald-400'
+                                : st.netChangeAmount > 0
+                                ? 'text-rose-400'
+                                : 'text-slate-300'
+                            }`}
+                          >
+                            {st.netChangeAmount < 0
+                              ? `📉 -${formatPrice(Math.abs(st.netChangeAmount))}`
+                              : st.netChangeAmount > 0
+                              ? `📈 +${formatPrice(st.netChangeAmount)}`
+                              : '● Óbreytt verð'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Daily Changes Breakdown */}
+                      <div className="flex items-center justify-between text-[11px] px-2.5 py-1.5 bg-slate-950/60 rounded-lg border border-slate-800/60 text-slate-400">
+                        <span className="flex items-center gap-1 text-emerald-400 font-medium">
+                          📉 {st.dropsCount} lækkanir
+                        </span>
+                        <span className="flex items-center gap-1 text-rose-400 font-medium">
+                          📈 {st.hikesCount} hækkanir
+                        </span>
+                        <span className="text-slate-500">
+                          {st.unchangedCount} óbreytt
+                        </span>
+                      </div>
+
+                      {/* Biggest Drop at Store */}
+                      {st.biggestDrop && (
+                        <div className="mt-3 p-2.5 rounded-xl bg-emerald-950/40 border border-emerald-800/40 text-xs">
+                          <span className="text-[10px] text-emerald-300 font-bold block mb-0.5">
+                            Mesta lækkun dagsins hjá {st.store}:
+                          </span>
+                          <div className="flex items-baseline justify-between text-slate-200">
+                            <span className="font-semibold line-clamp-1 mr-2">{st.biggestDrop.modelName}</span>
+                            <span className="text-emerald-400 font-extrabold shrink-0">
+                              -{formatPrice(st.biggestDrop.dropAmount)} (-{st.biggestDrop.dropPercent}%)
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Action Button */}
+                    <button
+                      onClick={() => {
+                        setSelectedStore(st.store);
+                        setActiveView('list');
+                      }}
+                      className="w-full text-xs font-semibold py-2 rounded-xl bg-slate-800 hover:bg-blue-600 text-slate-200 hover:text-white border border-slate-700 hover:border-blue-500 transition flex items-center justify-center gap-1.5"
+                    >
+                      <span>Skoða alla síma hjá {st.store} ({st.totalPhones})</span>
+                      <span>→</span>
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* VIEW 3: LOGS & KEYRSLUFERILL */}
         {activeView === 'logs' && (
           <div className="space-y-6 animate-in fade-in duration-150">
             {/* Status Card */}
@@ -1063,7 +1247,19 @@ export default function Home() {
                                 />
                               )}
                               <div>
-                                <span className="text-xs font-bold text-white block">{offer.store}</span>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-xs font-bold text-white block">{offer.store}</span>
+                                  {typeof offer.priceChange === 'number' && offer.priceChange < 0 && (
+                                    <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">
+                                      📉 -{formatPrice(Math.abs(offer.priceChange))}
+                                    </span>
+                                  )}
+                                  {typeof offer.priceChange === 'number' && offer.priceChange > 0 && (
+                                    <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-rose-950 text-rose-300 border border-rose-800">
+                                      📈 +{formatPrice(offer.priceChange)}
+                                    </span>
+                                  )}
+                                </div>
                                 {isCheapest ? (
                                   <span className="text-[10px] font-bold text-emerald-400">
                                     ★ Lægsta boðna verð
