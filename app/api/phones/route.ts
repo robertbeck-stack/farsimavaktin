@@ -166,16 +166,30 @@ export async function GET() {
 
     const queryUrls: string[] = [];
 
-    // 1. Aggregator pages across category 28
-    for (let p = 1; p <= 10; p++) {
+    // 1. Primary phone category on Já (Category 50: Farsímar) & Category 28
+    for (let p = 1; p <= 6; p++) {
+      queryUrls.push(`https://ja.is/vorur/results/?category=50&sort=-price&page=${p}`);
+    }
+    for (let p = 1; p <= 6; p++) {
       queryUrls.push(`https://ja.is/vorur/results/?category=28&sort=-price&page=${p}`);
     }
 
-    // 2. Specific store queries for Nova, TL, Tölvutek, Computer.is, Tölvutækni, etc.
+    // 2. Direct brand searches to ensure complete coverage of all models (especially Google Pixel, OnePlus, Xiaomi)
+    queryUrls.push('https://ja.is/vorur/results/?q=Google+Pixel&page=1');
+    queryUrls.push('https://ja.is/vorur/results/?q=Google+Pixel&page=2');
+    queryUrls.push('https://ja.is/vorur/results/?q=Pixel&page=1');
+    queryUrls.push('https://ja.is/vorur/results/?q=OnePlus&page=1');
+    queryUrls.push('https://ja.is/vorur/results/?q=Xiaomi&page=1');
+    queryUrls.push('https://ja.is/vorur/results/?q=Redmi&page=1');
+    queryUrls.push('https://ja.is/vorur/results/?q=Motorola&page=1');
+    queryUrls.push('https://ja.is/vorur/results/?q=Ulefone&page=1');
+
+    // 3. Store-specific queries for Nova, TL, Tölvutek, Computer.is, Tölvutækni, Sýn, ELKO
     const targetStoreIds = ['60', '79', '80', '15', '81', '2133', '342', '20', '1142'];
     for (const cid of targetStoreIds) {
       queryUrls.push(`https://ja.is/vorur/results/?company=${cid}&q=iPhone`);
       queryUrls.push(`https://ja.is/vorur/results/?company=${cid}&q=Galaxy`);
+      queryUrls.push(`https://ja.is/vorur/results/?company=${cid}&q=Pixel`);
       queryUrls.push(`https://ja.is/vorur/results/?company=${cid}&q=${encodeURIComponent('snjallsími')}`);
     }
 
@@ -215,7 +229,8 @@ export async function GET() {
 
     const modelMap = new Map<string, PhoneModelGroup>();
 
-    const strictAccessoryRegex = /(?:hulstur|case|cover|skjáfilma|filmur|filma|gler|hleðslutæki|hleðsl|snúra|snura|standur|adapter|armband|strap|húfa|gleraugu|reim|veski|wallet|penni|pen|sleeve|festing|myndavélavörn|screen\s*protector|lens\s*protector|powerbank|veggspjald|framköllun|ring|tag)/i;
+    const strictAccessoryRegex =
+      /(?:hulstur|case|cover|skjávörn|skjavorn|skjáfilma|filmur|filma|gler|öryggisgler|oryggisgler|hleðslutæki|hledslutæki|hleðsl|snúra|snura|standur|adapter|armband|strap|húfa|gleraugu|reim|veski|wallet|penni|pen|sleeve|festing|myndavélavörn|screen\s*protector|lens\s*protector|powerbank|veggspjald|framköllun|ring|tag|watch|buds|spigen|panzerglass|tech21|avionaut|kjóll|kjoll|kjÃ³ll|peysa|buxur|fatnaður|fatnadur|talstöð|talstod|barnapía|barnapia|babyalarm|spjaldtölva|spjaldtolva|hlíf|hlif|headset|heyrnartól|heyrnartol|hátalari|hatalari|snjallúr|snjallur|smartwatch|airpods|smartvision|gítar|gitar)/i;
 
     const processItem = (
       title: string,
