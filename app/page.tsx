@@ -44,7 +44,18 @@ export interface PricePoint {
 export interface PhoneModelGroup {
   id: string;
   name: string;
-  brand: 'Apple' | 'Samsung' | 'Xiaomi' | 'Google' | 'OnePlus' | 'Ulefone' | 'Motorola' | 'Aðrir';
+  brand:
+    | 'Apple'
+    | 'Samsung'
+    | 'Xiaomi'
+    | 'Google'
+    | 'OPPO'
+    | 'Nothing'
+    | 'OnePlus'
+    | 'Ulefone'
+    | 'Motorola'
+    | 'Nokia'
+    | 'Aðrir';
   image?: string;
   lowestPrice: number;
   highestPrice: number;
@@ -143,7 +154,8 @@ export default function Home() {
       // Synchronize client-side persistent catalog and price history ledger
       let syncedModels: PhoneModelGroup[] = data.models || [];
       try {
-        const savedCatalogRaw = localStorage.getItem('farsimar_catalog_backup_v1');
+        localStorage.removeItem('farsimar_catalog_backup_v1');
+        const savedCatalogRaw = localStorage.getItem('farsimar_catalog_backup_v2');
         const savedCatalog: Record<string, PhoneModelGroup> = savedCatalogRaw
           ? JSON.parse(savedCatalogRaw)
           : {};
@@ -160,8 +172,10 @@ export default function Home() {
           modelMapAll.set(m.id, m);
         }
 
-        const consolidated = Array.from(modelMapAll.values());
-        localStorage.setItem('farsimar_catalog_backup_v1', JSON.stringify(savedCatalog));
+        const consolidated = Array.from(modelMapAll.values()).sort((a, b) =>
+          a.name.localeCompare(b.name, 'is')
+        );
+        localStorage.setItem('farsimar_catalog_backup_v2', JSON.stringify(savedCatalog));
 
         const localHistoryRaw = localStorage.getItem('farsimar_price_history_v1');
         const localHistory: Record<string, PricePoint[]> = localHistoryRaw ? JSON.parse(localHistoryRaw) : {};
@@ -680,23 +694,41 @@ export default function Home() {
                   { id: 'Samsung', label: 'Samsung Galaxy', icon: '🌌' },
                   { id: 'Xiaomi', label: 'Xiaomi / Redmi', icon: '⚡' },
                   { id: 'Google', label: 'Google Pixel', icon: '🔍' },
+                  { id: 'OPPO', label: 'OPPO', icon: '🟢' },
+                  { id: 'Nothing', label: 'Nothing Phone', icon: '⚪' },
                   { id: 'OnePlus', label: 'OnePlus', icon: '🔴' },
                   { id: 'Motorola', label: 'Motorola', icon: 'Ⓜ️' },
+                  { id: 'Nokia', label: 'Nokia / HMD', icon: '📶' },
                   { id: 'Ulefone', label: 'Ulefone Vinnusímar', icon: '🛡️' },
-                ].map((b) => (
-                  <button
-                    key={b.id}
-                    onClick={() => setSelectedBrand(b.id)}
-                    className={`shrink-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border font-semibold transition ${
-                      selectedBrand === b.id
-                        ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
-                        : 'bg-slate-950 text-slate-300 border-slate-800 hover:border-slate-700'
-                    }`}
-                  >
-                    <span>{b.icon}</span>
-                    <span>{b.label}</span>
-                  </button>
-                ))}
+                  { id: 'Aðrir', label: 'Aðrir', icon: '✨' },
+                ].map((b) => {
+                  const count =
+                    b.id === 'Allt' ? models.length : models.filter((m) => m.brand === b.id).length;
+                  if (b.id !== 'Allt' && count === 0) return null;
+                  return (
+                    <button
+                      key={b.id}
+                      onClick={() => setSelectedBrand(b.id)}
+                      className={`shrink-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border font-semibold transition ${
+                        selectedBrand === b.id
+                          ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
+                          : 'bg-slate-950 text-slate-300 border-slate-800 hover:border-slate-700'
+                      }`}
+                    >
+                      <span>{b.icon}</span>
+                      <span>{b.label}</span>
+                      <span
+                        className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+                          selectedBrand === b.id
+                            ? 'bg-blue-700 text-white'
+                            : 'bg-slate-900 text-slate-400'
+                        }`}
+                      >
+                        {count}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
 
               {/* Search, Store, Sort Row */}
@@ -1566,7 +1598,9 @@ export default function Home() {
                       <span className="text-xl sm:text-2xl font-bold font-mono text-cyan-400">
                         {meta?.durationMs || 0} ms
                       </span>
-                      <span className="text-[10px] text-slate-500 block mt-1">14 runur (batches) af 4</span>
+                      <span className="text-[10px] text-slate-500 block mt-1">
+                        {meta?.sourcesScanned || 43} gagnastraumar skannaðir
+                      </span>
                     </div>
 
                     <div className="bg-slate-900/90 border border-slate-800/80 rounded-xl p-3.5">
@@ -1656,7 +1690,7 @@ export default function Home() {
                         <span className="text-[10px] text-slate-400">{models.length} líkön samtals</span>
                       </div>
                       <div className="space-y-2">
-                        {summaryStats.sortedBrands.slice(0, 5).map(([brand, count]) => {
+                        {summaryStats.sortedBrands.map(([brand, count]) => {
                           const pct = models.length > 0 ? Math.round((count / models.length) * 100) : 0;
                           return (
                             <div key={brand} className="space-y-1">
@@ -1689,7 +1723,7 @@ export default function Home() {
                         <span className="text-[10px] text-slate-400">Verðbreytingar og ódýrustu boð</span>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-                        {summaryStats.storeSummaries.slice(0, 6).map((st) => (
+                        {summaryStats.storeSummaries.map((st) => (
                           <div
                             key={st.store}
                             className="bg-slate-950/70 border border-slate-800/60 rounded-lg p-2.5 text-xs space-y-1"
