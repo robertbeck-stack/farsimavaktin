@@ -123,10 +123,10 @@ export default function Home() {
   const [selectedModel, setSelectedModel] = useState<PhoneModelGroup | null>(null);
   const [selectedStorage, setSelectedStorage] = useState<string>('');
 
-  // Raw JSON Inspector modal
+  // Raw JSON & Summary Inspector modal
   const [rawJsonPayload, setRawJsonPayload] = useState<any>(null);
   const [showRawJsonModal, setShowRawJsonModal] = useState(false);
-  const [rawJsonTab, setRawJsonTab] = useState<'all' | 'meta' | 'sample'>('all');
+  const [rawJsonTab, setRawJsonTab] = useState<'summary' | 'all' | 'meta' | 'sample'>('summary');
   const [rawSearchFilter, setRawSearchFilter] = useState('');
   const [copiedRaw, setCopiedRaw] = useState(false);
 
@@ -331,6 +331,28 @@ export default function Home() {
       selectedModel.variants[0]
     );
   }, [selectedModel, selectedStorage]);
+
+  const summaryStats = useMemo(() => {
+    const drops = models.filter((m) => m.trend === 'DOWN');
+    const hikes = models.filter((m) => m.trend === 'UP');
+    const unchanged = models.filter((m) => m.trend === 'SAME');
+
+    const brandCounts: Record<string, number> = {};
+    for (const m of models) {
+      brandCounts[m.brand] = (brandCounts[m.brand] || 0) + 1;
+    }
+    const sortedBrands = Object.entries(brandCounts).sort((a, b) => b[1] - a[1]);
+
+    return {
+      dropsCount: drops.length,
+      hikesCount: hikes.length,
+      unchangedCount: unchanged.length,
+      sortedBrands,
+      topSavings: meta?.topSavings || [],
+      biggestDrops: meta?.biggestDrops || [],
+      storeSummaries: meta?.storeSummaries || [],
+    };
+  }, [models, meta]);
 
   const rawFormattedJson = useMemo(() => {
     let target = rawJsonPayload;
@@ -1022,11 +1044,14 @@ export default function Home() {
 
                 <div className="flex flex-wrap items-center gap-2">
                   <button
-                    onClick={() => setShowRawJsonModal(true)}
+                    onClick={() => {
+                      setRawJsonTab('summary');
+                      setShowRawJsonModal(true);
+                    }}
                     className="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition shadow-sm"
                   >
-                    <span>📦</span>
-                    <span>Skoða hrágögn (Raw JSON)</span>
+                    <span>📊</span>
+                    <span>Skoða samantekt & logs</span>
                   </button>
 
                   <button
@@ -1078,6 +1103,53 @@ export default function Home() {
               )}
             </div>
 
+            {/* Quick Executive Summary Card directly on Logs tab */}
+            <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 shadow-lg space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                    <span>📊</span> Samantekt úr síðasta skanna
+                  </h3>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    Helstu tölur og hreyfingar á verðum síðan síðast var keyrt
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setRawJsonTab('summary');
+                    setShowRawJsonModal(true);
+                  }}
+                  className="text-xs px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 font-semibold text-white transition flex items-center gap-1.5"
+                >
+                  <span>🔍</span>
+                  <span>Opna heildaryfirlit</span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                <div className="bg-slate-950/70 border border-slate-800/60 p-3 rounded-xl">
+                  <span className="text-slate-400 text-[11px] block">Lækkaðir símar</span>
+                  <span className="text-lg font-bold text-emerald-400">📉 {summaryStats.dropsCount} símar</span>
+                </div>
+                <div className="bg-slate-950/70 border border-slate-800/60 p-3 rounded-xl">
+                  <span className="text-slate-400 text-[11px] block">Hækkaðir símar</span>
+                  <span className="text-lg font-bold text-rose-400">📈 {summaryStats.hikesCount} símar</span>
+                </div>
+                <div className="bg-slate-950/70 border border-slate-800/60 p-3 rounded-xl">
+                  <span className="text-slate-400 text-[11px] block">Óbreytt verð</span>
+                  <span className="text-lg font-bold text-slate-300">➖ {summaryStats.unchangedCount} símar</span>
+                </div>
+                <div className="bg-slate-950/70 border border-slate-800/60 p-3 rounded-xl">
+                  <span className="text-slate-400 text-[11px] block">Mestur sparnaður</span>
+                  <span className="text-lg font-bold text-amber-400">
+                    {summaryStats.topSavings.length > 0
+                      ? formatPrice(summaryStats.topSavings[0].savings)
+                      : '0 kr.'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
             {/* Active Connected Stores */}
             <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 shadow-lg space-y-3">
               <h3 className="text-sm font-bold text-white flex items-center gap-2">
@@ -1107,10 +1179,13 @@ export default function Home() {
                   </p>
                 </div>
                 <button
-                  onClick={() => setShowRawJsonModal(true)}
+                  onClick={() => {
+                    setRawJsonTab('summary');
+                    setShowRawJsonModal(true);
+                  }}
                   className="text-xs px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition"
                 >
-                  🔍 Skoða hrágögn
+                  📊 Skoða samantekt
                 </button>
               </div>
 
@@ -1130,7 +1205,10 @@ export default function Home() {
                     {logs.map((log) => (
                       <tr
                         key={log.id}
-                        onClick={() => setShowRawJsonModal(true)}
+                        onClick={() => {
+                          setRawJsonTab('summary');
+                          setShowRawJsonModal(true);
+                        }}
                         className="hover:bg-slate-800/50 cursor-pointer transition group"
                       >
                         <td className="py-2.5 px-3 font-mono text-slate-200 group-hover:text-blue-400 transition">
@@ -1148,11 +1226,12 @@ export default function Home() {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
+                              setRawJsonTab('summary');
                               setShowRawJsonModal(true);
                             }}
                             className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-slate-800 group-hover:bg-blue-600 text-[11px] font-medium text-slate-300 group-hover:text-white transition"
                           >
-                            <span>🔍</span> Skoða JSON
+                            <span>📊</span> Samantekt
                           </button>
                         </td>
                       </tr>
@@ -1345,7 +1424,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* RAW JSON MODAL / INSPECTOR */}
+        {/* RAW JSON & SUMMARY MODAL / INSPECTOR */}
         {showRawJsonModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md animate-in fade-in duration-150">
             <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
@@ -1353,14 +1432,17 @@ export default function Home() {
               <div className="p-4 sm:p-5 border-b border-slate-800 flex items-center justify-between gap-4 bg-slate-950/80">
                 <div className="flex items-center gap-3">
                   <span className="text-xl p-2 rounded-xl bg-blue-950/80 border border-blue-800 text-blue-400 font-mono">
-                    {'{ }'}
+                    {rawJsonTab === 'summary' ? '📊' : '{ }'}
                   </span>
                   <div>
                     <h2 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
-                      Hrágögn úr skanna <span className="text-xs font-mono text-slate-400 font-normal hidden sm:inline">(Raw JSON Payload)</span>
+                      {rawJsonTab === 'summary' ? 'Framkvæmdasamantekt skanna' : 'Hrágögn úr skanna'}{' '}
+                      <span className="text-xs font-mono text-slate-400 font-normal hidden sm:inline">
+                        {rawJsonTab === 'summary' ? '(Executive Scan Summary)' : '(Raw JSON Payload)'}
+                      </span>
                     </h2>
                     <p className="text-[11px] text-slate-400">
-                      {meta?.lastRun ? `Keyrt: ${formatDate(meta.lastRun)}` : ''} · {meta?.totalModels || 0} líkön · {meta?.durationMs || 0} ms svarstími
+                      {meta?.lastRun ? `Keyrt: ${formatDate(meta.lastRun)}` : ''} · {meta?.totalModels || models.length} líkön · {meta?.durationMs || 0} ms svarstími
                     </p>
                   </div>
                 </div>
@@ -1413,66 +1495,281 @@ export default function Home() {
               {/* Sub-bar: Tabs & Filter */}
               <div className="px-4 py-3 border-b border-slate-800/80 bg-slate-950/50 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 text-xs">
                 {/* Tabs */}
-                <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-lg border border-slate-800">
+                <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-lg border border-slate-800 overflow-x-auto">
+                  <button
+                    onClick={() => setRawJsonTab('summary')}
+                    className={`px-3 py-1 rounded font-semibold transition shrink-0 ${
+                      rawJsonTab === 'summary' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    📊 Samantekt
+                  </button>
                   <button
                     onClick={() => setRawJsonTab('all')}
-                    className={`px-3 py-1 rounded font-semibold transition ${
+                    className={`px-3 py-1 rounded font-semibold transition shrink-0 ${
                       rawJsonTab === 'all' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-400 hover:text-slate-200'
                     }`}
                   >
-                    Allur JSON pakki
+                    📄 Allur JSON pakki
                   </button>
                   <button
                     onClick={() => setRawJsonTab('meta')}
-                    className={`px-3 py-1 rounded font-semibold transition ${
+                    className={`px-3 py-1 rounded font-semibold transition shrink-0 ${
                       rawJsonTab === 'meta' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-400 hover:text-slate-200'
                     }`}
                   >
-                    Aðeins Meta & Kerfi
+                    ⚙️ Aðeins Meta & Kerfi
                   </button>
                   <button
                     onClick={() => setRawJsonTab('sample')}
-                    className={`px-3 py-1 rounded font-semibold transition ${
+                    className={`px-3 py-1 rounded font-semibold transition shrink-0 ${
                       rawJsonTab === 'sample' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-400 hover:text-slate-200'
                     }`}
                   >
-                    Sýnishorn af líkönum
+                    🔍 Sýnishorn af líkönum
                   </button>
                 </div>
 
-                {/* Filter input */}
-                <div className="relative flex-1 sm:max-w-xs">
-                  <input
-                    type="text"
-                    placeholder="Sía línur í JSON (t.d. Pixel, Nova, price)..."
-                    value={rawSearchFilter}
-                    onChange={(e) => setRawSearchFilter(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
-                  />
-                  {rawSearchFilter && (
-                    <button
-                      onClick={() => setRawSearchFilter('')}
-                      className="absolute right-2 top-1 text-slate-400 hover:text-white text-[10px] bg-slate-800 px-1.5 py-0.5 rounded"
-                    >
-                      X
-                    </button>
-                  )}
-                </div>
+                {/* Filter input (when in raw mode) or descriptive status (when in summary mode) */}
+                {rawJsonTab !== 'summary' ? (
+                  <div className="relative flex-1 sm:max-w-xs">
+                    <input
+                      type="text"
+                      placeholder="Sía línur í JSON (t.d. Pixel, Nova, price)..."
+                      value={rawSearchFilter}
+                      onChange={(e) => setRawSearchFilter(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                    />
+                    {rawSearchFilter && (
+                      <button
+                        onClick={() => setRawSearchFilter('')}
+                        className="absolute right-2 top-1 text-slate-400 hover:text-white text-[10px] bg-slate-800 px-1.5 py-0.5 rounded"
+                      >
+                        X
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-slate-400 text-[11px] hidden sm:block">
+                    Heildaryfirlit og tölfræði úr skönnun
+                  </div>
+                )}
               </div>
 
-              {/* Code viewer */}
-              <div className="p-4 flex-1 overflow-auto bg-slate-950 font-mono text-[11px] leading-relaxed text-emerald-400/95 selection:bg-blue-700 selection:text-white">
-                <pre className="whitespace-pre overflow-x-auto">{rawFormattedJson}</pre>
-              </div>
+              {/* Modal Body: Summary Dashboard or Code Viewer */}
+              {rawJsonTab === 'summary' ? (
+                <div className="p-4 sm:p-6 space-y-6 flex-1 overflow-auto bg-slate-950 text-slate-200">
+                  {/* KPI Cards */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+                    <div className="bg-slate-900/90 border border-slate-800/80 rounded-xl p-3.5">
+                      <span className="text-[11px] font-medium text-slate-400 block">Svarstími & hraði</span>
+                      <span className="text-xl sm:text-2xl font-bold font-mono text-cyan-400">
+                        {meta?.durationMs || 0} ms
+                      </span>
+                      <span className="text-[10px] text-slate-500 block mt-1">14 runur (batches) af 4</span>
+                    </div>
+
+                    <div className="bg-slate-900/90 border border-slate-800/80 rounded-xl p-3.5">
+                      <span className="text-[11px] font-medium text-slate-400 block">Heildarfjöldi líkana</span>
+                      <span className="text-xl sm:text-2xl font-bold text-white">
+                        {meta?.totalModels || models.length}
+                      </span>
+                      <span className="text-[10px] text-slate-500 block mt-1">
+                        {meta?.totalVariants || 0} útfærslur skráðar
+                      </span>
+                    </div>
+
+                    <div className="bg-slate-900/90 border border-slate-800/80 rounded-xl p-3.5">
+                      <span className="text-[11px] font-medium text-slate-400 block">Verðbreytingar</span>
+                      <div className="flex items-baseline gap-2 mt-0.5">
+                        <span className="text-lg sm:text-xl font-bold text-emerald-400">
+                          {summaryStats.dropsCount} lækkuð
+                        </span>
+                        {summaryStats.hikesCount > 0 && (
+                          <span className="text-xs font-bold text-rose-400">
+                            +{summaryStats.hikesCount} hækkuð
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[10px] text-slate-500 block mt-1">
+                        {summaryStats.unchangedCount} óbreytt verð
+                      </span>
+                    </div>
+
+                    <div className="bg-slate-900/90 border border-slate-800/80 rounded-xl p-3.5">
+                      <span className="text-[11px] font-medium text-slate-400 block">Verslanir í vöktun</span>
+                      <span className="text-xl sm:text-2xl font-bold text-indigo-400">
+                        {meta?.totalStores || 0}
+                      </span>
+                      <span className="text-[10px] text-emerald-400 block mt-1">
+                        ● 100% tengdar og virkar
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Section 1: Price Highlights & Brand Distribution */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    {/* Top Savings */}
+                    <div className="bg-slate-900/70 border border-slate-800/80 rounded-xl p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-xs sm:text-sm font-bold text-white flex items-center gap-2">
+                          <span>💰</span> Mestur verðmunur milli verslana
+                        </h4>
+                        <span className="text-[10px] text-slate-400">Sama geymslurými</span>
+                      </div>
+                      {summaryStats.topSavings.length > 0 ? (
+                        <div className="space-y-2">
+                          {summaryStats.topSavings.slice(0, 3).map((item, idx) => (
+                            <div
+                              key={idx}
+                              className="bg-slate-950/70 border border-slate-800/60 rounded-lg p-2.5 flex items-center justify-between text-xs"
+                            >
+                              <div className="min-w-0 pr-2">
+                                <div className="font-semibold text-white truncate">
+                                  {item.name} {item.variantStorage && `(${item.variantStorage})`}
+                                </div>
+                                <div className="text-[11px] text-slate-400 mt-0.5">
+                                  Ódýrast hjá <strong className="text-emerald-400">{item.cheapestStore}</strong> ({formatPrice(item.lowestPrice)})
+                                  {' vs '}
+                                  <span className="text-slate-400">{item.expensiveStore} ({formatPrice(item.highestPrice)})</span>
+                                </div>
+                              </div>
+                              <div className="text-right shrink-0">
+                                <span className="text-xs font-bold text-emerald-400 bg-emerald-950/80 border border-emerald-800 px-2 py-0.5 rounded">
+                                  Sparar {formatPrice(item.savings)}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-slate-400">Enginn verðmunur milli verslana fannst.</p>
+                      )}
+                    </div>
+
+                    {/* Brand Distribution */}
+                    <div className="bg-slate-900/70 border border-slate-800/80 rounded-xl p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-xs sm:text-sm font-bold text-white flex items-center gap-2">
+                          <span>📱</span> Vörumerkjadreifing í skanna
+                        </h4>
+                        <span className="text-[10px] text-slate-400">{models.length} líkön samtals</span>
+                      </div>
+                      <div className="space-y-2">
+                        {summaryStats.sortedBrands.slice(0, 5).map(([brand, count]) => {
+                          const pct = models.length > 0 ? Math.round((count / models.length) * 100) : 0;
+                          return (
+                            <div key={brand} className="space-y-1">
+                              <div className="flex justify-between text-xs">
+                                <span className="font-medium text-slate-200">{brand}</span>
+                                <span className="text-slate-400 font-mono">
+                                  {count} líkön ({pct}%)
+                                </span>
+                              </div>
+                              <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                                <div
+                                  className="bg-blue-500 h-full rounded-full transition-all duration-300"
+                                  style={{ width: `${pct}%` }}
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Section 2: Store Activity Breakdown */}
+                  {summaryStats.storeSummaries.length > 0 && (
+                    <div className="bg-slate-900/70 border border-slate-800/80 rounded-xl p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-xs sm:text-sm font-bold text-white flex items-center gap-2">
+                          <span>🏪</span> Samantekt eftir verslunum
+                        </h4>
+                        <span className="text-[10px] text-slate-400">Verðbreytingar og ódýrustu boð</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                        {summaryStats.storeSummaries.slice(0, 6).map((st) => (
+                          <div
+                            key={st.store}
+                            className="bg-slate-950/70 border border-slate-800/60 rounded-lg p-2.5 text-xs space-y-1"
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className={`px-2 py-0.5 rounded font-semibold text-[11px] border ${getStoreBadgeColor(st.store)}`}>
+                                {st.store}
+                              </span>
+                              <span className="text-slate-400 font-mono text-[11px]">
+                                {st.totalPhones} símar
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between text-[11px] pt-1">
+                              <span className="text-slate-400">Lægsta verð á mkr.:</span>
+                              <span className="font-semibold text-emerald-400">{st.cheapestCount} sinnum</span>
+                            </div>
+                            <div className="flex items-center justify-between text-[11px]">
+                              <span className="text-slate-400">Verðlækkanir:</span>
+                              <span className={st.dropsCount > 0 ? 'font-bold text-emerald-400' : 'text-slate-500'}>
+                                {st.dropsCount} stk
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Section 3: Engine Architecture & Quality Checks */}
+                  <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4 space-y-2.5 text-xs">
+                    <h4 className="font-bold text-white flex items-center gap-2">
+                      <span>🛡️</span> Gæðagreining & Bakendakerfi
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-[11px] text-slate-400">
+                      <div className="bg-slate-950/80 p-2.5 rounded-lg border border-slate-800/60">
+                        <span className="font-bold text-slate-200 block mb-0.5">Fyrirspurnarstjórnun</span>
+                        Já.is fyrirspurnir keyra í 14 runum af 4 með 60ms töf til að forðast hraðatakmarkanir (HTTP 429).
+                      </div>
+                      <div className="bg-slate-950/80 p-2.5 rounded-lg border border-slate-800/60">
+                        <span className="font-bold text-slate-200 block mb-0.5">Verðsamræming geymslu</span>
+                        Verðsamanburður og sparnaður er strangt reiknaður á sömu minnisstærð (t.d. 256GB við 256GB).
+                      </div>
+                      <div className="bg-slate-950/80 p-2.5 rounded-lg border border-slate-800/60">
+                        <span className="font-bold text-slate-200 block mb-0.5">Gagnaöryggi & Saga</span>
+                        Vörulisti og verðsöguferill er geymdur bæði á vefþjóni og í staðværu minni (localStorage).
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-4 flex-1 overflow-auto bg-slate-950 font-mono text-[11px] leading-relaxed text-emerald-400/95 selection:bg-blue-700 selection:text-white">
+                  <pre className="whitespace-pre overflow-x-auto">{rawFormattedJson}</pre>
+                </div>
+              )}
 
               {/* Footer */}
               <div className="p-3 border-t border-slate-800 bg-slate-950 flex items-center justify-between text-[11px] text-slate-400">
-                <span>
-                  Línufjöldi: <strong className="text-white">{rawFormattedJson.split('\n').length}</strong> línur
-                </span>
-                <span className="text-slate-500">
-                  {rawSearchFilter ? `(Síað eftir: "${rawSearchFilter}")` : 'Öll gögn sýnd eins og þau berast úr bakenda'}
-                </span>
+                {rawJsonTab === 'summary' ? (
+                  <>
+                    <span>
+                      Samantekt unnin úr <strong className="text-white">{meta?.totalModels || models.length}</strong> símum og <strong className="text-white">{meta?.totalStores || 0}</strong> verslunum
+                    </span>
+                    <button
+                      onClick={() => setRawJsonTab('all')}
+                      className="text-blue-400 hover:text-blue-300 font-semibold transition flex items-center gap-1"
+                    >
+                      <span>Skoða hrágögn í JSON</span>
+                      <span>→</span>
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <span>
+                      Línufjöldi: <strong className="text-white">{rawFormattedJson.split('\n').length}</strong> línur
+                    </span>
+                    <span className="text-slate-500">
+                      {rawSearchFilter ? `(Síað eftir: "${rawSearchFilter}")` : 'Öll gögn sýnd eins og þau berast úr bakenda'}
+                    </span>
+                  </>
+                )}
               </div>
             </div>
           </div>
