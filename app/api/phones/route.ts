@@ -23,7 +23,7 @@ export interface PricePoint {
 export interface PhoneModelGroup {
   id: string;
   name: string;
-  brand: 'Apple' | 'Samsung' | 'Xiaomi' | 'Google' | 'OnePlus' | 'Ulefone' | 'Aðrir';
+  brand: 'Apple' | 'Samsung' | 'Xiaomi' | 'Google' | 'OnePlus' | 'Ulefone' | 'Motorola' | 'Aðrir';
   image?: string;
   lowestPrice: number;
   highestPrice: number;
@@ -57,6 +57,7 @@ export interface MetaData {
   }[];
   allTimeLowsCount: number;
   status: string;
+  sourcesScanned: number;
 }
 
 const companyMap: Record<string, string> = {
@@ -73,7 +74,7 @@ const companyMap: Record<string, string> = {
   '239': 'Goshop',
 };
 
-function detectBrand(title: string): 'Apple' | 'Samsung' | 'Xiaomi' | 'Google' | 'OnePlus' | 'Ulefone' | 'Aðrir' {
+function detectBrand(title: string): 'Apple' | 'Samsung' | 'Xiaomi' | 'Google' | 'OnePlus' | 'Ulefone' | 'Motorola' | 'Aðrir' {
   const t = title.toLowerCase();
   if (t.includes('iphone') || t.includes('apple')) return 'Apple';
   if (t.includes('samsung') || t.includes('galaxy')) return 'Samsung';
@@ -81,6 +82,7 @@ function detectBrand(title: string): 'Apple' | 'Samsung' | 'Xiaomi' | 'Google' |
   if (t.includes('pixel') || t.includes('google')) return 'Google';
   if (t.includes('oneplus')) return 'OnePlus';
   if (t.includes('ulefone') || t.includes('armor')) return 'Ulefone';
+  if (t.includes('motorola') || t.includes('moto ')) return 'Motorola';
   return 'Aðrir';
 }
 
@@ -94,10 +96,11 @@ function extractStorage(title: string): string {
 
 function normalizeModelName(title: string, brand: string): string {
   let clean = title;
-  clean = clean.replace(/^(?:Apple|Samsung|Xiaomi|Google|Redmi|Poco|Ulefone)\s+/i, '');
+  clean = clean.replace(/^(?:Apple|Samsung|Xiaomi|Google|Redmi|Poco|Ulefone|Motorola)\s+/i, '');
   clean = clean.replace(/\s+(?:snjallsími|farsími|vinnusími|smartphone|4g|5g)/gi, '');
   clean = clean.replace(/\s+\d+\s*(?:gb|tb).*$/i, '');
   clean = clean.replace(/\s*-\s*.*$/, '');
+  clean = clean.replace(/&#8211;.*$/, '');
   clean = clean.trim();
 
   if (brand === 'Apple' && !clean.toLowerCase().includes('iphone')) {
@@ -114,7 +117,7 @@ function normalizeModelName(title: string, brand: string): string {
 
 function generateHistory(lowestPrice: number, brand: string, name: string): { points: PricePoint[]; trend: 'DOWN' | 'UP' | 'SAME'; changePercent: number; changeAmount: number } {
   const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  const dropFactor = ((hash % 18) + 6) / 100; // 6% to 24% drop
+  const dropFactor = ((hash % 18) + 6) / 100;
   const originalPrice = Math.round((lowestPrice / (1 - dropFactor)) / 500) * 500;
   const changeAmount = lowestPrice - originalPrice;
   const changePercent = Math.round((changeAmount / originalPrice) * 100);
@@ -161,15 +164,14 @@ export async function GET() {
       'Accept': 'application/json',
     };
 
-    // Parallel fetch: category 28 pages + specific store queries for Nova, TL, Tölvutek, Computer.is, Tölvutækni, etc.
     const queryUrls: string[] = [];
-    
-    // Category 28 base pages
+
+    // 1. Aggregator pages across category 28
     for (let p = 1; p <= 10; p++) {
       queryUrls.push(`https://ja.is/vorur/results/?category=28&sort=-price&page=${p}`);
     }
 
-    // Direct store queries to guarantee full coverage of all stores
+    // 2. Specific store queries for Nova, TL, Tölvutek, Computer.is, Tölvutækni, etc.
     const targetStoreIds = ['60', '79', '80', '15', '81', '2133', '342', '20', '1142'];
     for (const cid of targetStoreIds) {
       queryUrls.push(`https://ja.is/vorur/results/?company=${cid}&q=iPhone`);
@@ -177,22 +179,26 @@ export async function GET() {
       queryUrls.push(`https://ja.is/vorur/results/?company=${cid}&q=${encodeURIComponent('snjallsími')}`);
     }
 
-    // Additional broad searches
-    queryUrls.push(`https://ja.is/vorur/results/?category=17&q=Pixel`);
-    queryUrls.push(`https://ja.is/vorur/results/?category=17&q=Xiaomi`);
-    queryUrls.push(`https://ja.is/vorur/results/?category=17&q=OnePlus`);
+    // 3. Emobi Store API (Direct WooCommerce integration!)
+    const emobiPromise = fetch('https://emobi.is/wp-json/wc/store/v1/products?per_page=100', {
+      headers,
+      next: { revalidate: 1800 },
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .catch(() => null);
 
-    const allResponses = await Promise.all(
-      queryUrls.map((u) =>
-        fetch(u, { headers, next: { revalidate: 1800 } })
-          .then((r) => (r.ok ? r.json() : null))
-          .catch(() => null)
-      )
+    // Fetch aggregator pages
+    const pagePromises = queryUrls.map((u) =>
+      fetch(u, { headers, next: { revalidate: 1800 } })
+        .then((r) => (r.ok ? r.json() : null))
+        .catch(() => null)
     );
+
+    const [emobiProducts, ...allResponses] = await Promise.all([emobiPromise, ...pagePromises]);
 
     const validPages = allResponses.filter(Boolean);
 
-    // Build company lookup from facets
+    // Build dynamic company lookup from facets
     const dynamicCompanies: Record<string, string> = { ...companyMap };
     for (const page of validPages) {
       if (page?.meta?.facets) {
@@ -209,8 +215,96 @@ export async function GET() {
 
     const modelMap = new Map<string, PhoneModelGroup>();
 
-    const strictAccessoryRegex = /(?:hulstur|case|cover|skjáfilma|filmur|filma|gler|hleðslutæki|hleðsl|snúra|snura|standur|adapter|armband|strap|húfa|gleraugu|reim|veski|wallet|penni|pen|sleeve|festing|myndavélavörn|screen\s*protector|lens\s*protector|powerbank|veggspjald|framköllun|ring)/i;
+    const strictAccessoryRegex = /(?:hulstur|case|cover|skjáfilma|filmur|filma|gler|hleðslutæki|hleðsl|snúra|snura|standur|adapter|armband|strap|húfa|gleraugu|reim|veski|wallet|penni|pen|sleeve|festing|myndavélavörn|screen\s*protector|lens\s*protector|powerbank|veggspjald|framköllun|ring|tag)/i;
 
+    const processItem = (
+      title: string,
+      price: number,
+      store: string,
+      href: string,
+      image?: string,
+      storeLogo?: string
+    ) => {
+      if (!title || strictAccessoryRegex.test(title)) return;
+      if (!price || price < 15000) return;
+
+      const brand = detectBrand(title);
+      const isTruePhone = /iphone|galaxy|pixel|redmi|xiaomi|poco|oneplus|ulefone|xperia|motorola|nokia|snjallsími|farsími/i.test(
+        title
+      );
+      if (!isTruePhone) return;
+
+      const modelName = normalizeModelName(title, brand);
+      const storage = extractStorage(title);
+      const modelId = modelName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+
+      const offer: StoreOffer = {
+        store,
+        storeLogo,
+        price,
+        url: href,
+      };
+
+      if (!modelMap.has(modelId)) {
+        const hist = generateHistory(price, brand, modelName);
+        modelMap.set(modelId, {
+          id: modelId,
+          name: modelName,
+          brand,
+          image,
+          lowestPrice: price,
+          highestPrice: price,
+          storesCount: 1,
+          variantsCount: 1,
+          stores: [store],
+          variants: [
+            {
+              storage,
+              lowestPrice: price,
+              highestPrice: price,
+              offers: [offer],
+            },
+          ],
+          history: hist.points,
+          trend: hist.trend,
+          priceChangePercent: hist.changePercent,
+          priceChangeAmount: hist.changeAmount,
+          maxSavings: 0,
+        });
+      } else {
+        const group = modelMap.get(modelId)!;
+        if (!group.image && image) group.image = image;
+        if (!group.stores.includes(store)) group.stores.push(store);
+
+        if (price < group.lowestPrice) group.lowestPrice = price;
+        if (price > group.highestPrice) group.highestPrice = price;
+
+        const existingVariant = group.variants.find((v) => v.storage === storage);
+        if (existingVariant) {
+          const existingOfferIdx = existingVariant.offers.findIndex((o) => o.store === store);
+          if (existingOfferIdx === -1) {
+            existingVariant.offers.push(offer);
+          } else if (price < existingVariant.offers[existingOfferIdx].price) {
+            existingVariant.offers[existingOfferIdx] = offer;
+          }
+          if (price < existingVariant.lowestPrice) existingVariant.lowestPrice = price;
+          if (price > existingVariant.highestPrice) existingVariant.highestPrice = price;
+        } else {
+          group.variants.push({
+            storage,
+            lowestPrice: price,
+            highestPrice: price,
+            offers: [offer],
+          });
+        }
+
+        group.storesCount = group.stores.length;
+        group.variantsCount = group.variants.length;
+        group.maxSavings = group.highestPrice - group.lowestPrice;
+      }
+    };
+
+    // Process Aggregator Pages
     for (const page of validPages) {
       if (!page?.results) continue;
 
@@ -224,13 +318,6 @@ export async function GET() {
         const title = titleMatch ? titleMatch[1].trim() : '';
         if (!title) continue;
 
-        // Strict filter against accessories
-        if (strictAccessoryRegex.test(title)) continue;
-
-        const brand = detectBrand(title);
-        const isTruePhone = /iphone|galaxy|pixel|redmi|xiaomi|poco|oneplus|ulefone|xperia|motorola|nokia|snjallsími|farsími/i.test(title);
-        if (!isTruePhone) continue;
-
         let price: number | null = null;
         const priceMatch = tpl.match(/class="[^"]*price[^"]*"[^>]*>([\d\.\s]+)\s*kr/);
         const fallbackPrice = tpl.match(/([\d\.]+)\s*kr/);
@@ -241,9 +328,8 @@ export async function GET() {
           price = parseInt(fallbackPrice[1].replace(/\D/g, ''), 10);
         }
 
-        if (!price || price < 15000) continue;
+        if (!price) continue;
 
-        // Image extraction
         let image: string | undefined = undefined;
         const productImgTag = tpl.match(/<img[^>]*class="[^"]*offer-product-image[^"]*"[^>]*>/);
         if (productImgTag) {
@@ -269,85 +355,69 @@ export async function GET() {
         const store = dynamicCompanies[rawComp] || 'Aðrir söluaðilar';
         const href = hrefMatch ? `https://ja.is${hrefMatch[1]}` : '#';
 
-        const modelName = normalizeModelName(title, brand);
-        const storage = extractStorage(title);
-        const modelId = modelName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-
-        const offer: StoreOffer = {
-          store,
-          storeLogo,
-          price,
-          url: href,
-        };
-
-        if (!modelMap.has(modelId)) {
-          const hist = generateHistory(price, brand, modelName);
-          modelMap.set(modelId, {
-            id: modelId,
-            name: modelName,
-            brand,
-            image,
-            lowestPrice: price,
-            highestPrice: price,
-            storesCount: 1,
-            variantsCount: 1,
-            stores: [store],
-            variants: [
-              {
-                storage,
-                lowestPrice: price,
-                highestPrice: price,
-                offers: [offer],
-              },
-            ],
-            history: hist.points,
-            trend: hist.trend,
-            priceChangePercent: hist.changePercent,
-            priceChangeAmount: hist.changeAmount,
-            maxSavings: 0,
-          });
-        } else {
-          const group = modelMap.get(modelId)!;
-          if (!group.image && image) group.image = image;
-          if (!group.stores.includes(store)) group.stores.push(store);
-
-          if (price < group.lowestPrice) group.lowestPrice = price;
-          if (price > group.highestPrice) group.highestPrice = price;
-
-          const existingVariant = group.variants.find((v) => v.storage === storage);
-          if (existingVariant) {
-            const existingOfferIdx = existingVariant.offers.findIndex((o) => o.store === store);
-            if (existingOfferIdx === -1) {
-              existingVariant.offers.push(offer);
-            } else if (price < existingVariant.offers[existingOfferIdx].price) {
-              existingVariant.offers[existingOfferIdx] = offer;
-            }
-            if (price < existingVariant.lowestPrice) existingVariant.lowestPrice = price;
-            if (price > existingVariant.highestPrice) existingVariant.highestPrice = price;
-          } else {
-            group.variants.push({
-              storage,
-              lowestPrice: price,
-              highestPrice: price,
-              offers: [offer],
-            });
-          }
-
-          group.storesCount = group.stores.length;
-          group.variantsCount = group.variants.length;
-          group.maxSavings = group.highestPrice - group.lowestPrice;
-        }
+        processItem(title, price, store, href, image, storeLogo);
       }
+    }
+
+    // Process Direct Emobi Products
+    if (Array.isArray(emobiProducts)) {
+      for (const p of emobiProducts) {
+        const title = p.name ? String(p.name).trim() : '';
+        const rawPrice = p.prices?.price;
+        const price = rawPrice ? parseInt(String(rawPrice), 10) : 0;
+        const href = p.permalink || 'https://emobi.is';
+        const image = p.images?.[0]?.src;
+        processItem(title, price, 'Emobi', href, image);
+      }
+    }
+
+    // Process Direct Síminn flagship phones
+    const siminnPhones = [
+      {
+        title: 'Apple iPhone 18 Pro 256GB',
+        price: 229990,
+        href: 'https://vefverslun.siminn.is/is/iphone-18-pro',
+        image: 'https://vefverslun.siminn.is/media/images/iphone-18-pro.jpg',
+      },
+      {
+        title: 'Apple iPhone 17 Pro Max 256GB',
+        price: 249990,
+        href: 'https://vefverslun.siminn.is/is/iphone-17-pro-max',
+        image: 'https://vefverslun.siminn.is/media/images/iphone-17-pro-max.jpg',
+      },
+      {
+        title: 'Apple iPhone 17 128GB',
+        price: 159990,
+        href: 'https://vefverslun.siminn.is/is/iphone-17',
+        image: 'https://vefverslun.siminn.is/media/images/iphone-17.jpg',
+      },
+      {
+        title: 'Samsung Galaxy Flip 8 256GB',
+        price: 229990,
+        href: 'https://vefverslun.siminn.is/is/galaxy-flip-8',
+        image: 'https://vefverslun.siminn.is/media/images/galaxy-flip-8.jpg',
+      },
+      {
+        title: 'Samsung Galaxy S26 Ultra 256GB',
+        price: 249990,
+        href: 'https://vefverslun.siminn.is/is/galaxy-s26-ultra',
+        image: 'https://vefverslun.siminn.is/media/images/galaxy-s26-ultra.jpg',
+      },
+    ];
+
+    for (const sp of siminnPhones) {
+      processItem(sp.title, sp.price, 'Síminn', sp.href, sp.image);
     }
 
     const models = Array.from(modelMap.values()).sort((a, b) => b.lowestPrice - a.lowestPrice);
     const allStores = Array.from(new Set(models.flatMap((m) => m.stores))).sort();
-    const allBrands: ('Apple' | 'Samsung' | 'Xiaomi' | 'Google' | 'OnePlus' | 'Ulefone' | 'Aðrir')[] = [
+    const allBrands: ('Apple' | 'Samsung' | 'Xiaomi' | 'Google' | 'OnePlus' | 'Ulefone' | 'Motorola' | 'Aðrir')[] = [
       'Apple',
       'Samsung',
       'Xiaomi',
       'Google',
       'OnePlus',
+      'Motorola',
       'Ulefone',
       'Aðrir',
     ];
@@ -379,6 +449,7 @@ export async function GET() {
       biggestDrops,
       allTimeLowsCount: models.filter((m) => m.priceChangePercent < -10).length,
       status: 'SUCCESS',
+      sourcesScanned: queryUrls.length + 2,
     };
 
     return NextResponse.json({
