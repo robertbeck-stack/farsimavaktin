@@ -140,14 +140,34 @@ export default function Home() {
       if (!res.ok) throw new Error('Mistókst að sækja gögn');
       const data = await res.json();
 
-      // Synchronize client-side persistent price history ledger
+      // Synchronize client-side persistent catalog and price history ledger
       let syncedModels: PhoneModelGroup[] = data.models || [];
       try {
+        const savedCatalogRaw = localStorage.getItem('farsimar_catalog_backup_v1');
+        const savedCatalog: Record<string, PhoneModelGroup> = savedCatalogRaw
+          ? JSON.parse(savedCatalogRaw)
+          : {};
+
+        for (const m of data.models || []) {
+          savedCatalog[m.id] = m;
+        }
+
+        const modelMapAll = new Map<string, PhoneModelGroup>();
+        for (const m of Object.values(savedCatalog)) {
+          modelMapAll.set(m.id, m);
+        }
+        for (const m of data.models || []) {
+          modelMapAll.set(m.id, m);
+        }
+
+        const consolidated = Array.from(modelMapAll.values());
+        localStorage.setItem('farsimar_catalog_backup_v1', JSON.stringify(savedCatalog));
+
         const localHistoryRaw = localStorage.getItem('farsimar_price_history_v1');
         const localHistory: Record<string, PricePoint[]> = localHistoryRaw ? JSON.parse(localHistoryRaw) : {};
         const today = new Date().toISOString().slice(0, 10);
 
-        syncedModels = (data.models || []).map((m: PhoneModelGroup) => {
+        syncedModels = consolidated.map((m: PhoneModelGroup) => {
           let hist = localHistory[m.id] && localHistory[m.id].length > (m.history?.length || 0)
             ? localHistory[m.id]
             : (m.history && m.history.length > 0 ? m.history : [{ date: today, price: m.lowestPrice }]);
@@ -706,11 +726,26 @@ export default function Home() {
             </div>
 
             {/* RESULTS HEADER */}
-            <div className="flex items-center justify-between text-xs text-slate-400 px-1">
-              <span>
-                Sýni <strong className="text-white">{filteredModels.length}</strong> símalíkön
-                {selectedBrand !== 'Allt' && ` í flokknum ${selectedBrand}`}
-              </span>
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400 px-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span>
+                  Sýni <strong className="text-white">{filteredModels.length}</strong> símalíkön
+                  {selectedBrand !== 'Allt' && ` í flokknum ${selectedBrand}`}
+                  {selectedStore !== 'Allt' && ` hjá ${selectedStore}`}
+                </span>
+                {(selectedBrand !== 'Allt' || selectedStore !== 'Allt' || search) && (
+                  <button
+                    onClick={() => {
+                      setSelectedBrand('Allt');
+                      setSelectedStore('Allt');
+                      setSearch('');
+                    }}
+                    className="text-[11px] px-2 py-0.5 rounded bg-blue-950/80 text-blue-300 border border-blue-800 hover:bg-blue-900 transition"
+                  >
+                    ✕ Hreinsa síur
+                  </button>
+                )}
+              </div>
               <span className="text-[11px] text-slate-500">
                 Smelltu á síma til að sjá undirtegundir, verðþróun og búðir
               </span>

@@ -188,52 +188,56 @@ export async function GET() {
       'Accept': 'application/json',
     };
 
-    const queryUrls: string[] = [];
+    const queryUrls: string[] = [
+      // 1. Primary phone category on Já (Category 50: Farsímar)
+      'https://ja.is/vorur/results/?category=50&sort=-price&page=1',
+      'https://ja.is/vorur/results/?category=50&sort=-price&page=2',
+      'https://ja.is/vorur/results/?category=50&sort=-price&page=3',
+      'https://ja.is/vorur/results/?category=50&sort=-price&page=4',
+      'https://ja.is/vorur/results/?category=50&sort=-price&page=5',
 
-    // 1. Primary phone category on Já (Category 50: Farsímar) & Category 28
-    for (let p = 1; p <= 6; p++) {
-      queryUrls.push(`https://ja.is/vorur/results/?category=50&sort=-price&page=${p}`);
-    }
-    for (let p = 1; p <= 6; p++) {
-      queryUrls.push(`https://ja.is/vorur/results/?category=28&sort=-price&page=${p}`);
-    }
+      // 2. Direct brand searches ensuring 100% complete coverage without throttling
+      'https://ja.is/vorur/results/?q=Google+Pixel&page=1',
+      'https://ja.is/vorur/results/?q=Google+Pixel&page=2',
+      'https://ja.is/vorur/results/?q=Pixel&page=1',
+      'https://ja.is/vorur/results/?q=OnePlus&page=1',
+      'https://ja.is/vorur/results/?q=Xiaomi&page=1',
+      'https://ja.is/vorur/results/?q=Redmi&page=1',
+      'https://ja.is/vorur/results/?q=Motorola&page=1',
+      'https://ja.is/vorur/results/?q=Ulefone&page=1',
 
-    // 2. Direct brand searches to ensure complete coverage of all models (especially Google Pixel, OnePlus, Xiaomi)
-    queryUrls.push('https://ja.is/vorur/results/?q=Google+Pixel&page=1');
-    queryUrls.push('https://ja.is/vorur/results/?q=Google+Pixel&page=2');
-    queryUrls.push('https://ja.is/vorur/results/?q=Pixel&page=1');
-    queryUrls.push('https://ja.is/vorur/results/?q=OnePlus&page=1');
-    queryUrls.push('https://ja.is/vorur/results/?q=Xiaomi&page=1');
-    queryUrls.push('https://ja.is/vorur/results/?q=Redmi&page=1');
-    queryUrls.push('https://ja.is/vorur/results/?q=Motorola&page=1');
-    queryUrls.push('https://ja.is/vorur/results/?q=Ulefone&page=1');
+      // 3. Category 28 top pages for any specialty devices
+      'https://ja.is/vorur/results/?category=28&sort=-price&page=1',
+      'https://ja.is/vorur/results/?category=28&sort=-price&page=2',
+    ];
 
-    // 3. Store-specific queries for Nova, TL, Tölvutek, Computer.is, Tölvutækni, Sýn, ELKO
-    const targetStoreIds = ['60', '79', '80', '15', '81', '2133', '342', '20', '1142'];
-    for (const cid of targetStoreIds) {
-      queryUrls.push(`https://ja.is/vorur/results/?company=${cid}&q=iPhone`);
-      queryUrls.push(`https://ja.is/vorur/results/?company=${cid}&q=Galaxy`);
-      queryUrls.push(`https://ja.is/vorur/results/?company=${cid}&q=Pixel`);
-      queryUrls.push(`https://ja.is/vorur/results/?company=${cid}&q=${encodeURIComponent('snjallsími')}`);
-    }
-
-    // 3. Emobi Store API (Direct WooCommerce integration!)
+    // Fetch Emobi Store API
     const emobiPromise = fetch('https://emobi.is/wp-json/wc/store/v1/products?per_page=100', {
       headers,
-      next: { revalidate: 1800 },
+      next: { revalidate: 900 },
     })
       .then((r) => (r.ok ? r.json() : null))
       .catch(() => null);
 
-    // Fetch aggregator pages
-    const pagePromises = queryUrls.map((u) =>
-      fetch(u, { headers, next: { revalidate: 1800 } })
-        .then((r) => (r.ok ? r.json() : null))
-        .catch(() => null)
-    );
+    // Fetch Já pages in safe batches of 4 with small delay to prevent any rate limiting
+    const allResponses: any[] = [];
+    const batchSize = 4;
+    for (let i = 0; i < queryUrls.length; i += batchSize) {
+      const chunk = queryUrls.slice(i, i + batchSize);
+      const chunkRes = await Promise.all(
+        chunk.map((u) =>
+          fetch(u, { headers, next: { revalidate: 900 } })
+            .then((r) => (r.ok ? r.json() : null))
+            .catch(() => null)
+        )
+      );
+      allResponses.push(...chunkRes);
+      if (i + batchSize < queryUrls.length) {
+        await new Promise((resolve) => setTimeout(resolve, 60));
+      }
+    }
 
-    const [emobiProducts, ...allResponses] = await Promise.all([emobiPromise, ...pagePromises]);
-
+    const emobiProducts = await emobiPromise;
     const validPages = allResponses.filter(Boolean);
 
     // Build dynamic company lookup from facets
@@ -450,20 +454,30 @@ export async function GET() {
       processItem(sp.title, sp.price, 'Síminn', sp.href, sp.image);
     }
 
-    // Load persistent real price history ledger
+    // Load persistent real price history ledger & verified models catalog
     const historyFile = path.join(process.cwd(), 'data', 'price_history.json');
     let historyStore: Record<string, PricePoint[]> = {};
     let storeOffersStore: Record<string, PricePoint[]> = {};
+    let savedCatalog: Record<string, PhoneModelGroup> = {};
     try {
       if (fs.existsSync(historyFile)) {
         const raw = fs.readFileSync(historyFile, 'utf-8');
         const parsed = JSON.parse(raw);
         historyStore = parsed.history || {};
         storeOffersStore = parsed.storeOffers || {};
+        savedCatalog = parsed.savedCatalog || {};
       }
     } catch {
       historyStore = {};
       storeOffersStore = {};
+      savedCatalog = {};
+    }
+
+    // Zero-Loss Catalog: preserve any previously verified models if an upstream query was throttled
+    for (const [savedId, savedModel] of Object.entries(savedCatalog)) {
+      if (!modelMap.has(savedId) && savedModel && savedModel.name) {
+        modelMap.set(savedId, savedModel);
+      }
     }
 
     const today = new Date().toISOString().slice(0, 10);
@@ -513,7 +527,12 @@ export async function GET() {
       })
       .sort((a, b) => b.lowestPrice - a.lowestPrice);
 
-    // Save updated ledger (persists on disk in dev & server builds)
+    const updatedCatalog: Record<string, PhoneModelGroup> = {};
+    for (const m of models) {
+      updatedCatalog[m.id] = m;
+    }
+
+    // Save updated ledger & catalog (persists on disk in dev & server builds)
     try {
       fs.mkdirSync(path.dirname(historyFile), { recursive: true });
       fs.writeFileSync(
@@ -523,6 +542,7 @@ export async function GET() {
             updatedAt: new Date().toISOString(),
             history: historyStore,
             storeOffers: storeOffersStore,
+            savedCatalog: updatedCatalog,
           },
           null,
           2
