@@ -92,6 +92,13 @@ export default function Home() {
   const [selectedModel, setSelectedModel] = useState<PhoneModelGroup | null>(null);
   const [selectedStorage, setSelectedStorage] = useState<string>('');
 
+  // Raw JSON Inspector modal
+  const [rawJsonPayload, setRawJsonPayload] = useState<any>(null);
+  const [showRawJsonModal, setShowRawJsonModal] = useState(false);
+  const [rawJsonTab, setRawJsonTab] = useState<'all' | 'meta' | 'sample'>('all');
+  const [rawSearchFilter, setRawSearchFilter] = useState('');
+  const [copiedRaw, setCopiedRaw] = useState(false);
+
   const fetchPhones = useCallback(async (isRefresh = false) => {
     try {
       if (isRefresh) setRefreshing(true);
@@ -104,6 +111,7 @@ export default function Home() {
 
       setModels(data.models || []);
       setMeta(data.meta || null);
+      setRawJsonPayload(data);
 
       // Record to execution logs
       const newEntry: RunLogEntry = {
@@ -226,6 +234,57 @@ export default function Home() {
       selectedModel.variants[0]
     );
   }, [selectedModel, selectedStorage]);
+
+  const rawFormattedJson = useMemo(() => {
+    let target = rawJsonPayload;
+    if (!target) {
+      if (meta && models.length > 0) {
+        target = { meta, models };
+      } else {
+        return 'Engin hrágögn tiltæk enn. Smelltu á "Keyra uppfærslu" til að sækja gögn.';
+      }
+    }
+
+    if (rawJsonTab === 'meta') {
+      target = target.meta || meta;
+    } else if (rawJsonTab === 'sample') {
+      target = {
+        meta: target.meta || meta,
+        sampleCount: 3,
+        sampleModels: (target.models || models || []).slice(0, 3),
+      };
+    }
+
+    const fullStr = JSON.stringify(target, null, 2);
+    if (!rawSearchFilter.trim()) return fullStr;
+
+    const query = rawSearchFilter.toLowerCase();
+    const lines = fullStr.split('\n');
+    const matched = lines.filter((line) => line.toLowerCase().includes(query));
+    if (matched.length === 0) {
+      return `Engin lína fannst sem inniheldur "${rawSearchFilter}".`;
+    }
+    return matched.join('\n');
+  }, [rawJsonPayload, meta, models, rawJsonTab, rawSearchFilter]);
+
+  const handleCopyJson = () => {
+    navigator.clipboard.writeText(rawFormattedJson);
+    setCopiedRaw(true);
+    setTimeout(() => setCopiedRaw(false), 2000);
+  };
+
+  const handleDownloadJson = () => {
+    const dataToDownload = rawJsonPayload || { meta, models };
+    const blob = new Blob([JSON.stringify(dataToDownload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `farsimavaktin-raw-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
 
   // SVG Line Chart generation for price history
   const renderTrendSvg = (points: PricePoint[], width = 360, height = 120) => {
@@ -600,26 +659,36 @@ export default function Home() {
                   </p>
                 </div>
 
-                <button
-                  onClick={() => fetchPhones(true)}
-                  disabled={refreshing}
-                  className="inline-flex items-center gap-2 text-xs font-semibold px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white transition disabled:opacity-50"
-                >
-                  <svg
-                    className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={() => setShowRawJsonModal(true)}
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition shadow-sm"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                    />
-                  </svg>
-                  {refreshing ? 'Keyri uppfærslu núna...' : 'Keyra uppfærslu núna'}
-                </button>
+                    <span>📦</span>
+                    <span>Skoða hrágögn (Raw JSON)</span>
+                  </button>
+
+                  <button
+                    onClick={() => fetchPhones(true)}
+                    disabled={refreshing}
+                    className="inline-flex items-center gap-2 text-xs font-semibold px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white transition disabled:opacity-50"
+                  >
+                    <svg
+                      className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                      />
+                    </svg>
+                    {refreshing ? 'Keyri uppfærslu núna...' : 'Keyra uppfærslu núna'}
+                  </button>
+                </div>
               </div>
 
               {meta && (
@@ -667,9 +736,22 @@ export default function Home() {
 
             {/* History Table */}
             <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 shadow-lg space-y-4">
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <span>📋</span> Ferill síðustu keyrslna (Execution Log History)
-              </h3>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                    <span>📋</span> Ferill síðustu keyrslna (Execution Log History)
+                  </h3>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    Smelltu á hvaða línu sem er til að skoða hrágögn (Raw JSON)
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowRawJsonModal(true)}
+                  className="text-xs px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition"
+                >
+                  🔍 Skoða hrágögn
+                </button>
+              </div>
 
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
@@ -680,12 +762,19 @@ export default function Home() {
                       <th className="py-2.5 px-3">Símar fundnir</th>
                       <th className="py-2.5 px-3">Verslanir</th>
                       <th className="py-2.5 px-3">Svarstími</th>
+                      <th className="py-2.5 px-3 text-right">Hrágögn</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800/60 text-slate-300">
                     {logs.map((log) => (
-                      <tr key={log.id} className="hover:bg-slate-800/30 transition">
-                        <td className="py-2.5 px-3 font-mono text-slate-200">{formatDate(log.timestamp)}</td>
+                      <tr
+                        key={log.id}
+                        onClick={() => setShowRawJsonModal(true)}
+                        className="hover:bg-slate-800/50 cursor-pointer transition group"
+                      >
+                        <td className="py-2.5 px-3 font-mono text-slate-200 group-hover:text-blue-400 transition">
+                          {formatDate(log.timestamp)}
+                        </td>
                         <td className="py-2.5 px-3">
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-950 text-emerald-300 border border-emerald-800">
                             ● {log.status}
@@ -694,10 +783,154 @@ export default function Home() {
                         <td className="py-2.5 px-3 font-semibold text-white">{log.modelsCount} líkön</td>
                         <td className="py-2.5 px-3">{log.storesCount} verslanir</td>
                         <td className="py-2.5 px-3 font-mono text-cyan-400">{log.durationMs} ms</td>
+                        <td className="py-2.5 px-3 text-right">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShowRawJsonModal(true);
+                            }}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-slate-800 group-hover:bg-blue-600 text-[11px] font-medium text-slate-300 group-hover:text-white transition"
+                          >
+                            <span>🔍</span> Skoða JSON
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* RAW JSON MODAL / INSPECTOR */}
+        {showRawJsonModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md animate-in fade-in duration-150">
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+              {/* Header */}
+              <div className="p-4 sm:p-5 border-b border-slate-800 flex items-center justify-between gap-4 bg-slate-950/80">
+                <div className="flex items-center gap-3">
+                  <span className="text-xl p-2 rounded-xl bg-blue-950/80 border border-blue-800 text-blue-400 font-mono">
+                    {'{ }'}
+                  </span>
+                  <div>
+                    <h2 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+                      Hrágögn úr skanna <span className="text-xs font-mono text-slate-400 font-normal hidden sm:inline">(Raw JSON Payload)</span>
+                    </h2>
+                    <p className="text-[11px] text-slate-400">
+                      {meta?.lastRun ? `Keyrt: ${formatDate(meta.lastRun)}` : ''} · {meta?.totalModels || 0} líkön · {meta?.durationMs || 0} ms svarstími
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleCopyJson}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-200 transition"
+                  >
+                    {copiedRaw ? (
+                      <>
+                        <span className="text-emerald-400">✓</span>
+                        <span className="text-emerald-400 font-bold">Afritað!</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>📋</span>
+                        <span>Afrita JSON</span>
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    onClick={handleDownloadJson}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-200 transition"
+                  >
+                    <span>⬇️</span>
+                    <span className="hidden sm:inline">Sækja .json</span>
+                  </button>
+
+                  <a
+                    href="/api/phones"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-200 transition"
+                  >
+                    <span>🔗</span>
+                    <span className="hidden sm:inline">/api/phones</span>
+                  </a>
+
+                  <button
+                    onClick={() => setShowRawJsonModal(false)}
+                    className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold transition ml-1"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+
+              {/* Sub-bar: Tabs & Filter */}
+              <div className="px-4 py-3 border-b border-slate-800/80 bg-slate-950/50 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 text-xs">
+                {/* Tabs */}
+                <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-lg border border-slate-800">
+                  <button
+                    onClick={() => setRawJsonTab('all')}
+                    className={`px-3 py-1 rounded font-semibold transition ${
+                      rawJsonTab === 'all' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    Allur JSON pakki
+                  </button>
+                  <button
+                    onClick={() => setRawJsonTab('meta')}
+                    className={`px-3 py-1 rounded font-semibold transition ${
+                      rawJsonTab === 'meta' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    Aðeins Meta & Kerfi
+                  </button>
+                  <button
+                    onClick={() => setRawJsonTab('sample')}
+                    className={`px-3 py-1 rounded font-semibold transition ${
+                      rawJsonTab === 'sample' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    Sýnishorn af líkönum
+                  </button>
+                </div>
+
+                {/* Filter input */}
+                <div className="relative flex-1 sm:max-w-xs">
+                  <input
+                    type="text"
+                    placeholder="Sía línur í JSON (t.d. Pixel, Nova, price)..."
+                    value={rawSearchFilter}
+                    onChange={(e) => setRawSearchFilter(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                  />
+                  {rawSearchFilter && (
+                    <button
+                      onClick={() => setRawSearchFilter('')}
+                      className="absolute right-2 top-1 text-slate-400 hover:text-white text-[10px] bg-slate-800 px-1.5 py-0.5 rounded"
+                    >
+                      X
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Code viewer */}
+              <div className="p-4 flex-1 overflow-auto bg-slate-950 font-mono text-[11px] leading-relaxed text-emerald-400/95 selection:bg-blue-700 selection:text-white">
+                <pre className="whitespace-pre overflow-x-auto">{rawFormattedJson}</pre>
+              </div>
+
+              {/* Footer */}
+              <div className="p-3 border-t border-slate-800 bg-slate-950 flex items-center justify-between text-[11px] text-slate-400">
+                <span>
+                  Línufjöldi: <strong className="text-white">{rawFormattedJson.split('\n').length}</strong> línur
+                </span>
+                <span className="text-slate-500">
+                  {rawSearchFilter ? `(Síað eftir: "${rawSearchFilter}")` : 'Öll gögn sýnd eins og þau berast úr bakenda'}
+                </span>
               </div>
             </div>
           </div>
@@ -860,6 +1093,139 @@ export default function Home() {
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* RAW JSON MODAL / INSPECTOR */}
+        {showRawJsonModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md animate-in fade-in duration-150">
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+              {/* Header */}
+              <div className="p-4 sm:p-5 border-b border-slate-800 flex items-center justify-between gap-4 bg-slate-950/80">
+                <div className="flex items-center gap-3">
+                  <span className="text-xl p-2 rounded-xl bg-blue-950/80 border border-blue-800 text-blue-400 font-mono">
+                    {'{ }'}
+                  </span>
+                  <div>
+                    <h2 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+                      Hrágögn úr skanna <span className="text-xs font-mono text-slate-400 font-normal hidden sm:inline">(Raw JSON Payload)</span>
+                    </h2>
+                    <p className="text-[11px] text-slate-400">
+                      {meta?.lastRun ? `Keyrt: ${formatDate(meta.lastRun)}` : ''} · {meta?.totalModels || 0} líkön · {meta?.durationMs || 0} ms svarstími
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleCopyJson}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-200 transition"
+                  >
+                    {copiedRaw ? (
+                      <>
+                        <span className="text-emerald-400">✓</span>
+                        <span className="text-emerald-400 font-bold">Afritað!</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>📋</span>
+                        <span>Afrita JSON</span>
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    onClick={handleDownloadJson}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-200 transition"
+                  >
+                    <span>⬇️</span>
+                    <span className="hidden sm:inline">Sækja .json</span>
+                  </button>
+
+                  <a
+                    href="/api/phones"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-200 transition"
+                  >
+                    <span>🔗</span>
+                    <span className="hidden sm:inline">/api/phones</span>
+                  </a>
+
+                  <button
+                    onClick={() => setShowRawJsonModal(false)}
+                    className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold transition ml-1"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+
+              {/* Sub-bar: Tabs & Filter */}
+              <div className="px-4 py-3 border-b border-slate-800/80 bg-slate-950/50 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 text-xs">
+                {/* Tabs */}
+                <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-lg border border-slate-800">
+                  <button
+                    onClick={() => setRawJsonTab('all')}
+                    className={`px-3 py-1 rounded font-semibold transition ${
+                      rawJsonTab === 'all' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    Allur JSON pakki
+                  </button>
+                  <button
+                    onClick={() => setRawJsonTab('meta')}
+                    className={`px-3 py-1 rounded font-semibold transition ${
+                      rawJsonTab === 'meta' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    Aðeins Meta & Kerfi
+                  </button>
+                  <button
+                    onClick={() => setRawJsonTab('sample')}
+                    className={`px-3 py-1 rounded font-semibold transition ${
+                      rawJsonTab === 'sample' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    Sýnishorn af líkönum
+                  </button>
+                </div>
+
+                {/* Filter input */}
+                <div className="relative flex-1 sm:max-w-xs">
+                  <input
+                    type="text"
+                    placeholder="Sía línur í JSON (t.d. Pixel, Nova, price)..."
+                    value={rawSearchFilter}
+                    onChange={(e) => setRawSearchFilter(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                  />
+                  {rawSearchFilter && (
+                    <button
+                      onClick={() => setRawSearchFilter('')}
+                      className="absolute right-2 top-1 text-slate-400 hover:text-white text-[10px] bg-slate-800 px-1.5 py-0.5 rounded"
+                    >
+                      X
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Code viewer */}
+              <div className="p-4 flex-1 overflow-auto bg-slate-950 font-mono text-[11px] leading-relaxed text-emerald-400/95 selection:bg-blue-700 selection:text-white">
+                <pre className="whitespace-pre overflow-x-auto">{rawFormattedJson}</pre>
+              </div>
+
+              {/* Footer */}
+              <div className="p-3 border-t border-slate-800 bg-slate-950 flex items-center justify-between text-[11px] text-slate-400">
+                <span>
+                  Línufjöldi: <strong className="text-white">{rawFormattedJson.split('\n').length}</strong> línur
+                </span>
+                <span className="text-slate-500">
+                  {rawSearchFilter ? `(Síað eftir: "${rawSearchFilter}")` : 'Öll gögn sýnd eins og þau berast úr bakenda'}
+                </span>
+              </div>
             </div>
           </div>
         )}
