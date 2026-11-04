@@ -419,9 +419,9 @@ export async function GET(request?: Request) {
   const startTime = Date.now();
   try {
     const historyFile = path.join(process.cwd(), 'data', 'price_history.json');
-    const forceRefresh = request ? new URL(request.url).searchParams.get('refresh') === '1' : true;
+    const forceRefresh = !request;
 
-    // Serve daily snapshot from data/price_history.json immediately unless ?refresh=1 or CLI run
+    // Serve daily snapshot from data/price_history.json immediately on all web requests
     if (!forceRefresh && fs.existsSync(historyFile)) {
       try {
         const raw = fs.readFileSync(historyFile, 'utf-8');
