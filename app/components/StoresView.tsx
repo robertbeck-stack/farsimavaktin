@@ -465,19 +465,22 @@ export function StoresView({ meta, models, onSelectStore }: StoresViewProps) {
                             className="text-zinc-400 dark:text-zinc-500"
                             strokeWidth="1.5"
                           />
+                          {/* Calm zone indicators placed in top & bottom right corners, away from line data points */}
                           <text
-                            x={padLeft + 8}
-                            y={Math.max(padTop + 12, zeroY - 6)}
-                            className="fill-rose-500/80 dark:fill-rose-400/80 text-[9px] font-bold uppercase tracking-wider"
+                            x={padLeft + plotW - 10}
+                            y={padTop + 14}
+                            textAnchor="end"
+                            className="fill-rose-500/70 dark:fill-rose-400/70 text-[10px] font-medium"
                           >
-                            ↑ Verð að hækka
+                            Hækkandi verðsvæði (↑)
                           </text>
                           <text
-                            x={padLeft + 8}
-                            y={Math.min(padTop + plotH - 6, zeroY + 13)}
-                            className="fill-emerald-600/90 dark:fill-emerald-400/90 text-[9px] font-bold uppercase tracking-wider"
+                            x={padLeft + plotW - 10}
+                            y={padTop + plotH - 8}
+                            textAnchor="end"
+                            className="fill-emerald-600/70 dark:fill-emerald-400/70 text-[10px] font-medium"
                           >
-                            ↓ Verð að lækka
+                            Lækkandi verðsvæði (↓)
                           </text>
                         </g>
                       )}
@@ -580,8 +583,8 @@ export function StoresView({ meta, models, onSelectStore }: StoresViewProps) {
                                   stroke="#ffffff"
                                   strokeWidth="1.5"
                                 />
-                                {/* Show daily price labels when single store is focused */}
-                                {isSingleSelected && (
+                                {/* Show daily price labels when single store is focused (skip last point to prevent collision with end-of-line store label) */}
+                                {isSingleSelected && cIdx < coords.length - 1 && (
                                   <text
                                     x={c.x}
                                     y={c.y - 10}
@@ -605,7 +608,7 @@ export function StoresView({ meta, models, onSelectStore }: StoresViewProps) {
                             >
                               {st.store}{' '}
                               {chartMode === 'pct'
-                                ? `(${st.trendPercent >= 0 ? '+' : ''}${st.trendPercent}%)`
+                                ? `(${st.trendPercent >= 0 ? '+' : ''}${st.trendPercent.toFixed(1)}%)`
                                 : `(${Math.round((st.avgPrice || lastCoord.price) / 1000)}þ)`}
                             </text>
                           </g>
@@ -648,7 +651,7 @@ export function StoresView({ meta, models, onSelectStore }: StoresViewProps) {
             <div className="space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 block">
+                  <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400 block">
                     Graf 2 · Verðforysta
                   </span>
                   <h3 className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white">
@@ -736,8 +739,8 @@ export function StoresView({ meta, models, onSelectStore }: StoresViewProps) {
             <div className="space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-600 dark:text-cyan-400 block">
-                    Graf 3 · Verðstaða vs. Markaður
+                  <span className="text-[11px] font-medium text-cyan-600 dark:text-cyan-400 block">
+                    Graf 3 · Verðstaða vs. markaður
                   </span>
                   <h3 className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white">
                     Frávik frá markaðsmeðaltali á sömu símum (%)
