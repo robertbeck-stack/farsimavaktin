@@ -149,7 +149,7 @@ export function StoresView({ meta, models, onSelectStore }: StoresViewProps) {
       <section aria-label="Verslanayfirlit" className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center justify-center w-6 h-6 rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25">
+            <span className="inline-flex items-center justify-center w-6 h-6 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200/80 dark:border-white/[0.08]">
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 21v-7.5a.75.75 0 01.75-.75h3a.75.75 0 01.75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349m-16.5 11.65V9.35m0 0a3.001 3.001 0 003.75-.615A2.993 2.993 0 009.75 9.75c.896 0 1.7-.393 2.25-1.016a2.993 2.993 0 002.25 1.016c.896 0 1.7-.393 2.25-1.016a3.001 3.001 0 003.75.614m-16.5 0a3.004 3.004 0 01-.621-4.72L4.318 3.44A1.5 1.5 0 015.378 3h13.243a1.5 1.5 0 011.06.44l1.19 1.189a3 3 0 01-.621 4.72m-13.5 8.65h3.75a.75.75 0 00.75-.75V13.5a.75.75 0 00-.75-.75H6.75a.75.75 0 00-.75.75v3.75c0 .415.336.75.75.75z" />
               </svg>
@@ -182,7 +182,7 @@ export function StoresView({ meta, models, onSelectStore }: StoresViewProps) {
               <span className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 block">
                 Flest lægstu verð
               </span>
-              <span className="text-base sm:text-lg font-extrabold text-zinc-900 dark:text-white truncate block">
+              <span className="text-base sm:text-lg font-bold text-zinc-900 dark:text-white truncate block">
                 {leader?.store || 'Nova'}
               </span>
               <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 block">
@@ -197,7 +197,7 @@ export function StoresView({ meta, models, onSelectStore }: StoresViewProps) {
               Verðstefna verslana (7 dagar)
             </span>
             <div className="mt-1 flex items-baseline gap-2.5">
-              <span className="text-lg sm:text-xl font-extrabold text-emerald-600 dark:text-emerald-400">
+              <span className="text-lg sm:text-xl font-bold text-emerald-600 dark:text-emerald-400">
                 ↓ {droppingStoresCount} lækka
               </span>
               <span className="text-xs text-zinc-400">·</span>
@@ -216,7 +216,7 @@ export function StoresView({ meta, models, onSelectStore }: StoresViewProps) {
               Verðlækkanir í verslunum
             </span>
             <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-xl sm:text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">
+              <span className="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400">
                 {totalDrops}
               </span>
               <span className="text-xs text-zinc-500 dark:text-zinc-400">tilboð á lækkuðu verði</span>
@@ -232,7 +232,7 @@ export function StoresView({ meta, models, onSelectStore }: StoresViewProps) {
               Verðhækkanir í verslunum
             </span>
             <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-xl sm:text-2xl font-extrabold text-rose-600 dark:text-rose-400">
+              <span className="text-xl sm:text-2xl font-bold text-rose-600 dark:text-rose-400">
                 {totalHikes}
               </span>
               <span className="text-xs text-zinc-500 dark:text-zinc-400">tilboð hafa hækkað</span>
@@ -253,7 +253,7 @@ export function StoresView({ meta, models, onSelectStore }: StoresViewProps) {
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
             <div>
               <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25">
+                <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200/80 dark:border-white/[0.08]">
                   Línurit
                 </span>
                 <h3 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-white">

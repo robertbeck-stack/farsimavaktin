@@ -416,23 +416,17 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-[#09090b] text-zinc-900 dark:text-zinc-100 antialiased selection:bg-emerald-500/20 selection:text-emerald-900 dark:selection:bg-emerald-500/30 dark:selection:text-emerald-200 relative overflow-x-hidden">
-      {/* Ambient Subtle Top Radial Glow */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none fixed inset-x-0 top-0 h-[420px] bg-[radial-gradient(ellipse_80%_50%_at_50%_-15%,rgba(16,185,129,0.08),rgba(59,130,246,0.04),transparent)] dark:bg-[radial-gradient(ellipse_80%_50%_at_50%_-15%,rgba(16,185,129,0.10),rgba(59,130,246,0.05),transparent)] z-0"
-      />
-
-      {/* Sticky Glass Navigation Bar */}
-      <header className="sticky top-0 z-30 border-b border-zinc-200/80 dark:border-white/[0.07] bg-white/85 dark:bg-[#09090b]/80 backdrop-blur-xl">
+      {/* Sticky Clean Navigation Bar */}
+      <header className="sticky top-0 z-30 border-b border-zinc-200/70 dark:border-white/[0.07] bg-white/90 dark:bg-[#09090b]/85 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
           {/* Brand Logo */}
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500/15 to-blue-500/10 border border-emerald-600/25 dark:border-emerald-500/30 flex items-center justify-center shadow-xs shrink-0">
+            <div className="w-9 h-9 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 flex items-center justify-center shrink-0 shadow-2xs">
               <svg
-                className="w-5 h-5 text-emerald-600 dark:text-emerald-400"
+                className="w-5 h-5"
                 fill="none"
                 stroke="currentColor"
-                strokeWidth={1.8}
+                strokeWidth={1.75}
                 viewBox="0 0 24 24"
               >
                 <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
@@ -440,12 +434,12 @@ export default function Home() {
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <span className="text-sm sm:text-base font-bold tracking-tight text-zinc-900 dark:text-white">
+                <span className="text-sm sm:text-base font-semibold tracking-tight text-zinc-900 dark:text-white">
                   Farsímavaktin
                 </span>
-                <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/25 font-semibold tracking-wide">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
-                  BEIN VÖKTUN
+                <span className="inline-flex items-center gap-1.5 text-[11px] px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200/80 dark:border-white/[0.08] font-medium">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  Bein vöktun
                 </span>
               </div>
               <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate hidden sm:block">

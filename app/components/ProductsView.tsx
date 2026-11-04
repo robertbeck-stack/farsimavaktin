@@ -150,7 +150,7 @@ export function ProductsView({
         <section aria-label="Mestur verðmunur í dag" className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <span className="inline-flex items-center justify-center w-6 h-6 rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/25">
+              <span className="inline-flex items-center justify-center w-6 h-6 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200/80 dark:border-white/[0.08]">
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
@@ -744,7 +744,7 @@ export function ProductsView({
 
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-1.5 mb-1">
-                        <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                        <span className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400">
                           {model.brand}
                         </span>
                         {variantSavings > 0 ? (
@@ -825,7 +825,7 @@ export function ProductsView({
                             )}
                             <span className="font-medium truncate">{offer.store}</span>
                             {isCheapest && sortedOffers.length > 1 && (
-                              <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.2 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
+                              <span className="text-[10px] font-medium px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
                                 Ódýrast
                               </span>
                             )}
@@ -874,7 +874,7 @@ export function ProductsView({
                       <span className="text-[10px] text-zinc-500 dark:text-zinc-400 block">
                         Lægsta verð ({activeVariant?.storage}):
                       </span>
-                      <span className="text-base font-extrabold text-zinc-900 dark:text-white">
+                      <span className="text-base font-bold text-zinc-900 dark:text-white">
                         {formatPrice(activeVariant?.lowestPrice || model.lowestPrice)}
                       </span>
                     </div>
@@ -980,7 +980,7 @@ export function ProductsView({
 
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
-                      <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                      <span className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400">
                         {model.brand}
                       </span>
                       {variantSavings > 0 && (
@@ -1056,7 +1056,7 @@ export function ProductsView({
                     <span className="text-[10px] text-zinc-500 dark:text-zinc-400 block">
                       Lægsta verð ({activeVariant?.storage}):
                     </span>
-                    <span className="text-base font-extrabold text-emerald-600 dark:text-emerald-400">
+                    <span className="text-base font-bold text-emerald-600 dark:text-emerald-400">
                       {formatPrice(activeVariant?.lowestPrice || model.lowestPrice)}
                     </span>
                   </div>
