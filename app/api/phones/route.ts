@@ -1,6 +1,97 @@
 import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import https from 'https';
+
+function fetchHtmlUnverified(url: string, timeoutMs = 9000): Promise<string> {
+  return new Promise((resolve) => {
+    const req = https.get(
+      url,
+      {
+        rejectUnauthorized: false,
+        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
+        timeout: timeoutMs,
+      },
+      (res) => {
+        if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+          const nextUrl = res.headers.location.startsWith('http')
+            ? res.headers.location
+            : new URL(res.headers.location, url).toString();
+          fetchHtmlUnverified(nextUrl, timeoutMs).then(resolve);
+          return;
+        }
+        if (!res.statusCode || res.statusCode >= 400) {
+          resolve('');
+          return;
+        }
+        const chunks: Buffer[] = [];
+        res.on('data', (c) => chunks.push(Buffer.from(c)));
+        res.on('end', () => resolve(Buffer.concat(chunks).toString('utf-8')));
+      }
+    );
+    req.on('error', () => resolve(''));
+    req.on('timeout', () => {
+      req.destroy();
+      resolve('');
+    });
+  });
+}
+
+function extractBalancedJsonArray(text: string, startBracketIdx: number): any[] {
+  let depth = 0;
+  let inStr = false;
+  let esc = false;
+  for (let i = startBracketIdx; i < text.length; i++) {
+    const ch = text[i];
+    if (inStr) {
+      if (esc) esc = false;
+      else if (ch === '\\') esc = true;
+      else if (ch === '"') inStr = false;
+    } else {
+      if (ch === '"') inStr = true;
+      else if (ch === '[') depth++;
+      else if (ch === ']') {
+        depth--;
+        if (depth === 0) {
+          try {
+            return JSON.parse(text.slice(startBracketIdx, i + 1));
+          } catch {
+            return [];
+          }
+        }
+      }
+    }
+  }
+  return [];
+}
+
+function extractBalancedJsonObject(text: string, startBraceIdx: number): Record<string, any> | null {
+  let depth = 0;
+  let inStr = false;
+  let esc = false;
+  for (let i = startBraceIdx; i < text.length; i++) {
+    const ch = text[i];
+    if (inStr) {
+      if (esc) esc = false;
+      else if (ch === '\\') esc = true;
+      else if (ch === '"') inStr = false;
+    } else {
+      if (ch === '"') inStr = true;
+      else if (ch === '{') depth++;
+      else if (ch === '}') {
+        depth--;
+        if (depth === 0) {
+          try {
+            return JSON.parse(text.slice(startBraceIdx, i + 1));
+          } catch {
+            return null;
+          }
+        }
+      }
+    }
+  }
+  return null;
+}
 
 export type PhoneBrand =
   | 'Apple'
@@ -109,7 +200,7 @@ export interface MetaData {
 const companyMap: Record<string, string> = {
   '20': 'ELKO',
   '60': 'Nova',
-  '2133': 'Sýn (Vodafone)',
+  '2133': 'Sýn',
   '79': 'Tölvulistinn',
   '80': 'Tölvutek',
   '15': 'Computer.is',
@@ -124,7 +215,7 @@ const companyMap: Record<string, string> = {
 };
 
 const strictAccessoryRegex =
-  /(?:hulstur|\bcase\b|\bcover\b|skjávörn|skjavorn|skjáfilma|filmur|filma|gler|öryggisgler|oryggisgler|hleðslutæki|hledslutæki|hleðsl|snúra|snura|standur|adapter|armband|\bstrap\b|húfa|gleraugu|reim|veski|wallet|penni|\bpen\b|sleeve|festing|myndavélavörn|screen\s*protector|lens\s*protector|powerbank|power\s*bank|\bmah\b|veggspjald|framköllun|\bring\b|\btag\b|\bwatch\b|\bbuds\b|spigen|panzerglass|tech21|avionaut|kjóll|kjoll|peysa|buxur|fatnaður|fatnadur|talstöð|talstod|barnapía|barnapia|babyalarm|babymonitor|barnavakt|hljóðnemi|hljodnemi|spjaldtölva|spjaldtolva|\btab\b|\bpad\b|ipad|folio|hlíf|hlif|headset|heyrnartól|heyrnartol|heyrnatól|heyrnatol|hátalari|hatalari|snjallúr|snjallur|heilsuúr|heilsuur|smart\s*band|smartwatch|airpods|smartvision|gítar|gitar|sjónvarp|sjonvarp|fjarstýring|fjarstyring|tv\s*stick|tv\s*box|mi\s*box|apple\s*tv|dualsense|playstation|xbox|nintendo|dect|heimasími|heimasimi|borðsími|bordsimi|fjarfund|ip\s*sími|ip\s*phone|yealink|grandstream|fanvil|gigaset|profoon|alecto|backpack|bakpoki|taska|luggage|microscope|linsa|myndavélalinsa|photography\s*kit|rafhlaða|battery|skjár\s*fyrir|scooter|hlaupahjól|hlaupahjol|airfryer|steikingarpottur|ryksug|roborock|flosser|tannhreinsir|öryggismyndavél|oryggismyndavel|smart\s*camera|burðarpoki|burdarpoki|skiptidýna|skiptidyna|necklace|blazer|jakki|osprey|rfid|farsímahaldari|farsimahaldari|sound\s*kit|barcode\s*scanner|little\s*star|startpakkinn)/i;
+  /(?:hulstur|\bcase\b|\bcover\b|skjávörn|skjavorn|skjáfilma|filmur|filma|gler|öryggisgler|oryggisgler|hleðslutæki|hledslutæki|hleðsl|snúra|snura|standur|adapter|armband|\bstrap\b|húfa|gleraugu|reim|veski|wallet|penni|\bpen\b|sleeve|festing|myndavélavörn|screen\s*protector|lens\s*protector|powerbank|power\s*bank|\bmah\b|veggspjald|framköllun|\bring\b|\btag\b|airtag|magsafe|earpods|\bwatch\b|\bbuds\b|spigen|panzerglass|tech21|avionaut|kjóll|kjoll|peysa|buxur|fatnaður|fatnadur|talstöð|talstod|barnapía|barnapia|babyalarm|babymonitor|barnavakt|hljóðnemi|hljodnemi|spjaldtölva|spjaldtolva|\btab\b|\bpad\b|ipad|folio|hlíf|hlif|headset|heyrnartól|heyrnartol|heyrnatól|heyrnatol|hátalari|hatalari|snjallúr|snjallur|heilsuúr|heilsuur|smart\s*band|smartwatch|airpods|smartvision|gítar|gitar|sjónvarp|sjonvarp|fjarstýring|fjarstyring|tv\s*stick|tv\s*box|mi\s*box|apple\s*tv|dualsense|playstation|xbox|nintendo|dect|heimasími|heimasimi|borðsími|bordsimi|fjarfund|ip\s*sími|ip\s*phone|yealink|grandstream|fanvil|gigaset|profoon|alecto|backpack|bakpoki|taska|luggage|microscope|linsa|myndavélalinsa|photography\s*kit|rafhlaða|rafhlada|battery|skjár\s*fyrir|scooter|hlaupahjól|hlaupahjol|airfryer|steikingarpottur|ryksug|roborock|flosser|tannhreinsir|öryggismyndavél|oryggismyndavel|smart\s*camera|burðarpoki|burdarpoki|skiptidýna|skiptidyna|necklace|blazer|jakki|osprey|rfid|farsímahaldari|farsimahaldari|sound\s*kit|barcode\s*scanner|little\s*star|startpakkinn)/i;
 
 const isTruePhoneRegex =
   /iphone|galaxy\s*(?:s\d|z\s*fold|z\s*flip|fold|flip|a\d|xcover|m\d)|pixel\s*\d|redmi\s*(?:note|\d|a\d)|xiaomi\s*1[2-9]|poco\s*[cfxm]\d|oneplus\s*(?:\d|nord|open)|ulefone\s*(?:armor|power|rugone|note)|rugone|xperia|motorola\s*(?:edge|moto|razr|defy|signature|g\d)|moto\s*(?:g\d|e\d|edge|razr|snjallsími|snjallsimi)|nokia\s*(?:\d|g\d|c\d|xr)|hmd\s*(?:\d|fusion|pulse|skyline|barbie|crest)|oppo\s*(?:find|reno|a\d)|honor\s*(?:magic|\d|x\d)|nothing\s*phone|balance\s*phone|light\s*phone|sonim|emporia|\b(?:3210|2660|105)\b|snjallsími|snjallsimi|farsími|farsimi|vinnusími|vinnusimi|samlokusími|samlokusimi|takkasími|takkasimi/i;
@@ -169,6 +260,7 @@ function extractStorage(title: string): string {
 
 function normalizeModelName(title: string, brand: PhoneBrand): string {
   let s = title
+    .replace(/[™®©\u00a0]/g, ' ')
     .replace(/&#8211;/g, '-')
     .replace(/&quot;/g, '"')
     .replace(/&#8243;/g, '"')
@@ -203,9 +295,10 @@ function normalizeModelName(title: string, brand: PhoneBrand): string {
   s = s.replace(/\b\d+\s*(?:gb|tb)\b/gi, ' ');
   // Strip network & generic phone words
   s = s.replace(
-    /\b(?:5g|4g-volte|4g|lte\/4g|lte-4g|lte|volte|snjallsími|snjallsimi|farsími|farsimi|vinnusími|vinnusimi|samlokusími|samlokusimi|takkasími|takkasimi|smartphone|enterprise\s*edition|leica)\b/gi,
+    /\b(?:5g|4g-volte|4g|lte\/4g|lte-4g|lte|volte|snjallsími|snjallsimi|farsími|farsimi|vinnusími|vinnusimi|samlokusími|samlokusimi|takkasími|takkasimi|smartphone|enterprise\s*edition|2nd\s*edition|leica)\b/gi,
     ' '
   );
+  s = s.replace(/\(202\d\)/g, ' ');
   // Strip trailing descriptions after dash " - "
   s = s.replace(/\s+-\s+.*$/, '');
   // Strip "með hitamyndavél", "m. aukaskjá", etc.
@@ -216,12 +309,12 @@ function normalizeModelName(title: string, brand: PhoneBrand): string {
   s = s.replace(/\b(?:refreshed|refurbished|very\s*good\s*condition|græn\s*græja)\b/gi, '');
 
   const colorRegex =
-    /(?:,\s*|\s+)(?:black|white|silver\s*shadow|silver|cobalt\s*violet|pink\s*gold|sky\s*blue|sky\s*teal|glacier\s*blue|frost\s*blue|mist\s*blue|moonlight\s*blue|deep\s*blue|midnight\s*black|midnight\s*blue|midnight|titan\s*gray|titanium\s*charcoal|ripple\s*green|cloud\s*blush|graphite|purple|bleikur|blár|hvítur|svartur|grár|grænn|dökkgrænn|dökkblár|dökkgrár|ljósblár|ljósgrænn|ljósfjólublár|fjólublár|vínrauður|appelsínugulur|brúnn|gylltur|ljósgylltur|silfur|rauður|títan)\s*$/i;
+    /(?:,\s*|\s+)(?:black|white|silver\s*shadow|silver|cobalt\s*violet|pink\s*gold|sky\s*blue|sky\s*teal|glacier\s*blue|frost\s*blue|mist\s*blue|moonlight\s*blue|deep\s*blue|midnight\s*black|midnight\s*blue|midnight|titan\s*gray|titanium\s*charcoal|ripple\s*green|starlit\s*green|cloud\s*blush|graphite|purple|lavender|obsidian|pistachio|pistacho|porcelain|hazel|peony|wintergreen|berry|fog|canyon|ultramarine|charcoal|scuba\s*blue|y2k\s*gold|bleikur|blár|hvítur|svartur|grár|kolgrár|grænn|dökkgrænn|dökkblár|dökkgrár|ljósblár|ljósgrænn|ljósfjólublár|fjólublár|vínrauður|appelsínugulur|brúnn|gylltur|ljósgylltur|silfur|rauður|títan)\s*$/i;
   s = s.replace(colorRegex, '');
   s = s.replace(colorRegex, '');
 
   // Strip leading brand names (including repeated ones)
-  s = s.replace(/^(?:(?:apple|samsung|xiaomi|google|redmi|poco|ulefone|motorola|moto|oppo|oneplus|nothing|nokia\/hmd|nokia|hmd)\s+)+/i, '').trim();
+  s = s.replace(/^(?:(?:apple|samsung|xiaomi|google|redmi|poco|ulefone|motorola|moto|oppo|oneplus|nothing|nokia\/hmd|hmd\/nokia|nokia|hmd)\s+)+/i, '').trim();
   s = s.replace(/\s+/g, ' ').replace(/^[\s\-–,/|]+|[\s\-–,/|]+$/g, '');
 
   let full = s;
@@ -237,6 +330,7 @@ function normalizeModelName(title: string, brand: PhoneBrand): string {
     s = s.replace(/^z\s*fold\s*(\d)/i, 'Z Fold$1');
     s = s.replace(/^z\s*flip\s*(\d)/i, 'Z Flip$1');
     s = s.replace(/^(s\d+)fe\b/i, '$1 FE');
+    s = s.replace(/\b(s\d+)\+/i, '$1 Plus');
     s = s.replace(/^xcover\s*(\d)/i, 'XCover $1');
     s = s.replace(/Ultra\s+8$/i, 'Ultra');
     full = `Samsung Galaxy ${s}`;
@@ -387,6 +481,49 @@ export async function GET() {
       )
     );
 
+    // Fetch Nova Barinn directly (contains all 64 phones & storage variants in window.__APOLLO_STATE__)
+    const novaPromise = fetch('https://www.nova.is/barinn/farsimar', {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
+      next: { revalidate: 900 },
+    })
+      .then((r) => (r.ok ? r.text() : ''))
+      .catch(() => '');
+
+    // Fetch Lune.is phone categories directly (uses unverified TLS helper so cert rotations never fail)
+    const lunePromise = Promise.all(
+      ['iphone', 'samsung-simar', 'google-pixel', 'adrir-simar'].map((slug) =>
+        fetchHtmlUnverified(`https://lune.is/voruflokkur/${slug}`)
+      )
+    );
+
+    // Fetch Sýn web store directly (contains initialProducts & productsExtras in __NEXT_DATA__)
+    const synPromise = fetch('https://www.syn.is/vefverslun/farsimar', {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
+      next: { revalidate: 900 },
+    })
+      .then((r) => (r.ok ? r.text() : ''))
+      .catch(() => '');
+
+    // Fetch Macland WooCommerce Store API directly (Category 20 = iPhone)
+    const maclandPromise = fetch('https://macland.is/wp-json/wc/store/v1/products?category=20&per_page=100', {
+      headers,
+      next: { revalidate: 900 },
+    })
+      .then((r) => (r.ok ? r.json() : []))
+      .catch(() => []);
+
+    // Fetch Mi búðin WooCommerce Store API directly (Category 17 = Farsímar, pages 1-3)
+    const mibudinPromise = Promise.all(
+      [1, 2, 3].map((p) =>
+        fetch(`https://mibudin.is/wp-json/wc/store/v1/products?category=17&per_page=100&page=${p}`, {
+          headers,
+          next: { revalidate: 900 },
+        })
+          .then((r) => (r.ok ? r.json() : []))
+          .catch(() => [])
+      )
+    ).then((pages) => pages.flatMap((p) => (Array.isArray(p) ? p : [])));
+
     // Fetch Já pages in safe batches of 7 with small 40ms delay to prevent HTTP 429
     const allResponses: any[] = [];
     const batchSize = 7;
@@ -405,7 +542,16 @@ export async function GET() {
       }
     }
 
-    const [emobiProducts, siminnPages] = await Promise.all([emobiPromise, siminnPromise]);
+    const [emobiProducts, siminnPages, novaHtml, lunePages, synHtml, maclandProducts, mibudinProducts] =
+      await Promise.all([
+        emobiPromise,
+        siminnPromise,
+        novaPromise,
+        lunePromise,
+        synPromise,
+        maclandPromise,
+        mibudinPromise,
+      ]);
     const validPages = allResponses.filter(Boolean);
 
     // Build dynamic company lookup from facets
@@ -428,18 +574,21 @@ export async function GET() {
     const processItem = (
       title: string,
       price: number,
-      store: string,
+      rawStore: string,
       href: string,
       image?: string,
-      storeLogo?: string
+      storeLogo?: string,
+      explicitStorage?: string
     ) => {
+      const store = rawStore.startsWith('Sýn') ? 'Sýn' : rawStore;
       if (!title || strictAccessoryRegex.test(title)) return;
       if (!price || price < 7000) return;
       if (!isTruePhoneRegex.test(title)) return;
 
       const brand = detectBrand(title);
       const modelName = normalizeModelName(title, brand);
-      const storage = extractStorage(title);
+      const storage =
+        explicitStorage && explicitStorage !== 'Standard' ? explicitStorage : extractStorage(title);
       const modelId = modelName
         .toLowerCase()
         .replace(/\+/g, '-plus-')
@@ -492,8 +641,14 @@ export async function GET() {
           const existingOfferIdx = existingVariant.offers.findIndex((o) => o.store === store);
           if (existingOfferIdx === -1) {
             existingVariant.offers.push(offer);
-          } else if (price < existingVariant.offers[existingOfferIdx].price) {
-            existingVariant.offers[existingOfferIdx] = offer;
+          } else {
+            const prev = existingVariant.offers[existingOfferIdx];
+            if (
+              price < prev.price ||
+              (price === prev.price && prev.url.includes('ja.is') && !href.includes('ja.is'))
+            ) {
+              existingVariant.offers[existingOfferIdx] = offer;
+            }
           }
           if (price < existingVariant.lowestPrice) existingVariant.lowestPrice = price;
           if (price > existingVariant.highestPrice) existingVariant.highestPrice = price;
@@ -573,6 +728,134 @@ export async function GET() {
       }
     }
 
+    // Process Direct Nova Products (window.__APOLLO_STATE__ with all 64 phones & storage variants)
+    if (novaHtml) {
+      const apolloIdx = novaHtml.indexOf('window.__APOLLO_STATE__');
+      if (apolloIdx !== -1) {
+        const braceStart = novaHtml.indexOf('{', apolloIdx);
+        const apollo = braceStart !== -1 ? extractBalancedJsonObject(novaHtml, braceStart) : null;
+        if (apollo) {
+          for (const [key, val] of Object.entries(apollo)) {
+            if (!key.startsWith('Product:gid://shopify/Product/') || !val || typeof val !== 'object') continue;
+            const prod = val as Record<string, any>;
+            const handle = prod.handle ? String(prod.handle).trim() : '';
+            const rawTitle = prod.title ? String(prod.title).trim() : '';
+            const vendor = prod.vendor ? String(prod.vendor).trim() : '';
+            if (!rawTitle || !handle) continue;
+
+            const fullTitle =
+              vendor && !rawTitle.toLowerCase().startsWith(vendor.toLowerCase())
+                ? `${vendor} ${rawTitle}`
+                : rawTitle;
+            const href = `https://www.nova.is/barinn/vara/${handle}`;
+
+            let prodImg: string | undefined = undefined;
+            const imgConn = prod['images({"first":10})'] || prod['images({"first":50})'] || prod.images;
+            const firstImgRef = imgConn?.edges?.[0]?.node?.__ref;
+            if (firstImgRef && apollo[firstImgRef]) {
+              prodImg =
+                apollo[firstImgRef].originalSrc ||
+                apollo[firstImgRef].url ||
+                apollo[firstImgRef].src;
+            }
+
+            const varConn = prod['variants({"first":50})'] || prod.variants;
+            const edges = Array.isArray(varConn?.edges) ? varConn.edges : [];
+            for (const edge of edges) {
+              const vRef = edge?.node?.__ref;
+              const vNode = vRef ? apollo[vRef] : edge?.node;
+              if (!vNode) continue;
+              const amount = parseFloat(vNode.priceV2?.amount || '0');
+              const price = Math.round(amount);
+              if (!price) continue;
+
+              const opts = Array.isArray(vNode.selectedOptions) ? vNode.selectedOptions : [];
+              const sizeOpt = opts.find((o: any) => /size|stærð|minni|geymsl/i.test(String(o?.name || '')))?.value;
+              const explicitStorage = sizeOpt ? extractStorage(String(sizeOpt)) : undefined;
+
+              let varImg = prodImg;
+              const vImgRef = vNode.image?.__ref;
+              if (vImgRef && apollo[vImgRef]) {
+                varImg =
+                  apollo[vImgRef].originalSrc ||
+                  apollo[vImgRef].url ||
+                  apollo[vImgRef].src ||
+                  prodImg;
+              }
+
+              processItem(fullTitle, price, 'Nova', href, varImg, undefined, explicitStorage);
+            }
+          }
+        }
+      }
+    }
+
+    // Process Direct Lune.is Products (from Next.js RSC initialProducts across all 4 phone categories)
+    for (const html of lunePages) {
+      if (!html) continue;
+      const chunks: string[] = [];
+      const rscRegex = /self\.__next_f\.push\(\[1,(".*?")\]\)/gs;
+      let match: RegExpExecArray | null;
+      while ((match = rscRegex.exec(html)) !== null) {
+        try {
+          chunks.push(JSON.parse(match[1]));
+        } catch {
+          // ignore malformed chunk
+        }
+      }
+      const fullRsc = chunks.join('');
+      const initIdx = fullRsc.indexOf('"initialProducts":[');
+      if (initIdx !== -1) {
+        const bracketIdx = initIdx + '"initialProducts":'.length;
+        const luneProds = extractBalancedJsonArray(fullRsc, bracketIdx);
+        for (const p of luneProds) {
+          const rawTitle = p.title ? String(p.title).trim() : '';
+          const brandPrefix = p.brand ? String(p.brand).trim() : '';
+          if (!rawTitle || !p.slug) continue;
+          const fullTitle =
+            brandPrefix && !rawTitle.toLowerCase().startsWith(brandPrefix.toLowerCase())
+              ? `${brandPrefix} ${rawTitle}`
+              : rawTitle;
+          const price = Number(p.price || p.retail_price || 0);
+          const href = `https://lune.is/vara/${p.slug}`;
+          const rawImg = p.variant_image || p.media?.[0]?.url;
+          const img = rawImg
+            ? String(rawImg).startsWith('http')
+              ? String(rawImg)
+              : `https://lune.is${rawImg}`
+            : undefined;
+          const storageHint = extractStorage(
+            `${rawTitle} ${p.variant_title || ''} ${JSON.stringify(p.options || {})}`
+          );
+          processItem(fullTitle, price, 'Lune', href, img, undefined, storageHint);
+        }
+      }
+    }
+
+    // Process Direct Sýn Products (__NEXT_DATA__.props.pageProps.initialProducts)
+    if (synHtml) {
+      const nextMatch = synHtml.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/);
+      if (nextMatch) {
+        try {
+          const nd = JSON.parse(nextMatch[1]);
+          const pp = nd?.props?.pageProps || {};
+          const synProds = Array.isArray(pp.initialProducts) ? pp.initialProducts : [];
+          const extras = pp.productsExtras || {};
+          for (const p of synProds) {
+            const title = p.productName ? String(p.productName).trim() : '';
+            const price = Number(p.productDiscountPrice || p.productPrice || 0);
+            const pid = p.productId ? String(p.productId).trim() : '';
+            if (!title || !price || !pid) continue;
+            const href = `https://www.syn.is/vefverslun/um-voru/${encodeURIComponent(pid)}`;
+            const img = extras[pid]?.images?.[0]?.url;
+            processItem(title, price, 'Sýn (Vodafone)', href, img);
+          }
+        } catch {
+          // ignore parse error
+        }
+      }
+    }
+
     // Process Direct Emobi Products (Pages 1 & 2)
     if (Array.isArray(emobiProducts)) {
       for (const p of emobiProducts) {
@@ -582,6 +865,31 @@ export async function GET() {
         const href = p.permalink || 'https://emobi.is';
         const image = p.images?.[0]?.src;
         processItem(title, price, 'Emobi', href, image);
+      }
+    }
+
+    // Process Direct Macland Products
+    if (Array.isArray(maclandProducts)) {
+      for (const p of maclandProducts) {
+        const title = p.name ? String(p.name).trim() : '';
+        const rawPrice = p.prices?.price;
+        const price = rawPrice ? parseInt(String(rawPrice), 10) : 0;
+        if (price < 35000) continue; // Filter out small accessories in iPhone category
+        const href = p.permalink || 'https://macland.is';
+        const image = p.images?.[0]?.src;
+        processItem(title, price, 'Macland', href, image);
+      }
+    }
+
+    // Process Direct Mi búðin Products
+    if (Array.isArray(mibudinProducts)) {
+      for (const p of mibudinProducts) {
+        const title = p.name ? String(p.name).trim() : '';
+        const rawPrice = p.prices?.price;
+        const price = rawPrice ? parseInt(String(rawPrice), 10) : 0;
+        const href = p.permalink || 'https://mibudin.is';
+        const image = p.images?.[0]?.src;
+        processItem(title, price, 'Mi búðin', href, image);
       }
     }
 
@@ -608,7 +916,7 @@ export async function GET() {
       }
     }
 
-    // Merge "Standard" offers (from stores like Nova & Síminn that omit GB on overview cards)
+    // Merge "Standard" offers (from stores like Síminn/Sýn that omit GB on overview cards)
     // into the model's base explicit storage variant when explicit GB/TB variants exist
     for (const group of modelMap.values()) {
       const explicitVariants = group.variants.filter((v) => v.storage !== 'Standard');
@@ -621,8 +929,14 @@ export async function GET() {
           const existingIdx = baseVariant.offers.findIndex((o) => o.store === stdOffer.store);
           if (existingIdx === -1) {
             baseVariant.offers.push(stdOffer);
-          } else if (stdOffer.price < baseVariant.offers[existingIdx].price) {
-            baseVariant.offers[existingIdx] = stdOffer;
+          } else {
+            const prev = baseVariant.offers[existingIdx];
+            if (
+              stdOffer.price < prev.price ||
+              (stdOffer.price === prev.price && prev.url.includes('ja.is') && !stdOffer.url.includes('ja.is'))
+            ) {
+              baseVariant.offers[existingIdx] = stdOffer;
+            }
           }
           if (stdOffer.price < baseVariant.lowestPrice) baseVariant.lowestPrice = stdOffer.price;
           if (stdOffer.price > baseVariant.highestPrice) baseVariant.highestPrice = stdOffer.price;
@@ -664,7 +978,15 @@ export async function GET() {
         !strictAccessoryRegex.test(savedModel.name) &&
         isTruePhoneRegex.test(savedModel.name)
       ) {
-        modelMap.set(savedId, savedModel);
+        const reNorm = normalizeModelName(savedModel.name, detectBrand(savedModel.name))
+          .toLowerCase()
+          .replace(/\+/g, '-plus-')
+          .replace(/[()]/g, '')
+          .replace(/[^a-z0-9þæðöáéíóúý]+/g, '-')
+          .replace(/^-+|-+$/g, '');
+        if (!modelMap.has(reNorm)) {
+          modelMap.set(savedId, savedModel);
+        }
       }
     }
 
@@ -880,7 +1202,7 @@ export async function GET() {
       storeSummaries,
       allTimeLowsCount: models.filter((m) => m.priceChangePercent < 0).length,
       status: 'SUCCESS',
-      sourcesScanned: queryUrls.length + 8,
+      sourcesScanned: queryUrls.length + 18,
     };
 
     return NextResponse.json({
