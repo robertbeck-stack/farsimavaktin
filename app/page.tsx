@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 
 export interface StoreOffer {
   store: string;
@@ -113,6 +113,8 @@ interface RunLogEntry {
   status: 'SUCCESS' | 'ERROR';
 }
 
+type PriceRangeFilter = 'all' | 'under50' | '50to120' | '120to200' | 'over200';
+
 export default function Home() {
   const [models, setModels] = useState<PhoneModelGroup[]>([]);
   const [meta, setMeta] = useState<MetaData | null>(null);
@@ -123,23 +125,32 @@ export default function Home() {
 
   // Active view: 'list' | 'stores' | 'logs'
   const [activeView, setActiveView] = useState<'list' | 'stores' | 'logs'>('list');
+  // Layout mode: 'grid' | 'rows'
+  const [layoutMode, setLayoutMode] = useState<'grid' | 'rows'>('grid');
 
   // Filters & State
   const [search, setSearch] = useState('');
   const [selectedBrand, setSelectedBrand] = useState('Allt');
   const [selectedStore, setSelectedStore] = useState('Allt');
-  const [sortBy, setSortBy] = useState<'drop' | 'asc' | 'desc' | 'savings'>('drop');
+  const [priceRange, setPriceRange] = useState<PriceRangeFilter>('all');
+  const [onlyMultiStore, setOnlyMultiStore] = useState(false);
+  const [sortBy, setSortBy] = useState<'savings' | 'asc' | 'desc' | 'drop'>('savings');
+
+  // Inline selected storage per model card/row
+  const [cardStorageMap, setCardStorageMap] = useState<Record<string, string>>({});
 
   // Selected phone for detail modal / inspector
   const [selectedModel, setSelectedModel] = useState<PhoneModelGroup | null>(null);
   const [selectedStorage, setSelectedStorage] = useState<string>('');
 
   // Raw JSON & Summary Inspector modal
-  const [rawJsonPayload, setRawJsonPayload] = useState<any>(null);
+  const [rawJsonPayload, setRawJsonPayload] = useState<unknown>(null);
   const [showRawJsonModal, setShowRawJsonModal] = useState(false);
   const [rawJsonTab, setRawJsonTab] = useState<'summary' | 'all' | 'meta' | 'sample'>('summary');
   const [rawSearchFilter, setRawSearchFilter] = useState('');
   const [copiedRaw, setCopiedRaw] = useState(false);
+
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const fetchPhones = useCallback(async (isRefresh = false) => {
     try {
@@ -182,9 +193,12 @@ export default function Home() {
         const today = new Date().toISOString().slice(0, 10);
 
         syncedModels = consolidated.map((m: PhoneModelGroup) => {
-          let hist = localHistory[m.id] && localHistory[m.id].length > (m.history?.length || 0)
-            ? localHistory[m.id]
-            : (m.history && m.history.length > 0 ? m.history : [{ date: today, price: m.lowestPrice }]);
+          let hist =
+            localHistory[m.id] && localHistory[m.id].length > (m.history?.length || 0)
+              ? localHistory[m.id]
+              : m.history && m.history.length > 0
+              ? m.history
+              : [{ date: today, price: m.lowestPrice }];
 
           const lastPoint = hist[hist.length - 1];
           if (!lastPoint) {
@@ -259,10 +273,35 @@ export default function Home() {
     fetchPhones();
   }, [fetchPhones]);
 
+  // Keyboard shortcuts: '/' focuses search, 'Escape' closes modals
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (selectedModel) setSelectedModel(null);
+        else if (showRawJsonModal) setShowRawJsonModal(false);
+        return;
+      }
+      if (
+        e.key === '/' &&
+        !selectedModel &&
+        !showRawJsonModal &&
+        document.activeElement?.tagName !== 'INPUT' &&
+        document.activeElement?.tagName !== 'TEXTAREA' &&
+        document.activeElement?.tagName !== 'SELECT'
+      ) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [selectedModel, showRawJsonModal]);
+
   const handleSelectModel = (model: PhoneModelGroup, defaultStorage?: string) => {
     setSelectedModel(model);
-    if (defaultStorage && model.variants.some((v) => v.storage === defaultStorage)) {
-      setSelectedStorage(defaultStorage);
+    const chosen = defaultStorage || cardStorageMap[model.id];
+    if (chosen && model.variants.some((v) => v.storage === chosen)) {
+      setSelectedStorage(chosen);
     } else if (model.variants.length > 0) {
       setSelectedStorage(model.variants[0].storage);
     } else {
@@ -279,7 +318,8 @@ export default function Home() {
         (m) =>
           m.name.toLowerCase().includes(q) ||
           m.brand.toLowerCase().includes(q) ||
-          m.variants.some((v) => v.storage.toLowerCase().includes(q))
+          m.variants.some((v) => v.storage.toLowerCase().includes(q)) ||
+          m.stores.some((s) => s.toLowerCase().includes(q))
       );
     }
 
@@ -291,16 +331,33 @@ export default function Home() {
       result = result.filter((m) => m.stores.includes(selectedStore));
     }
 
+    if (onlyMultiStore) {
+      result = result.filter((m) => m.storesCount >= 2);
+    }
+
+    if (priceRange !== 'all') {
+      result = result.filter((m) => {
+        if (priceRange === 'under50') return m.lowestPrice < 50000;
+        if (priceRange === '50to120') return m.lowestPrice >= 50000 && m.lowestPrice <= 120000;
+        if (priceRange === '120to200') return m.lowestPrice > 120000 && m.lowestPrice <= 200000;
+        if (priceRange === 'over200') return m.lowestPrice > 200000;
+        return true;
+      });
+    }
+
     result.sort((a, b) => {
+      if (sortBy === 'savings') {
+        if (b.maxSavings !== a.maxSavings) return b.maxSavings - a.maxSavings;
+        return b.storesCount - a.storesCount;
+      }
       if (sortBy === 'drop') return a.priceChangePercent - b.priceChangePercent;
       if (sortBy === 'asc') return a.lowestPrice - b.lowestPrice;
       if (sortBy === 'desc') return b.lowestPrice - a.lowestPrice;
-      if (sortBy === 'savings') return b.maxSavings - a.maxSavings;
       return a.name.localeCompare(b.name, 'is');
     });
 
     return result;
-  }, [models, search, selectedBrand, selectedStore, sortBy]);
+  }, [models, search, selectedBrand, selectedStore, onlyMultiStore, priceRange, sortBy]);
 
   const formatPrice = (p: number) => {
     return new Intl.NumberFormat('is-IS').format(p) + ' kr.';
@@ -314,7 +371,6 @@ export default function Home() {
         month: 'short',
         hour: '2-digit',
         minute: '2-digit',
-        second: '2-digit',
       });
     } catch {
       return iso;
@@ -323,19 +379,19 @@ export default function Home() {
 
   const getStoreBadgeColor = (store: string) => {
     const s = store.toLowerCase();
-    if (s.includes('elko')) return 'bg-blue-950 text-blue-300 border-blue-800';
-    if (s.includes('nova')) return 'bg-emerald-950 text-emerald-300 border-emerald-800';
-    if (s.includes('síminn') || s.includes('siminn')) return 'bg-sky-950 text-sky-300 border-sky-800';
-    if (s.includes('sýn') || s.includes('vodafone')) return 'bg-rose-950 text-rose-300 border-rose-800';
-    if (s.includes('emobi')) return 'bg-teal-950 text-teal-300 border-teal-800';
-    if (s.includes('tölvulistinn')) return 'bg-indigo-950 text-indigo-300 border-indigo-800';
-    if (s.includes('tölvutek')) return 'bg-amber-950 text-amber-300 border-amber-800';
-    if (s.includes('computer')) return 'bg-cyan-950 text-cyan-300 border-cyan-800';
-    if (s.includes('tölvutækni')) return 'bg-violet-950 text-violet-300 border-violet-800';
-    if (s.includes('mi búðin')) return 'bg-orange-950 text-orange-300 border-orange-800';
-    if (s.includes('coolshop')) return 'bg-purple-950 text-purple-300 border-purple-800';
-    if (s.includes('ormsson')) return 'bg-sky-950 text-sky-300 border-sky-800';
-    return 'bg-slate-800 text-slate-300 border-slate-700';
+    if (s.includes('elko')) return 'bg-blue-500/10 text-blue-300 border-blue-500/25';
+    if (s.includes('nova')) return 'bg-emerald-500/10 text-emerald-300 border-emerald-500/25';
+    if (s.includes('síminn') || s.includes('siminn')) return 'bg-sky-500/10 text-sky-300 border-sky-500/25';
+    if (s.includes('sýn') || s.includes('vodafone')) return 'bg-rose-500/10 text-rose-300 border-rose-500/25';
+    if (s.includes('emobi')) return 'bg-teal-500/10 text-teal-300 border-teal-500/25';
+    if (s.includes('tölvulistinn')) return 'bg-indigo-500/10 text-indigo-300 border-indigo-500/25';
+    if (s.includes('tölvutek')) return 'bg-amber-500/10 text-amber-300 border-amber-500/25';
+    if (s.includes('computer')) return 'bg-cyan-500/10 text-cyan-300 border-cyan-500/25';
+    if (s.includes('tölvutækni')) return 'bg-violet-500/10 text-violet-300 border-violet-500/25';
+    if (s.includes('mi búðin')) return 'bg-orange-500/10 text-orange-300 border-orange-500/25';
+    if (s.includes('coolshop')) return 'bg-purple-500/10 text-purple-300 border-purple-500/25';
+    if (s.includes('ormsson')) return 'bg-sky-500/10 text-sky-300 border-sky-500/25';
+    return 'bg-zinc-800/80 text-zinc-300 border-zinc-700/80';
   };
 
   const getStoreFavicon = (store: string): string | null => {
@@ -389,59 +445,68 @@ export default function Home() {
     };
   }, [models, meta]);
 
+  // Formatted Raw JSON string for modal inspector
   const rawFormattedJson = useMemo(() => {
-    let target = rawJsonPayload;
-    if (!target) {
-      if (meta && models.length > 0) {
-        target = { meta, models };
-      } else {
-        return 'Engin hrágögn tiltæk enn. Smelltu á "Keyra uppfærslu" til að sækja gögn.';
-      }
-    }
-
+    if (!rawJsonPayload) return '// Engin gögn hlaðin ennþá...';
+    const payload = rawJsonPayload as { meta?: MetaData; models?: PhoneModelGroup[] };
+    let targetData: unknown = payload;
     if (rawJsonTab === 'meta') {
-      target = target.meta || meta;
+      targetData = payload.meta || {};
     } else if (rawJsonTab === 'sample') {
-      target = {
-        meta: target.meta || meta,
-        sampleCount: 3,
-        sampleModels: (target.models || models || []).slice(0, 3),
+      targetData = {
+        info: 'Sýnishorn af fyrstu 10 símalíkönum úr skanna',
+        sampleCount: Math.min(10, payload.models?.length || 0),
+        models: (payload.models || []).slice(0, 10),
       };
     }
 
-    const fullStr = JSON.stringify(target, null, 2);
+    const fullStr = JSON.stringify(targetData, null, 2);
     if (!rawSearchFilter.trim()) return fullStr;
 
-    const query = rawSearchFilter.toLowerCase();
+    const q = rawSearchFilter.toLowerCase();
     const lines = fullStr.split('\n');
-    const matched = lines.filter((line) => line.toLowerCase().includes(query));
-    if (matched.length === 0) {
-      return `Engin lína fannst sem inniheldur "${rawSearchFilter}".`;
+    const matchedLines: string[] = [];
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i].toLowerCase().includes(q)) {
+        const start = Math.max(0, i - 2);
+        const end = Math.min(lines.length - 1, i + 2);
+        matchedLines.push(`// --- Lína ${i + 1} ---`);
+        for (let j = start; j <= end; j++) {
+          matchedLines.push(lines[j]);
+        }
+        matchedLines.push('');
+        i = end;
+      }
     }
-    return matched.join('\n');
-  }, [rawJsonPayload, meta, models, rawJsonTab, rawSearchFilter]);
+    return matchedLines.length > 0
+      ? matchedLines.join('\n')
+      : `// Engar línur fundust með leitarorðinu "${rawSearchFilter}"`;
+  }, [rawJsonPayload, rawJsonTab, rawSearchFilter]);
 
-  const handleCopyJson = () => {
-    navigator.clipboard.writeText(rawFormattedJson);
-    setCopiedRaw(true);
-    setTimeout(() => setCopiedRaw(false), 2000);
+  const handleCopyJson = async () => {
+    try {
+      await navigator.clipboard.writeText(rawFormattedJson);
+      setCopiedRaw(true);
+      setTimeout(() => setCopiedRaw(false), 2000);
+    } catch {
+      // Ignore
+    }
   };
 
   const handleDownloadJson = () => {
-    const dataToDownload = rawJsonPayload || { meta, models };
-    const blob = new Blob([JSON.stringify(dataToDownload, null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify(rawJsonPayload || { meta, models }, null, 2)], {
+      type: 'application/json',
+    });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `farsimavaktin-raw-${new Date().toISOString().slice(0, 10)}.json`;
-    document.body.appendChild(a);
+    a.download = `farsimavaktin-log-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.json`;
     a.click();
-    document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
 
-  // SVG Line Chart generation for price history
-  const renderTrendSvg = (points: PricePoint[], width = 360, height = 120) => {
+  // Helper to render SVG Trend Chart inside modal
+  const renderTrendSvg = (points: PricePoint[], width = 520, height = 110) => {
     if (!points || points.length === 0) return null;
 
     if (points.length === 1) {
@@ -455,15 +520,15 @@ export default function Home() {
               y1={y}
               x2={width - 20}
               y2={y}
-              stroke="#3b82f6"
-              strokeWidth="2.5"
+              stroke="#10b981"
+              strokeWidth="2"
               strokeDasharray="4 4"
             />
-            <circle cx={width / 2} cy={y} r={6} fill="#3b82f6" stroke="#1d4ed8" strokeWidth="2" />
+            <circle cx={width / 2} cy={y} r={5} fill="#10b981" stroke="#064e3b" strokeWidth="2" />
           </svg>
-          <div className="flex justify-between items-center text-[11px] text-slate-400 mt-1 px-1">
+          <div className="flex justify-between items-center text-[11px] text-zinc-400 mt-1 px-1 tabular-nums">
             <span>Fyrsta skráning: {p.date}</span>
-            <span className="font-semibold text-blue-400">Grunnverð: {formatPrice(p.price)}</span>
+            <span className="font-semibold text-emerald-400">Lægsta verð: {formatPrice(p.price)}</span>
           </div>
         </div>
       );
@@ -489,224 +554,257 @@ export default function Home() {
 
     const isDrop = points[points.length - 1].price < points[0].price;
     const isUp = points[points.length - 1].price > points[0].price;
-    const strokeColor = isDrop ? '#10b981' : isUp ? '#f43f5e' : '#6366f1';
+    const strokeColor = isDrop ? '#10b981' : isUp ? '#f43f5e' : '#3b82f6';
 
     return (
       <div className="relative">
-        <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-32 overflow-visible">
+        <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-28 overflow-visible">
           <defs>
             <linearGradient id="grad-area" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={strokeColor} stopOpacity="0.3" />
+              <stop offset="0%" stopColor={strokeColor} stopOpacity="0.28" />
               <stop offset="100%" stopColor={strokeColor} stopOpacity="0.0" />
             </linearGradient>
           </defs>
           <path d={areaD} fill="url(#grad-area)" />
-          <path d={pathD} fill="none" stroke={strokeColor} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+          <path d={pathD} fill="none" stroke={strokeColor} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
           {coords.map((c, i) => (
             <circle
               key={i}
               cx={c.x}
               cy={c.y}
-              r={i === 0 || i === coords.length - 1 ? 5 : 3}
-              fill={i === coords.length - 1 ? (isDrop ? '#34d399' : isUp ? '#fb7185' : '#818cf8') : '#1e293b'}
+              r={i === 0 || i === coords.length - 1 ? 4.5 : 3}
+              fill={i === coords.length - 1 ? strokeColor : '#09090b'}
               stroke={strokeColor}
               strokeWidth="2"
             />
           ))}
         </svg>
-        <div className="flex justify-between text-[11px] text-slate-400 mt-1 px-1">
-          <span>{points[0].date} ({formatPrice(points[0].price)})</span>
+        <div className="flex justify-between text-[11px] text-zinc-400 mt-1 px-1 tabular-nums">
+          <span>Upphaf ({points[0].date}): {formatPrice(points[0].price)}</span>
           <span className={`font-semibold ${isDrop ? 'text-emerald-400' : isUp ? 'text-rose-400' : 'text-blue-400'}`}>
-            Nú: {points[points.length - 1].date} ({formatPrice(points[points.length - 1].price)})
+            Nú ({points[points.length - 1].date}): {formatPrice(points[points.length - 1].price)}
           </span>
         </div>
       </div>
     );
   };
 
+  const hasActiveFilters =
+    selectedBrand !== 'Allt' ||
+    selectedStore !== 'Allt' ||
+    priceRange !== 'all' ||
+    onlyMultiStore ||
+    search.trim().length > 0;
+
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 antialiased selection:bg-blue-600 selection:text-white">
-      {/* Top Header Bar */}
-      <header className="border-b border-slate-800 bg-slate-900/90 backdrop-blur-md sticky top-0 z-30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2.5 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <span className="text-xl">📉</span>
-            <div>
+    <div className="min-h-screen bg-[#09090b] text-zinc-100 antialiased selection:bg-emerald-500/30 selection:text-emerald-200 relative overflow-x-hidden">
+      {/* Ambient Subtle Top Radial Glow */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed inset-x-0 top-0 h-[420px] bg-[radial-gradient(ellipse_80%_50%_at_50%_-15%,rgba(16,185,129,0.10),rgba(59,130,246,0.05),transparent)] z-0"
+      />
+
+      {/* Sticky Glass Navigation Bar */}
+      <header className="sticky top-0 z-30 border-b border-white/[0.07] bg-[#09090b]/80 backdrop-blur-xl">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
+          {/* Brand Logo */}
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500/20 to-blue-500/10 border border-emerald-500/30 flex items-center justify-center shadow-inner shrink-0">
+              <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
+              </svg>
+            </div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-extrabold tracking-tight text-white">FARSÍMAVAKTIN</span>
-                <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-950 text-emerald-400 border border-emerald-800 font-bold">
-                  LIVE TREND
+                <span className="text-sm sm:text-base font-bold tracking-tight text-white">
+                  Farsímavaktin
+                </span>
+                <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 font-semibold tracking-wide">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  BEIN VÖKTUN
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400">Verðþróun og samanburður á farsímum á Íslandi</p>
+              <p className="text-[11px] text-zinc-400 truncate hidden sm:block">
+                Rauntíma verðsamanburður á {models.length} símalíkönum hjá {meta?.totalStores || 10} íslenskum verslunum
+              </p>
             </div>
           </div>
 
+          {/* Segmented View Switcher & Refresh */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* View Switcher: Vörulisti vs Verslanagreining vs Logs */}
-            <div className="bg-slate-950 border border-slate-800 p-0.5 rounded-lg flex items-center text-xs">
+            <nav
+              aria-label="Aðalvalmynd"
+              className="bg-zinc-900/90 border border-white/[0.08] p-1 rounded-xl flex items-center text-xs"
+            >
               <button
                 onClick={() => setActiveView('list')}
-                className={`px-3 py-1.5 rounded-md font-semibold transition ${
+                className={`px-3 py-1.5 rounded-lg font-medium transition-colors duration-150 motion-safe:enabled:active:scale-[0.96] flex items-center gap-1.5 ${
                   activeView === 'list'
-                    ? 'bg-blue-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-white'
+                    ? 'bg-zinc-800 text-white shadow-xs ring-1 ring-white/10'
+                    : 'text-zinc-400 hover:text-zinc-200'
                 }`}
               >
-                📱 Vörur ({models.length})
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
+                </svg>
+                <span>Vörur</span>
+                <span className="text-[10px] font-mono text-zinc-400 tabular-nums hidden xs:inline">
+                  ({models.length})
+                </span>
               </button>
+
               <button
                 onClick={() => setActiveView('stores')}
-                className={`px-3 py-1.5 rounded-md font-semibold transition flex items-center gap-1.5 ${
+                className={`px-3 py-1.5 rounded-lg font-medium transition-colors duration-150 motion-safe:enabled:active:scale-[0.96] flex items-center gap-1.5 ${
                   activeView === 'stores'
-                    ? 'bg-blue-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-white'
+                    ? 'bg-zinc-800 text-white shadow-xs ring-1 ring-white/10'
+                    : 'text-zinc-400 hover:text-zinc-200'
                 }`}
               >
-                <span>🏪 Verslanir</span>
-                {meta?.storeSummaries && meta.storeSummaries.some((s) => s.dropsCount > 0) && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                )}
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 21v-7.5a.75.75 0 01.75-.75h3a.75.75 0 01.75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349m-16.5 11.65V9.35m0 0a3.001 3.001 0 003.75-.615A2.993 2.993 0 009.75 9.75c.896 0 1.7-.393 2.25-1.016a2.993 2.993 0 002.25 1.016c.896 0 1.7-.393 2.25-1.016a3.001 3.001 0 003.75.614m-16.5 0a3.004 3.004 0 01-.621-4.72L4.318 3.44A1.5 1.5 0 015.378 3h13.243a1.5 1.5 0 011.06.44l1.19 1.189a3 3 0 01-.621 4.72m-13.5 8.65h3.75a.75.75 0 00.75-.75V13.5a.75.75 0 00-.75-.75H6.75a.75.75 0 00-.75.75v3.75c0 .415.336.75.75.75z" />
+                </svg>
+                <span>Verslanir</span>
               </button>
+
               <button
                 onClick={() => setActiveView('logs')}
-                className={`px-3 py-1.5 rounded-md font-semibold transition flex items-center gap-1.5 ${
+                className={`px-3 py-1.5 rounded-lg font-medium transition-colors duration-150 motion-safe:enabled:active:scale-[0.96] flex items-center gap-1.5 ${
                   activeView === 'logs'
-                    ? 'bg-blue-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-white'
+                    ? 'bg-zinc-800 text-white shadow-xs ring-1 ring-white/10'
+                    : 'text-zinc-400 hover:text-zinc-200'
                 }`}
               >
-                <span>⏱️ Logs</span>
-                {meta && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                )}
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+                </svg>
+                <span>Kerfisvakt</span>
               </button>
-            </div>
+            </nav>
 
-            {/* Quick Status / Refresh */}
+            {/* Refresh Action */}
             <button
               onClick={() => fetchPhones(true)}
               disabled={refreshing}
-              className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700/80 transition disabled:opacity-50"
-              title="Keyra nýja uppfærslu"
+              className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-white/[0.08] transition-colors duration-150 motion-safe:enabled:active:scale-[0.96] disabled:opacity-50"
+              title="Sækja nýjustu verð"
             >
-              <svg className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-blue-400' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              <svg
+                className={`w-3.5 h-3.5 text-emerald-400 ${refreshing ? 'animate-spin' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
-              {refreshing ? 'Sæki...' : 'Keyra'}
+              <span className="hidden sm:inline">{refreshing ? 'Uppfæri...' : 'Uppfæra'}</span>
             </button>
           </div>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-        {/* VIEW 1: PHONES & TRENDS */}
+      {/* Main Content Container */}
+      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+        {/* VIEW 1: PRODUCT CATALOG & PRICE COMPARISON */}
         {activeView === 'list' && (
           <>
-            {/* TREND SPOTLIGHT: Real Price Drops or Top Savings between stores */}
-            {meta?.biggestDrops && meta.biggestDrops.length > 0 ? (
-              <div className="space-y-2.5">
-                <div className="flex items-center justify-between text-xs font-bold text-slate-300">
-                  <span className="flex items-center gap-1.5">
-                    <span className="text-emerald-400">📉</span> MEST LÆKKAÐ YFIR TÍMA (RAUNVERULEG LÆKKUN)
-                  </span>
-                  <span className="text-[11px] text-slate-400 font-normal">
-                    {meta.allTimeLowsCount} símar hafa lækkað í verði frá upphafi mælinga
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                  {meta.biggestDrops.map((drop) => {
-                    const model = models.find((m) => m.id === drop.id);
-                    return (
-                      <div
-                        key={drop.id}
-                        onClick={() => model && handleSelectModel(model)}
-                        className="cursor-pointer bg-slate-900/80 hover:bg-slate-900 border border-slate-800 hover:border-emerald-600/60 rounded-xl p-3 transition shadow-sm hover:shadow-md flex flex-col justify-between group"
-                      >
-                        <div>
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-800 text-slate-300">
-                              {drop.brand}
-                            </span>
-                            <span className="text-xs font-extrabold text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800/80">
-                              📉 {drop.dropPercent}%
-                            </span>
-                          </div>
-                          <h4 className="text-xs font-semibold text-slate-100 line-clamp-1 group-hover:text-blue-400 transition">
-                            {drop.name}
-                          </h4>
-                        </div>
-
-                        <div className="pt-2 mt-2 border-t border-slate-800/60 flex items-baseline justify-between">
-                          <span className="text-[11px] text-slate-500 line-through">
-                            {formatPrice(drop.oldPrice)}
-                          </span>
-                          <span className="text-sm font-extrabold text-emerald-400">
-                            {formatPrice(drop.currentPrice)}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ) : meta?.topSavings && meta.topSavings.length > 0 ? (
-              <div className="space-y-2.5">
-                <div className="flex items-center justify-between text-xs font-bold text-slate-300">
-                  <span className="flex items-center gap-1.5">
-                    <span className="text-amber-400">💰</span> MESTUR VERÐMUNUR MILLI BÚÐA Í DAG (SPARNAÐUR)
-                  </span>
-                  <span className="text-[11px] text-slate-400 font-normal">
-                    Berðu saman verslanir og sparaðu allt að {formatPrice(meta.topSavings[0]?.savings || 0)}
+            {/* SPOTLIGHT BENTO: Top Price Differences / Savings Today */}
+            {meta?.topSavings && meta.topSavings.length > 0 && (
+              <section aria-label="Mestur verðmunur í dag" className="space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-lg bg-amber-500/15 text-amber-400 border border-amber-500/25">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </span>
+                    <h2 className="text-xs sm:text-sm font-semibold tracking-tight text-zinc-100">
+                      Mestur verðmunur á sama síma í dag
+                    </h2>
+                  </div>
+                  <span className="text-xs text-zinc-400 tabular-nums">
+                    Sparaðu allt að{' '}
+                    <strong className="text-emerald-400 font-semibold">
+                      {formatPrice(meta.topSavings[0]?.savings || 0)}
+                    </strong>{' '}
+                    með því að velja ódýrustu verslunina
                   </span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                   {meta.topSavings.map((item) => {
                     const model = models.find((m) => m.id === item.id);
+                    const cheapFav = getStoreFavicon(item.cheapestStore);
+                    const expFav = getStoreFavicon(item.expensiveStore);
                     return (
                       <div
                         key={`${item.id}-${item.variantStorage || ''}`}
                         onClick={() => model && handleSelectModel(model, item.variantStorage)}
-                        className="cursor-pointer bg-slate-900/80 hover:bg-slate-900 border border-slate-800 hover:border-amber-500/60 rounded-xl p-3 transition shadow-sm hover:shadow-md flex flex-col justify-between group"
+                        className="group cursor-pointer rounded-2xl bg-zinc-900/70 hover:bg-zinc-900 border border-white/[0.07] hover:border-emerald-500/40 p-3.5 transition-colors duration-150 flex flex-col justify-between shadow-sm"
                       >
                         <div>
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-800 text-slate-300">
-                              {item.brand}
+                          <div className="flex items-center justify-between gap-2 mb-2">
+                            <span className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-zinc-800/90 text-zinc-300 border border-white/[0.05]">
+                              {item.brand} {item.variantStorage ? `· ${item.variantStorage}` : ''}
                             </span>
-                            <span className="text-xs font-extrabold text-amber-400 bg-amber-950 px-2 py-0.5 rounded border border-amber-800/80">
-                              💰 Sparar {formatPrice(item.savings)}
+                            <span className="text-[11px] font-bold text-emerald-300 bg-emerald-500/15 px-2 py-0.5 rounded-md border border-emerald-500/25 tabular-nums">
+                              Sparar {formatPrice(item.savings)}
                             </span>
                           </div>
-                          <h4 className="text-xs font-semibold text-slate-100 line-clamp-1 group-hover:text-blue-400 transition">
-                            {item.name}
-                          </h4>
-                          <span className="text-[10px] text-slate-400 mt-1 flex items-center gap-1 flex-wrap">
-                            Ódýrast hjá
-                            <strong className="text-emerald-400 inline-flex items-center gap-1">
-                              {getStoreFavicon(item.cheapestStore) && (
-                                /* eslint-disable-next-line @next/next/no-img-element */
+
+                          <div className="flex items-center gap-3">
+                            {model?.image && (
+                              <div className="w-10 h-10 rounded-lg bg-white p-1 shrink-0 flex items-center justify-center outline-1 -outline-offset-1 outline-black/10">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
                                 <img
-                                  src={getStoreFavicon(item.cheapestStore)!}
-                                  alt={item.cheapestStore}
-                                  className="w-3.5 h-3.5 rounded-xs object-contain"
+                                  src={model.image}
+                                  alt={item.name}
+                                  className="max-h-full max-w-full object-contain"
                                   loading="lazy"
                                 />
-                              )}
-                              {item.cheapestStore}
-                            </strong>
-                            (vs {item.expensiveStore})
-                          </span>
+                              </div>
+                            )}
+                            <div className="min-w-0">
+                              <h3 className="text-xs sm:text-sm font-semibold text-white truncate group-hover:text-emerald-400 transition-colors">
+                                {item.name}
+                              </h3>
+                              <div className="flex items-center gap-1.5 text-[11px] text-zinc-400 mt-0.5 truncate">
+                                <span className="inline-flex items-center gap-1 text-emerald-400 font-medium">
+                                  {cheapFav && (
+                                    /* eslint-disable-next-line @next/next/no-img-element */
+                                    <img
+                                      src={cheapFav}
+                                      alt={item.cheapestStore}
+                                      className="w-3.5 h-3.5 rounded-xs object-contain"
+                                      loading="lazy"
+                                    />
+                                  )}
+                                  {item.cheapestStore}
+                                </span>
+                                <span className="text-zinc-600">vs</span>
+                                <span className="inline-flex items-center gap-1 text-zinc-400">
+                                  {expFav && (
+                                    /* eslint-disable-next-line @next/next/no-img-element */
+                                    <img
+                                      src={expFav}
+                                      alt={item.expensiveStore}
+                                      className="w-3 h-3 rounded-xs object-contain opacity-75"
+                                      loading="lazy"
+                                    />
+                                  )}
+                                  {item.expensiveStore}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
                         </div>
 
-                        <div className="pt-2 mt-2 border-t border-slate-800/60 flex items-baseline justify-between">
-                          <span className="text-[11px] text-slate-500 line-through">
+                        <div className="pt-2.5 mt-3 border-t border-white/[0.06] flex items-baseline justify-between tabular-nums">
+                          <span className="text-xs text-zinc-500 line-through">
                             {formatPrice(item.highestPrice)}
                           </span>
-                          <span className="text-sm font-extrabold text-emerald-400">
+                          <span className="text-sm font-bold text-white group-hover:text-emerald-300 transition-colors">
                             {formatPrice(item.lowestPrice)}
                           </span>
                         </div>
@@ -714,48 +812,149 @@ export default function Home() {
                     );
                   })}
                 </div>
-              </div>
-            ) : null}
+              </section>
+            )}
 
-            {/* COMPACT FILTER BAR */}
-            <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-3 sm:p-4 space-y-3 shadow-md">
-              {/* Brand Tabs (Flokkar eftir framleiðanda: Apple sér, Samsung sér o.fl.) */}
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
-                <span className="text-slate-400 font-semibold mr-1 shrink-0">Flokkur:</span>
+            {/* COMMAND & FILTER BAR */}
+            <section
+              aria-label="Leit og síur"
+              className="rounded-2xl bg-zinc-900/70 border border-white/[0.08] p-3.5 sm:p-4 space-y-3.5 shadow-lg backdrop-blur-md"
+            >
+              {/* Row 1: Search Input + Store Select + Sort Select + Layout Switcher */}
+              <div className="flex flex-col lg:flex-row gap-2.5">
+                {/* Search Box with '/' shortcut */}
+                <div className="relative flex-1">
+                  <svg
+                    className="w-4 h-4 text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={1.8}
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                  </svg>
+                  <input
+                    ref={searchInputRef}
+                    type="text"
+                    placeholder="Leita að síma, framleiðanda, verslun eða geymslu (t.d. iPhone 16 Pro, S25, Pixel, 256GB)..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="w-full bg-zinc-950/90 border border-white/[0.09] focus:border-emerald-500/60 rounded-xl pl-10 pr-14 py-2.5 text-xs sm:text-sm text-white placeholder-zinc-500 focus:outline-none transition-colors"
+                  />
+                  {search ? (
+                    <button
+                      onClick={() => setSearch('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white px-2 py-0.5 rounded-md bg-zinc-800 text-[11px] font-medium"
+                    >
+                      Hreinsa
+                    </button>
+                  ) : (
+                    <kbd className="hidden sm:inline-flex items-center justify-center absolute right-3 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-[10px] font-mono text-zinc-400 bg-zinc-900 border border-white/[0.08] rounded-md pointer-events-none">
+                      /
+                    </kbd>
+                  )}
+                </div>
+
+                {/* Controls Group */}
+                <div className="flex flex-wrap sm:flex-nowrap items-center gap-2">
+                  {/* Store Filter */}
+                  <select
+                    aria-label="Sía eftir verslun"
+                    value={selectedStore}
+                    onChange={(e) => setSelectedStore(e.target.value)}
+                    className="bg-zinc-950/90 border border-white/[0.09] hover:border-white/20 rounded-xl px-3 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-emerald-500/60"
+                  >
+                    <option value="Allt">Allar verslanir ({meta?.totalStores || 10})</option>
+                    {meta?.storesList.map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </select>
+
+                  {/* Sort Filter */}
+                  <select
+                    aria-label="Raða vörum"
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as 'savings' | 'asc' | 'desc' | 'drop')}
+                    className="bg-zinc-950/90 border border-white/[0.09] hover:border-white/20 rounded-xl px-3 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-emerald-500/60"
+                  >
+                    <option value="savings">Mestur sparnaður milli búða</option>
+                    <option value="asc">Verð: Ódýrast fyrst</option>
+                    <option value="desc">Verð: Dýrast fyrst</option>
+                    <option value="drop">Mest lækkað yfir tíma</option>
+                  </select>
+
+                  {/* Grid vs Row View Switcher */}
+                  <div
+                    role="group"
+                    aria-label="Útlit vörulista"
+                    className="bg-zinc-950/90 border border-white/[0.09] p-1 rounded-xl flex items-center shrink-0"
+                  >
+                    <button
+                      onClick={() => setLayoutMode('grid')}
+                      title="Spjaldayfirlit"
+                      className={`p-1.5 rounded-lg transition-colors ${
+                        layoutMode === 'grid'
+                          ? 'bg-zinc-800 text-white shadow-xs'
+                          : 'text-zinc-400 hover:text-zinc-200'
+                      }`}
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => setLayoutMode('rows')}
+                      title="Þéttur línulisti"
+                      className={`p-1.5 rounded-lg transition-colors ${
+                        layoutMode === 'rows'
+                          ? 'bg-zinc-800 text-white shadow-xs'
+                          : 'text-zinc-400 hover:text-zinc-200'
+                      }`}
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Row 2: Brand Filter Pills */}
+              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
                 {[
-                  { id: 'Allt', label: 'Allir símar', icon: '📱' },
-                  { id: 'Apple', label: 'Apple iPhone', icon: '🍏' },
-                  { id: 'Samsung', label: 'Samsung Galaxy', icon: '🌌' },
-                  { id: 'Xiaomi', label: 'Xiaomi / Redmi', icon: '⚡' },
-                  { id: 'Google', label: 'Google Pixel', icon: '🔍' },
-                  { id: 'OPPO', label: 'OPPO', icon: '🟢' },
-                  { id: 'Nothing', label: 'Nothing Phone', icon: '⚪' },
-                  { id: 'OnePlus', label: 'OnePlus', icon: '🔴' },
-                  { id: 'Motorola', label: 'Motorola', icon: 'Ⓜ️' },
-                  { id: 'Nokia', label: 'Nokia / HMD', icon: '📶' },
-                  { id: 'Ulefone', label: 'Ulefone Vinnusímar', icon: '🛡️' },
-                  { id: 'Aðrir', label: 'Aðrir', icon: '✨' },
+                  { id: 'Allt', label: 'Allir símar' },
+                  { id: 'Apple', label: 'Apple' },
+                  { id: 'Samsung', label: 'Samsung' },
+                  { id: 'Xiaomi', label: 'Xiaomi' },
+                  { id: 'Google', label: 'Google Pixel' },
+                  { id: 'OnePlus', label: 'OnePlus' },
+                  { id: 'Nothing', label: 'Nothing' },
+                  { id: 'Motorola', label: 'Motorola' },
+                  { id: 'OPPO', label: 'OPPO' },
+                  { id: 'Nokia', label: 'Nokia / HMD' },
+                  { id: 'Ulefone', label: 'Ulefone' },
+                  { id: 'Aðrir', label: 'Aðrir' },
                 ].map((b) => {
                   const count =
                     b.id === 'Allt' ? models.length : models.filter((m) => m.brand === b.id).length;
                   if (b.id !== 'Allt' && count === 0) return null;
+                  const active = selectedBrand === b.id;
                   return (
                     <button
                       key={b.id}
                       onClick={() => setSelectedBrand(b.id)}
-                      className={`shrink-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border font-semibold transition ${
-                        selectedBrand === b.id
-                          ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
-                          : 'bg-slate-950 text-slate-300 border-slate-800 hover:border-slate-700'
+                      className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-colors duration-150 motion-safe:enabled:active:scale-[0.96] border ${
+                        active
+                          ? 'bg-white text-zinc-950 border-white font-semibold shadow-xs'
+                          : 'bg-zinc-950/70 text-zinc-300 border-white/[0.07] hover:border-white/20 hover:text-white'
                       }`}
                     >
-                      <span>{b.icon}</span>
                       <span>{b.label}</span>
                       <span
-                        className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
-                          selectedBrand === b.id
-                            ? 'bg-blue-700 text-white'
-                            : 'bg-slate-900 text-slate-400'
+                        className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono tabular-nums ${
+                          active ? 'bg-zinc-900/15 text-zinc-900 font-bold' : 'bg-zinc-800/90 text-zinc-400'
                         }`}
                       >
                         {count}
@@ -765,200 +964,425 @@ export default function Home() {
                 })}
               </div>
 
-              {/* Search, Store, Sort Row */}
-              <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-slate-800/60 text-xs">
-                <div className="relative flex-1">
-                  <input
-                    type="text"
-                    placeholder="Leita að líkani (t.d. iPhone 16 Pro, Galaxy S24, Pixel 9, 256GB)..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
-                  />
-                  {search && (
+              {/* Row 3: Price Range Quick-Filters & Multi-store Toggle */}
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-2.5 border-t border-white/[0.06] text-xs">
+                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+                  <span className="text-zinc-500 text-[11px] mr-1 shrink-0">Verðbil:</span>
+                  {(
+                    [
+                      { id: 'all', label: 'Öll verð' },
+                      { id: 'under50', label: '< 50 þús.' },
+                      { id: '50to120', label: '50–120 þús.' },
+                      { id: '120to200', label: '120–200 þús.' },
+                      { id: 'over200', label: '200 þús.+' },
+                    ] as { id: PriceRangeFilter; label: string }[]
+                  ).map((pr) => (
                     <button
-                      onClick={() => setSearch('')}
-                      className="absolute right-2 top-1.5 text-slate-400 hover:text-white px-1.5 py-0.5 rounded bg-slate-800 text-[10px]"
+                      key={pr.id}
+                      onClick={() => setPriceRange(pr.id)}
+                      className={`shrink-0 px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors border ${
+                        priceRange === pr.id
+                          ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                          : 'bg-zinc-950/60 text-zinc-400 border-white/[0.06] hover:text-zinc-200'
+                      }`}
                     >
-                      X
+                      {pr.label}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setOnlyMultiStore((v) => !v)}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors border ${
+                      onlyMultiStore
+                        ? 'bg-blue-500/15 text-blue-300 border-blue-500/35'
+                        : 'bg-zinc-950/60 text-zinc-400 border-white/[0.06] hover:text-zinc-200'
+                    }`}
+                  >
+                    <span
+                      className={`w-2 h-2 rounded-full ${
+                        onlyMultiStore ? 'bg-blue-400' : 'bg-zinc-600'
+                      }`}
+                    />
+                    Í 2+ búðum ({models.filter((m) => m.storesCount >= 2).length})
+                  </button>
+
+                  {hasActiveFilters && (
+                    <button
+                      onClick={() => {
+                        setSelectedBrand('Allt');
+                        setSelectedStore('Allt');
+                        setPriceRange('all');
+                        setOnlyMultiStore(false);
+                        setSearch('');
+                      }}
+                      className="text-[11px] px-2.5 py-1 rounded-lg bg-rose-500/10 text-rose-300 border border-rose-500/25 hover:bg-rose-500/20 transition-colors"
+                    >
+                      Hreinsa síur
                     </button>
                   )}
                 </div>
-
-                {/* Store Filter */}
-                <select
-                  value={selectedStore}
-                  onChange={(e) => setSelectedStore(e.target.value)}
-                  className="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-2 text-xs text-slate-200"
-                >
-                  <option value="Allt">Allar búðir ({meta?.totalStores || 0})</option>
-                  {meta?.storesList.map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                </select>
-
-                {/* Sort Filter */}
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as 'drop' | 'asc' | 'desc' | 'savings')}
-                  className="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-2 text-xs text-slate-200"
-                >
-                  <option value="drop">📉 Mest lækkað (Trend)</option>
-                  <option value="asc">Ódýrast fyrst</option>
-                  <option value="desc">Dýrast fyrst</option>
-                  <option value="savings">💰 Mestur verðmunur milli búða</option>
-                </select>
               </div>
-            </div>
+            </section>
 
-            {/* RESULTS HEADER */}
-            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400 px-1">
-              <div className="flex items-center gap-2 flex-wrap">
+            {/* RESULTS STATUS LINE */}
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-400 px-1">
+              <div className="flex items-center gap-2">
                 <span>
-                  Sýni <strong className="text-white">{filteredModels.length}</strong> símalíkön
-                  {selectedBrand !== 'Allt' && ` í flokknum ${selectedBrand}`}
-                  {selectedStore !== 'Allt' && ` hjá ${selectedStore}`}
+                  Sýni <strong className="text-white font-semibold tabular-nums">{filteredModels.length}</strong> af{' '}
+                  <span className="tabular-nums">{models.length}</span> símalíkönum
+                  {selectedBrand !== 'Allt' && ` · ${selectedBrand}`}
+                  {selectedStore !== 'Allt' && ` · ${selectedStore}`}
                 </span>
-                {(selectedBrand !== 'Allt' || selectedStore !== 'Allt' || search) && (
-                  <button
-                    onClick={() => {
-                      setSelectedBrand('Allt');
-                      setSelectedStore('Allt');
-                      setSearch('');
-                    }}
-                    className="text-[11px] px-2 py-0.5 rounded bg-blue-950/80 text-blue-300 border border-blue-800 hover:bg-blue-900 transition"
-                  >
-                    ✕ Hreinsa síur
-                  </button>
-                )}
               </div>
-              <span className="text-[11px] text-slate-500">
-                Smelltu á síma til að sjá undirtegundir, verðþróun og búðir
+              <span className="text-[11px] text-zinc-500">
+                Veldu geymslupláss beint á spjaldi eða smelltu til að opna fullan verðsamanburð
               </span>
             </div>
 
-            {/* COMPACT PHONE TABLE / LIST */}
+            {/* LOADING / ERROR / EMPTY STATES */}
             {loading ? (
-              <div className="space-y-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {[...Array(6)].map((_, i) => (
-                  <div key={i} className="h-16 bg-slate-900/50 border border-slate-800 rounded-xl animate-pulse" />
+                  <div
+                    key={i}
+                    className="h-64 bg-zinc-900/40 border border-white/[0.06] rounded-2xl animate-pulse"
+                  />
                 ))}
               </div>
             ) : error ? (
-              <div className="text-center py-12 bg-slate-900/40 border border-rose-900/40 rounded-xl p-4">
+              <div className="text-center py-12 bg-zinc-900/40 border border-rose-500/25 rounded-2xl p-6">
                 <p className="text-rose-400 text-sm font-semibold">{error}</p>
+                <button
+                  onClick={() => fetchPhones(true)}
+                  className="mt-3 px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs font-medium text-white"
+                >
+                  Reyna aftur
+                </button>
               </div>
             ) : filteredModels.length === 0 ? (
-              <div className="text-center py-16 bg-slate-900/20 border border-slate-800 rounded-xl">
-                <p className="text-slate-400 text-xs">Engir símar fundust sem passa við síur.</p>
+              <div className="text-center py-16 bg-zinc-900/30 border border-white/[0.06] rounded-2xl space-y-3">
+                <p className="text-zinc-300 text-sm font-medium">Engir símar fundust með völdum síum</p>
+                <button
+                  onClick={() => {
+                    setSelectedBrand('Allt');
+                    setSelectedStore('Allt');
+                    setPriceRange('all');
+                    setOnlyMultiStore(false);
+                    setSearch('');
+                  }}
+                  className="text-xs px-3.5 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-medium transition-colors"
+                >
+                  Endurstilla allar síur
+                </button>
               </div>
-            ) : (
-              <div className="bg-slate-900/60 border border-slate-800 rounded-xl overflow-hidden divide-y divide-slate-800/60">
-                {filteredModels.map((model) => (
-                  <div
-                    key={model.id}
-                    onClick={() => handleSelectModel(model)}
-                    className="p-3 sm:px-4 hover:bg-slate-900 cursor-pointer transition flex items-center justify-between gap-3 group"
-                  >
-                    {/* Left: Image & Title */}
-                    <div className="flex items-center gap-3.5 min-w-0">
-                      <div className="w-12 h-12 bg-slate-950 rounded-lg p-1 border border-slate-800 shrink-0 flex items-center justify-center overflow-hidden">
-                        {model.image ? (
-                          /* eslint-disable-next-line @next/next/no-img-element */
-                          <img
-                            src={model.image}
-                            alt={model.name}
-                            className="max-h-full max-w-full object-contain"
-                            loading="lazy"
-                          />
-                        ) : (
-                          <span className="text-lg">📱</span>
-                        )}
-                      </div>
+            ) : layoutMode === 'grid' ? (
+              /* MODERN BENTO PRODUCT GRID VIEW */
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredModels.map((model, idx) => {
+                  const activeStorage = cardStorageMap[model.id] || model.variants[0]?.storage || '';
+                  const activeVariant =
+                    model.variants.find((v) => v.storage === activeStorage) || model.variants[0];
+                  const sortedOffers = activeVariant
+                    ? [...activeVariant.offers].sort((a, b) => a.price - b.price)
+                    : [];
+                  const variantSavings =
+                    sortedOffers.length >= 2
+                      ? sortedOffers[sortedOffers.length - 1].price - sortedOffers[0].price
+                      : 0;
 
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-800 text-slate-300">
-                            {model.brand}
-                          </span>
-                          {model.priceChangePercent < 0 ? (
-                            <span className="text-[10px] font-bold text-emerald-400 bg-emerald-950/80 px-1.5 py-0.2 rounded border border-emerald-800/60">
-                              📉 {model.priceChangePercent}%
-                            </span>
-                          ) : model.priceChangePercent > 0 ? (
-                            <span className="text-[10px] font-bold text-rose-400 bg-rose-950/80 px-1.5 py-0.2 rounded border border-rose-800/60">
-                              📈 +{model.priceChangePercent}%
-                            </span>
-                          ) : (
-                            <span className="text-[10px] text-slate-400 bg-slate-900 px-1.5 py-0.2 rounded border border-slate-800 font-medium">
-                              ● Óbreytt verð
-                            </span>
-                          )}
-                        </div>
-                        <h3 className="text-xs sm:text-sm font-bold text-white truncate group-hover:text-blue-400 transition">
-                          {model.name}
-                        </h3>
+                  return (
+                    <article
+                      key={model.id}
+                      onClick={() => handleSelectModel(model, activeVariant?.storage)}
+                      className={`group cursor-pointer rounded-2xl bg-zinc-900/65 hover:bg-zinc-900/95 border border-white/[0.07] hover:border-white/[0.16] p-4 flex flex-col justify-between transition-colors duration-150 shadow-sm ${
+                        idx >= 12 ? 'deferred-phone-card' : ''
+                      }`}
+                    >
+                      <div>
+                        {/* Card Top: Studio Image Pedestal + Title + Storage Selector */}
+                        <div className="flex items-start gap-3.5">
+                          <div className="w-16 h-16 rounded-xl bg-white p-1.5 shrink-0 flex items-center justify-center outline-1 -outline-offset-1 outline-black/10 shadow-xs">
+                            {model.image ? (
+                              /* eslint-disable-next-line @next/next/no-img-element */
+                              <img
+                                src={model.image}
+                                alt={model.name}
+                                className="max-h-full max-w-full object-contain"
+                                loading="lazy"
+                              />
+                            ) : (
+                              <svg className="w-7 h-7 text-zinc-400" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
+                              </svg>
+                            )}
+                          </div>
 
-                        {/* Storage badges & stores */}
-                        <div className="flex flex-wrap items-center gap-1 mt-1">
-                          {model.variants.map((v) => (
-                            <span
-                              key={v.storage}
-                              className="text-[10px] px-1.5 py-0.2 rounded bg-slate-950 border border-slate-800 text-slate-400"
-                            >
-                              {v.storage}
-                            </span>
-                          ))}
-                          <span className="text-[10px] text-slate-600 mx-0.5">•</span>
-                          {model.stores.slice(0, 4).map((st) => {
-                            const fav = getStoreFavicon(st);
-                            return (
-                              <span
-                                key={st}
-                                className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.2 rounded bg-slate-950/80 border border-slate-800/80 text-slate-300"
-                              >
-                                {fav && (
-                                  /* eslint-disable-next-line @next/next/no-img-element */
-                                  <img
-                                    src={fav}
-                                    alt={st}
-                                    className="w-3 h-3 rounded-xs object-contain shrink-0"
-                                    loading="lazy"
-                                  />
-                                )}
-                                {st}
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center justify-between gap-1.5 mb-1">
+                              <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+                                {model.brand}
                               </span>
+                              {variantSavings > 0 ? (
+                                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/25 tabular-nums">
+                                  Sparar {formatPrice(variantSavings)}
+                                </span>
+                              ) : model.priceChangePercent < 0 ? (
+                                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/25 tabular-nums">
+                                  {model.priceChangePercent}%
+                                </span>
+                              ) : (
+                                <span className="text-[10px] text-zinc-500 tabular-nums">
+                                  {model.storesCount} {model.storesCount === 1 ? 'verslun' : 'verslanir'}
+                                </span>
+                              )}
+                            </div>
+
+                            <h3 className="text-sm font-semibold text-white group-hover:text-emerald-400 transition-colors line-clamp-1">
+                              {model.name}
+                            </h3>
+
+                            {/* Interactive Storage Pills right on the card */}
+                            <div className="flex flex-wrap items-center gap-1 mt-2">
+                              {model.variants.map((v) => {
+                                const isSelected = activeVariant?.storage === v.storage;
+                                return (
+                                  <button
+                                    key={v.storage}
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setCardStorageMap((prev) => ({
+                                        ...prev,
+                                        [model.id]: v.storage,
+                                      }));
+                                    }}
+                                    className={`text-[10px] px-2 py-0.5 rounded-md font-medium transition-colors border ${
+                                      isSelected
+                                        ? 'bg-zinc-100 text-zinc-950 border-white font-semibold'
+                                        : 'bg-zinc-950/90 text-zinc-400 border-white/[0.08] hover:text-zinc-200 hover:border-white/20'
+                                    }`}
+                                  >
+                                    {v.storage}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Direct Store Offers Comparison List inside Card */}
+                        <div className="mt-3.5 pt-3 border-t border-white/[0.06] space-y-1.5">
+                          {sortedOffers.slice(0, 3).map((offer, oIdx) => {
+                            const fav = getStoreFavicon(offer.store) || offer.storeLogo;
+                            const isCheapest = oIdx === 0;
+                            return (
+                              <a
+                                key={offer.store}
+                                href={offer.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className={`flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs transition-colors border ${
+                                  isCheapest
+                                    ? 'bg-emerald-500/[0.08] hover:bg-emerald-500/[0.14] border-emerald-500/25 text-white'
+                                    : 'bg-zinc-950/60 hover:bg-zinc-950 border-white/[0.05] text-zinc-300'
+                                }`}
+                              >
+                                <div className="flex items-center gap-2 min-w-0">
+                                  {fav && (
+                                    /* eslint-disable-next-line @next/next/no-img-element */
+                                    <img
+                                      src={fav}
+                                      alt={offer.store}
+                                      className="w-4 h-4 rounded-xs object-contain shrink-0"
+                                      loading="lazy"
+                                    />
+                                  )}
+                                  <span className="font-medium truncate">{offer.store}</span>
+                                  {isCheapest && sortedOffers.length > 1 && (
+                                    <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300">
+                                      Ódýrast
+                                    </span>
+                                  )}
+                                </div>
+
+                                <div className="flex items-center gap-1.5 shrink-0 tabular-nums">
+                                  <span
+                                    className={`font-bold ${
+                                      isCheapest ? 'text-emerald-400' : 'text-zinc-200'
+                                    }`}
+                                  >
+                                    {formatPrice(offer.price)}
+                                  </span>
+                                  <svg className="w-3 h-3 text-zinc-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 19.5l15-15m0 0H8.25m11.25 0v11.25" />
+                                  </svg>
+                                </div>
+                              </a>
                             );
                           })}
-                          {model.stores.length > 4 && (
-                            <span className="text-[10px] text-slate-500">
-                              +{model.stores.length - 4}
-                            </span>
+
+                          {sortedOffers.length > 3 && (
+                            <div className="text-[11px] text-center text-zinc-400 pt-0.5">
+                              + {sortedOffers.length - 3} verslanir í viðbót
+                            </div>
                           )}
                         </div>
                       </div>
-                    </div>
 
-                    {/* Right: Prices & Difference */}
-                    <div className="text-right shrink-0">
-                      <span className="text-[10px] text-slate-400 block">Lægsta verð:</span>
-                      <div className="text-sm sm:text-base font-extrabold text-emerald-400">
-                        {formatPrice(model.lowestPrice)}
+                      {/* Card Footer */}
+                      <div className="mt-3 pt-2.5 border-t border-white/[0.06] flex items-center justify-between text-xs">
+                        <div className="tabular-nums">
+                          <span className="text-[10px] text-zinc-400 block">Lægsta verð ({activeVariant?.storage}):</span>
+                          <span className="text-base font-extrabold text-white">
+                            {formatPrice(activeVariant?.lowestPrice || model.lowestPrice)}
+                          </span>
+                        </div>
+
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-zinc-300 group-hover:text-white bg-zinc-800/80 group-hover:bg-zinc-800 px-3 py-1.5 rounded-xl border border-white/[0.07] transition-colors">
+                          <span>Skoða samanburð</span>
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                          </svg>
+                        </span>
                       </div>
-                      {model.maxSavings > 0 ? (
-                        <span className="text-[10px] font-semibold text-cyan-400 block">
-                          Sparar allt að {formatPrice(model.maxSavings)}
+                    </article>
+                  );
+                })}
+              </div>
+            ) : (
+              /* COMPACT HIGH-DENSITY ROW LIST VIEW */
+              <div className="rounded-2xl bg-zinc-900/60 border border-white/[0.08] overflow-hidden divide-y divide-white/[0.06]">
+                {filteredModels.map((model, idx) => {
+                  const activeStorage = cardStorageMap[model.id] || model.variants[0]?.storage || '';
+                  const activeVariant =
+                    model.variants.find((v) => v.storage === activeStorage) || model.variants[0];
+                  const sortedOffers = activeVariant
+                    ? [...activeVariant.offers].sort((a, b) => a.price - b.price)
+                    : [];
+                  const variantSavings =
+                    sortedOffers.length >= 2
+                      ? sortedOffers[sortedOffers.length - 1].price - sortedOffers[0].price
+                      : 0;
+
+                  return (
+                    <div
+                      key={model.id}
+                      onClick={() => handleSelectModel(model, activeVariant?.storage)}
+                      className={`p-3.5 sm:px-5 hover:bg-zinc-900/95 cursor-pointer transition-colors duration-150 flex flex-col sm:flex-row sm:items-center justify-between gap-3 group ${
+                        idx >= 18 ? 'deferred-phone-row' : ''
+                      }`}
+                    >
+                      {/* Left: White Studio Thumbnail + Title + Storage Pills + Store Chips */}
+                      <div className="flex items-center gap-3.5 min-w-0">
+                        <div className="w-12 h-12 bg-white rounded-xl p-1 shrink-0 flex items-center justify-center outline-1 -outline-offset-1 outline-black/10">
+                          {model.image ? (
+                            /* eslint-disable-next-line @next/next/no-img-element */
+                            <img
+                              src={model.image}
+                              alt={model.name}
+                              className="max-h-full max-w-full object-contain"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <svg className="w-6 h-6 text-zinc-400" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
+                            </svg>
+                          )}
+                        </div>
+
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+                              {model.brand}
+                            </span>
+                            {variantSavings > 0 && (
+                              <span className="text-[10px] font-semibold text-emerald-300 bg-emerald-500/15 px-1.5 py-0.2 rounded border border-emerald-500/25 tabular-nums">
+                                Sparar {formatPrice(variantSavings)}
+                              </span>
+                            )}
+                          </div>
+
+                          <h3 className="text-sm font-semibold text-white truncate group-hover:text-emerald-400 transition-colors">
+                            {model.name}
+                          </h3>
+
+                          <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                            {model.variants.map((v) => {
+                              const isSelected = activeVariant?.storage === v.storage;
+                              return (
+                                <button
+                                  key={v.storage}
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setCardStorageMap((prev) => ({
+                                      ...prev,
+                                      [model.id]: v.storage,
+                                    }));
+                                  }}
+                                  className={`text-[10px] px-2 py-0.5 rounded-md font-medium transition-colors border ${
+                                    isSelected
+                                      ? 'bg-zinc-100 text-zinc-950 border-white font-semibold'
+                                      : 'bg-zinc-950 text-zinc-400 border-white/[0.08] hover:text-zinc-200'
+                                  }`}
+                                >
+                                  {v.storage}
+                                </button>
+                              );
+                            })}
+
+                            <span className="text-zinc-700 text-xs mx-0.5">·</span>
+
+                            {sortedOffers.slice(0, 4).map((offer, oIdx) => {
+                              const fav = getStoreFavicon(offer.store);
+                              return (
+                                <span
+                                  key={offer.store}
+                                  className={`inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-md border tabular-nums ${
+                                    oIdx === 0
+                                      ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-300 font-medium'
+                                      : 'bg-zinc-950/90 border-white/[0.06] text-zinc-300'
+                                  }`}
+                                >
+                                  {fav && (
+                                    /* eslint-disable-next-line @next/next/no-img-element */
+                                    <img
+                                      src={fav}
+                                      alt={offer.store}
+                                      className="w-3.5 h-3.5 rounded-xs object-contain shrink-0"
+                                      loading="lazy"
+                                    />
+                                  )}
+                                  <span>{offer.store}</span>
+                                  <span className="text-zinc-400">{formatPrice(offer.price)}</span>
+                                </span>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Right: Lowest Price & Action */}
+                      <div className="flex sm:flex-col items-center sm:items-end justify-between shrink-0 gap-1 border-t sm:border-t-0 border-white/[0.06] pt-2 sm:pt-0 tabular-nums">
+                        <div className="text-left sm:text-right">
+                          <span className="text-[10px] text-zinc-400 block">
+                            Lægsta verð ({activeVariant?.storage}):
+                          </span>
+                          <span className="text-base font-extrabold text-emerald-400">
+                            {formatPrice(activeVariant?.lowestPrice || model.lowestPrice)}
+                          </span>
+                        </div>
+                        <span className="text-[11px] text-zinc-400 group-hover:text-white inline-flex items-center gap-1">
+                          <span>Allar verslanir ({sortedOffers.length})</span>
+                          <span>→</span>
                         </span>
-                      ) : (
-                        <span className="text-[10px] text-slate-500 block">
-                          {model.storesCount} {model.storesCount === 1 ? 'búð' : 'búðir'}
-                        </span>
-                      )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </>
@@ -966,31 +1390,31 @@ export default function Home() {
 
         {/* VIEW 2: VERSLANAGREINING & VERÐBREYTINGAR PER BÚÐ */}
         {activeView === 'stores' && (
-          <div className="space-y-6 animate-in fade-in duration-150">
+          <div className="space-y-6">
             {/* Store Analytics Header */}
-            <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 shadow-lg space-y-4">
+            <div className="bg-zinc-900/70 border border-white/[0.08] rounded-2xl p-6 shadow-lg space-y-5">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                  <h2 className="text-base font-bold text-white flex items-center gap-2">
-                    <span>🏪</span> Verslanagreining og Verðbreytingar dagsins
+                  <h2 className="text-base sm:text-lg font-bold text-white tracking-tight">
+                    Verslanagreining og verðstaða á markaði
                   </h2>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    Fylgstu með hvaða verslanir eru að lækka eða hækka verð í dag og hver býður ódýrustu símana á markaðnum.
+                  <p className="text-xs text-zinc-400 mt-1">
+                    Samanburður á því hvaða verslanir bjóða oftast lægsta verðið og hvernig verð hreyfast á milli daga.
                   </p>
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-slate-300">
+                  <span className="text-xs font-medium px-3 py-1.5 rounded-xl bg-zinc-950 border border-white/[0.08] text-zinc-300 tabular-nums">
                     {meta?.totalStores || 0} verslanir virkar
                   </span>
                 </div>
               </div>
 
               {/* KPI Summary Row */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-slate-800/80 text-xs">
-                <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800">
-                  <span className="text-slate-400 block text-[11px]">Flest lægstu verð á markaðnum</span>
-                  <span className="text-sm font-bold text-emerald-400 mt-1 flex items-center gap-1.5">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4 border-t border-white/[0.07] text-xs tabular-nums">
+                <div className="bg-zinc-950/90 p-4 rounded-xl border border-white/[0.07]">
+                  <span className="text-zinc-400 block text-[11px]">Flest lægstu verð á markaðnum</span>
+                  <span className="text-sm sm:text-base font-bold text-emerald-400 mt-1.5 flex items-center gap-2">
                     {getStoreFavicon(meta?.storeSummaries?.[0]?.store || 'Nova') && (
                       /* eslint-disable-next-line @next/next/no-img-element */
                       <img
@@ -1003,15 +1427,15 @@ export default function Home() {
                     {meta?.storeSummaries?.[0]?.store || 'Nova'} ({meta?.storeSummaries?.[0]?.cheapestCount || 0} símar)
                   </span>
                 </div>
-                <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800">
-                  <span className="text-slate-400 block text-[11px]">Heildarverðlækkanir í dag</span>
-                  <span className="text-sm font-bold text-cyan-400 mt-1 block">
+                <div className="bg-zinc-950/90 p-4 rounded-xl border border-white/[0.07]">
+                  <span className="text-zinc-400 block text-[11px]">Heildarverðlækkanir í dag</span>
+                  <span className="text-sm sm:text-base font-bold text-cyan-400 mt-1.5 block">
                     {meta?.storeSummaries?.reduce((acc, s) => acc + s.dropsCount, 0) || 0} símar lækkuðu
                   </span>
                 </div>
-                <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800">
-                  <span className="text-slate-400 block text-[11px]">Heildarverðhækkanir í dag</span>
-                  <span className="text-sm font-bold text-rose-400 mt-1 block">
+                <div className="bg-zinc-950/90 p-4 rounded-xl border border-white/[0.07]">
+                  <span className="text-zinc-400 block text-[11px]">Heildarverðhækkanir í dag</span>
+                  <span className="text-sm sm:text-base font-bold text-rose-400 mt-1.5 block">
                     {meta?.storeSummaries?.reduce((acc, s) => acc + s.hikesCount, 0) || 0} símar hækkuðu
                   </span>
                 </div>
@@ -1027,13 +1451,13 @@ export default function Home() {
                 return (
                   <div
                     key={st.store}
-                    className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 shadow-md flex flex-col justify-between space-y-4 hover:border-slate-700 transition"
+                    className="bg-zinc-900/70 border border-white/[0.08] hover:border-white/[0.15] rounded-2xl p-5 shadow-md flex flex-col justify-between space-y-4 transition-colors"
                   >
                     <div>
                       {/* Top Header */}
-                      <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center justify-between mb-3.5">
                         <div className="flex items-center gap-2">
-                          <span className={`inline-flex items-center gap-1.5 text-xs px-3 py-1 rounded-lg border font-bold ${getStoreBadgeColor(st.store)}`}>
+                          <span className={`inline-flex items-center gap-2 text-xs px-3 py-1.5 rounded-xl border font-bold ${getStoreBadgeColor(st.store)}`}>
                             {getStoreFavicon(st.store) && (
                               /* eslint-disable-next-line @next/next/no-img-element */
                               <img
@@ -1046,68 +1470,68 @@ export default function Home() {
                             {st.store}
                           </span>
                           {isLeader && (
-                            <span className="text-[10px] font-extrabold px-2 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800">
-                              🏆 Verðleiðtogi
+                            <span className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                              Verðleiðtogi
                             </span>
                           )}
                         </div>
 
-                        <span className="text-xs text-slate-400 font-mono">
+                        <span className="text-xs text-zinc-400 font-mono tabular-nums">
                           {st.totalPhones} símar í boði
                         </span>
                       </div>
 
                       {/* Store Metrics */}
-                      <div className="grid grid-cols-2 gap-2 text-xs mb-3">
-                        <div className="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800/60">
-                          <span className="text-[10px] text-slate-400 block">Lægst verð á markaði</span>
-                          <span className="text-xs font-bold text-emerald-400 mt-0.5 block">
-                            ★ Í {st.cheapestCount} líkönum
+                      <div className="grid grid-cols-2 gap-2.5 text-xs mb-3 tabular-nums">
+                        <div className="bg-zinc-950/80 p-3 rounded-xl border border-white/[0.06]">
+                          <span className="text-[11px] text-zinc-400 block">Lægst verð á markaði</span>
+                          <span className="text-sm font-bold text-emerald-400 mt-0.5 block">
+                            Í {st.cheapestCount} líkönum
                           </span>
                         </div>
 
-                        <div className="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800/60">
-                          <span className="text-[10px] text-slate-400 block">Heildarbreyting í dag</span>
+                        <div className="bg-zinc-950/80 p-3 rounded-xl border border-white/[0.06]">
+                          <span className="text-[11px] text-zinc-400 block">Heildarbreyting í dag</span>
                           <span
-                            className={`text-xs font-bold mt-0.5 block ${
+                            className={`text-sm font-bold mt-0.5 block ${
                               st.netChangeAmount < 0
                                 ? 'text-emerald-400'
                                 : st.netChangeAmount > 0
                                 ? 'text-rose-400'
-                                : 'text-slate-300'
+                                : 'text-zinc-300'
                             }`}
                           >
                             {st.netChangeAmount < 0
-                              ? `📉 -${formatPrice(Math.abs(st.netChangeAmount))}`
+                              ? `-${formatPrice(Math.abs(st.netChangeAmount))}`
                               : st.netChangeAmount > 0
-                              ? `📈 +${formatPrice(st.netChangeAmount)}`
-                              : '● Óbreytt verð'}
+                              ? `+${formatPrice(st.netChangeAmount)}`
+                              : 'Óbreytt verð'}
                           </span>
                         </div>
                       </div>
 
                       {/* Daily Changes Breakdown */}
-                      <div className="flex items-center justify-between text-[11px] px-2.5 py-1.5 bg-slate-950/60 rounded-lg border border-slate-800/60 text-slate-400">
-                        <span className="flex items-center gap-1 text-emerald-400 font-medium">
-                          📉 {st.dropsCount} lækkanir
+                      <div className="flex items-center justify-between text-[11px] px-3 py-2 bg-zinc-950/60 rounded-xl border border-white/[0.05] text-zinc-400 tabular-nums">
+                        <span className="text-emerald-400 font-medium">
+                          {st.dropsCount} lækkanir
                         </span>
-                        <span className="flex items-center gap-1 text-rose-400 font-medium">
-                          📈 {st.hikesCount} hækkanir
+                        <span className="text-rose-400 font-medium">
+                          {st.hikesCount} hækkanir
                         </span>
-                        <span className="text-slate-500">
+                        <span className="text-zinc-500">
                           {st.unchangedCount} óbreytt
                         </span>
                       </div>
 
                       {/* Biggest Drop at Store */}
                       {st.biggestDrop && (
-                        <div className="mt-3 p-2.5 rounded-xl bg-emerald-950/40 border border-emerald-800/40 text-xs">
-                          <span className="text-[10px] text-emerald-300 font-bold block mb-0.5">
+                        <div className="mt-3 p-3 rounded-xl bg-emerald-500/[0.08] border border-emerald-500/20 text-xs tabular-nums">
+                          <span className="text-[10px] text-emerald-300 font-semibold block mb-0.5">
                             Mesta lækkun dagsins hjá {st.store}:
                           </span>
-                          <div className="flex items-baseline justify-between text-slate-200">
+                          <div className="flex items-baseline justify-between text-zinc-200">
                             <span className="font-semibold line-clamp-1 mr-2">{st.biggestDrop.modelName}</span>
-                            <span className="text-emerald-400 font-extrabold shrink-0">
+                            <span className="text-emerald-400 font-bold shrink-0">
                               -{formatPrice(st.biggestDrop.dropAmount)} (-{st.biggestDrop.dropPercent}%)
                             </span>
                           </div>
@@ -1121,7 +1545,7 @@ export default function Home() {
                         setSelectedStore(st.store);
                         setActiveView('list');
                       }}
-                      className="w-full text-xs font-semibold py-2 rounded-xl bg-slate-800 hover:bg-blue-600 text-slate-200 hover:text-white border border-slate-700 hover:border-blue-500 transition flex items-center justify-center gap-1.5"
+                      className="w-full text-xs font-semibold py-2.5 rounded-xl bg-zinc-800/90 hover:bg-white text-zinc-200 hover:text-zinc-950 border border-white/[0.08] transition-colors duration-150 motion-safe:enabled:active:scale-[0.98] flex items-center justify-center gap-1.5"
                     >
                       <span>Skoða alla síma hjá {st.store} ({st.totalPhones})</span>
                       <span>→</span>
@@ -1135,16 +1559,16 @@ export default function Home() {
 
         {/* VIEW 3: LOGS & KEYRSLUFERILL */}
         {activeView === 'logs' && (
-          <div className="space-y-6 animate-in fade-in duration-150">
+          <div className="space-y-6">
             {/* Status Card */}
-            <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 shadow-lg space-y-4">
+            <div className="bg-zinc-900/70 border border-white/[0.08] rounded-2xl p-6 shadow-lg space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                  <h2 className="text-base font-bold text-white flex items-center gap-2">
-                    <span>⏱️</span> Vöktunarstaða og síðasta keyrsla
+                  <h2 className="text-base sm:text-lg font-bold text-white tracking-tight">
+                    Vöktunarstaða og keyrsluferill
                   </h2>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    Upplýsingar um hvenær bakendinn keyrði síðast og sótti gögn frá verslunum.
+                  <p className="text-xs text-zinc-400 mt-0.5">
+                    Rauntímayfirlit yfir gagnasöfnun úr 43 vörustraumum hjá íslenskum verslunum.
                   </p>
                 </div>
 
@@ -1154,16 +1578,15 @@ export default function Home() {
                       setRawJsonTab('summary');
                       setShowRawJsonModal(true);
                     }}
-                    className="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition shadow-sm"
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-white/[0.08] transition-colors"
                   >
-                    <span>📊</span>
-                    <span>Skoða samantekt & logs</span>
+                    <span>Skoða samantekt & JSON</span>
                   </button>
 
                   <button
                     onClick={() => fetchPhones(true)}
                     disabled={refreshing}
-                    className="inline-flex items-center gap-2 text-xs font-semibold px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white transition disabled:opacity-50"
+                    className="inline-flex items-center gap-2 text-xs font-semibold px-4 py-2 rounded-xl bg-white hover:bg-zinc-200 text-zinc-950 transition-colors disabled:opacity-50"
                   >
                     <svg
                       className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`}
@@ -1178,94 +1601,51 @@ export default function Home() {
                         d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
                       />
                     </svg>
-                    {refreshing ? 'Keyri uppfærslu núna...' : 'Keyra uppfærslu núna'}
+                    {refreshing ? 'Keyri uppfærslu...' : 'Keyra uppfærslu núna'}
                   </button>
                 </div>
               </div>
 
               {meta && (
-                <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 pt-4 border-t border-slate-800/80">
-                  <div className="bg-slate-950/80 p-3.5 rounded-xl border border-slate-800/60">
-                    <span className="text-[11px] text-slate-400 block">Síðast keyrt</span>
-                    <span className="text-sm font-bold text-emerald-400 font-mono">
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-4 border-t border-white/[0.07] tabular-nums">
+                  <div className="bg-zinc-950/80 p-3.5 rounded-xl border border-white/[0.06]">
+                    <span className="text-[11px] text-zinc-400 block">Síðast keyrt</span>
+                    <span className="text-sm font-bold text-emerald-400 font-mono mt-0.5 block">
                       {formatDate(meta.lastRun)}
                     </span>
                   </div>
-                  <div className="bg-slate-950/80 p-3.5 rounded-xl border border-slate-800/60">
-                    <span className="text-[11px] text-slate-400 block">Svarstími bakenda</span>
-                    <span className="text-sm font-bold text-cyan-400 font-mono">{meta.durationMs} ms</span>
+                  <div className="bg-zinc-950/80 p-3.5 rounded-xl border border-white/[0.06]">
+                    <span className="text-[11px] text-zinc-400 block">Svarstími bakenda</span>
+                    <span className="text-sm font-bold text-cyan-400 font-mono mt-0.5 block">
+                      {meta.durationMs} ms
+                    </span>
                   </div>
-                  <div className="bg-slate-950/80 p-3.5 rounded-xl border border-slate-800/60">
-                    <span className="text-[11px] text-slate-400 block">Símar / Verslanir</span>
-                    <span className="text-sm font-bold text-indigo-400">
+                  <div className="bg-zinc-950/80 p-3.5 rounded-xl border border-white/[0.06]">
+                    <span className="text-[11px] text-zinc-400 block">Símar / Verslanir</span>
+                    <span className="text-sm font-bold text-white mt-0.5 block">
                       {meta.totalModels} líkön / {meta.totalStores} búðir
                     </span>
                   </div>
-                  <div className="bg-slate-950/80 p-3.5 rounded-xl border border-slate-800/60">
-                    <span className="text-[11px] text-slate-400 block">Stöðukóði</span>
-                    <span className="text-sm font-bold text-emerald-400">● 200 OK ({meta.status})</span>
+                  <div className="bg-zinc-950/80 p-3.5 rounded-xl border border-white/[0.06]">
+                    <span className="text-[11px] text-zinc-400 block">Stöðukóði</span>
+                    <span className="text-sm font-bold text-emerald-400 mt-0.5 block">
+                      ● 200 OK ({meta.status})
+                    </span>
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Quick Executive Summary Card directly on Logs tab */}
-            <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 shadow-lg space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                    <span>📊</span> Samantekt úr síðasta skanna
-                  </h3>
-                  <p className="text-[11px] text-slate-400 mt-0.5">
-                    Helstu tölur og hreyfingar á verðum síðan síðast var keyrt
-                  </p>
-                </div>
-                <button
-                  onClick={() => {
-                    setRawJsonTab('summary');
-                    setShowRawJsonModal(true);
-                  }}
-                  className="text-xs px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 font-semibold text-white transition flex items-center gap-1.5"
-                >
-                  <span>🔍</span>
-                  <span>Opna heildaryfirlit</span>
-                </button>
-              </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                <div className="bg-slate-950/70 border border-slate-800/60 p-3 rounded-xl">
-                  <span className="text-slate-400 text-[11px] block">Lækkaðir símar</span>
-                  <span className="text-lg font-bold text-emerald-400">📉 {summaryStats.dropsCount} símar</span>
-                </div>
-                <div className="bg-slate-950/70 border border-slate-800/60 p-3 rounded-xl">
-                  <span className="text-slate-400 text-[11px] block">Hækkaðir símar</span>
-                  <span className="text-lg font-bold text-rose-400">📈 {summaryStats.hikesCount} símar</span>
-                </div>
-                <div className="bg-slate-950/70 border border-slate-800/60 p-3 rounded-xl">
-                  <span className="text-slate-400 text-[11px] block">Óbreytt verð</span>
-                  <span className="text-lg font-bold text-slate-300">➖ {summaryStats.unchangedCount} símar</span>
-                </div>
-                <div className="bg-slate-950/70 border border-slate-800/60 p-3 rounded-xl">
-                  <span className="text-slate-400 text-[11px] block">Mestur sparnaður</span>
-                  <span className="text-lg font-bold text-amber-400">
-                    {summaryStats.topSavings.length > 0
-                      ? formatPrice(summaryStats.topSavings[0].savings)
-                      : '0 kr.'}
-                  </span>
-                </div>
-              </div>
-            </div>
-
             {/* Active Connected Stores */}
-            <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 shadow-lg space-y-3">
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <span>🏪</span> Tengdar verslanir í vöktun ({meta?.totalStores || 0})
+            <div className="bg-zinc-900/70 border border-white/[0.08] rounded-2xl p-6 shadow-lg space-y-3">
+              <h3 className="text-sm font-bold text-white">
+                Tengdar verslanir í vöktun ({meta?.totalStores || 0})
               </h3>
               <div className="flex flex-wrap gap-2">
                 {meta?.storesList.map((st) => (
                   <span
                     key={st}
-                    className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border font-semibold ${getStoreBadgeColor(st)}`}
+                    className={`inline-flex items-center gap-2 text-xs px-3 py-1.5 rounded-xl border font-semibold ${getStoreBadgeColor(st)}`}
                   >
                     {getStoreFavicon(st) ? (
                       /* eslint-disable-next-line @next/next/no-img-element */
@@ -1285,14 +1665,14 @@ export default function Home() {
             </div>
 
             {/* History Table */}
-            <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 shadow-lg space-y-4">
+            <div className="bg-zinc-900/70 border border-white/[0.08] rounded-2xl p-6 shadow-lg space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                    <span>📋</span> Ferill síðustu keyrslna (Execution Log History)
+                  <h3 className="text-sm font-bold text-white">
+                    Ferill síðustu keyrslna
                   </h3>
-                  <p className="text-[11px] text-slate-400 mt-0.5">
-                    Smelltu á hvaða línu sem er til að skoða hrágögn (Raw JSON)
+                  <p className="text-[11px] text-zinc-400 mt-0.5">
+                    Smelltu á línu til að opna framkvæmdasamantekt eða skoða JSON hrágögn
                   </p>
                 </div>
                 <button
@@ -1300,25 +1680,25 @@ export default function Home() {
                     setRawJsonTab('summary');
                     setShowRawJsonModal(true);
                   }}
-                  className="text-xs px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition"
+                  className="text-xs px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-white/[0.08] transition-colors"
                 >
-                  📊 Skoða samantekt
+                  Opna samantekt
                 </button>
               </div>
 
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="border-b border-slate-800 text-slate-400 bg-slate-950/60">
+                <table className="w-full text-left text-xs tabular-nums">
+                  <thead className="border-b border-white/[0.08] text-zinc-400 bg-zinc-950/60">
                     <tr>
                       <th className="py-2.5 px-3">Tímasetning</th>
                       <th className="py-2.5 px-3">Staða</th>
                       <th className="py-2.5 px-3">Símar fundnir</th>
                       <th className="py-2.5 px-3">Verslanir</th>
                       <th className="py-2.5 px-3">Svarstími</th>
-                      <th className="py-2.5 px-3 text-right">Hrágögn</th>
+                      <th className="py-2.5 px-3 text-right">Aðgerð</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800/60 text-slate-300">
+                  <tbody className="divide-y divide-white/[0.06] text-zinc-300">
                     {logs.map((log) => (
                       <tr
                         key={log.id}
@@ -1326,13 +1706,13 @@ export default function Home() {
                           setRawJsonTab('summary');
                           setShowRawJsonModal(true);
                         }}
-                        className="hover:bg-slate-800/50 cursor-pointer transition group"
+                        className="hover:bg-zinc-800/40 cursor-pointer transition-colors group"
                       >
-                        <td className="py-2.5 px-3 font-mono text-slate-200 group-hover:text-blue-400 transition">
+                        <td className="py-2.5 px-3 font-mono text-zinc-200 group-hover:text-emerald-400 transition-colors">
                           {formatDate(log.timestamp)}
                         </td>
                         <td className="py-2.5 px-3">
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-950 text-emerald-300 border border-emerald-800">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/25">
                             ● {log.status}
                           </span>
                         </td>
@@ -1346,9 +1726,9 @@ export default function Home() {
                               setRawJsonTab('summary');
                               setShowRawJsonModal(true);
                             }}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-slate-800 group-hover:bg-blue-600 text-[11px] font-medium text-slate-300 group-hover:text-white transition"
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-800 group-hover:bg-white text-[11px] font-medium text-zinc-300 group-hover:text-zinc-950 transition-colors"
                           >
-                            <span>📊</span> Samantekt
+                            Samantekt →
                           </button>
                         </td>
                       </tr>
@@ -1360,14 +1740,23 @@ export default function Home() {
           </div>
         )}
 
-        {/* MODAL / INSPECTOR: Undirtegundir, Verð eftir búðum og Verðþróunargraf */}
+        {/* MODAL 1: PHONE COMPARISON & PRICE HISTORY INSPECTOR */}
         {selectedModel && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-150">
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl p-6 space-y-6">
+          <div
+            onClick={() => setSelectedModel(null)}
+            className="modal-overlay-backdrop fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md"
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="modal-phone-title"
+              className="modal-scroll-container bg-zinc-900 border border-white/[0.1] rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl p-5 sm:p-6 space-y-5"
+            >
               {/* Header */}
-              <div className="flex items-start justify-between border-b border-slate-800 pb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-14 h-14 bg-slate-950 rounded-xl p-1.5 border border-slate-800 flex items-center justify-center overflow-hidden shrink-0">
+              <div className="flex items-start justify-between gap-4 border-b border-white/[0.08] pb-4">
+                <div className="flex items-center gap-3.5">
+                  <div className="w-16 h-16 bg-white rounded-xl p-1.5 outline-1 -outline-offset-1 outline-black/10 flex items-center justify-center overflow-hidden shrink-0">
                     {selectedModel.image ? (
                       /* eslint-disable-next-line @next/next/no-img-element */
                       <img
@@ -1380,136 +1769,118 @@ export default function Home() {
                     )}
                   </div>
                   <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-300">
+                    <div className="flex flex-wrap items-center gap-2 mb-1">
+                      <span className="text-[11px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md bg-zinc-800 text-zinc-300">
                         {selectedModel.brand}
                       </span>
-                      {selectedModel.priceChangePercent < 0 ? (
-                        <span className="text-xs font-bold text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800">
-                          📉 {selectedModel.priceChangePercent}% ({formatPrice(Math.abs(selectedModel.priceChangeAmount))} lækkun)
-                        </span>
-                      ) : selectedModel.priceChangePercent > 0 ? (
-                        <span className="text-xs font-bold text-rose-400 bg-rose-950 px-2 py-0.5 rounded border border-rose-800">
-                          📈 +{selectedModel.priceChangePercent}% (+{formatPrice(selectedModel.priceChangeAmount)} hækkun)
-                        </span>
-                      ) : (
-                        <span className="text-xs font-medium text-slate-300 bg-slate-800/90 px-2 py-0.5 rounded border border-slate-700">
-                          ● Verð óbreytt frá {selectedModel.history[0]?.date || 'í dag'}
+                      {selectedModel.maxSavings > 0 && (
+                        <span className="text-[11px] font-semibold text-emerald-300 bg-emerald-500/15 px-2 py-0.5 rounded-md border border-emerald-500/25 tabular-nums">
+                          Allt að {formatPrice(selectedModel.maxSavings)} verðmunur
                         </span>
                       )}
                     </div>
-                    <h2 className="text-base sm:text-lg font-bold text-white">{selectedModel.name}</h2>
+                    <h2 id="modal-phone-title" className="text-base sm:text-xl font-bold text-white">
+                      {selectedModel.name}
+                    </h2>
                   </div>
                 </div>
 
                 <button
                   onClick={() => setSelectedModel(null)}
-                  className="text-slate-400 hover:text-white p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-bold"
+                  className="text-zinc-400 hover:text-white px-2.5 py-1.5 rounded-xl bg-zinc-800/90 hover:bg-zinc-700 text-xs font-semibold transition-colors shrink-0"
                 >
                   ✕ Loka
                 </button>
               </div>
 
-              {/* 1. VERÐÞRÓUNAR GRAF (Trend chart over time) */}
-              <div className="bg-slate-950/80 border border-slate-800/80 rounded-xl p-4 space-y-2">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-slate-200 flex items-center gap-1.5">
-                    <span>📈</span> Verðþróun yfir tíma (Saga)
-                  </span>
-                  <span className="text-slate-400 text-[11px]">
-                    Lægsta verð: <strong className="text-emerald-400">{formatPrice(selectedModel.lowestPrice)}</strong>
-                  </span>
-                </div>
-
-                {renderTrendSvg(selectedModel.history, 500, 110)}
-              </div>
-
-              {/* 2. UNDIRTEGUNDIR (Variants / Storage selection) */}
+              {/* 1. Storage Variant Selector */}
               <div className="space-y-2">
-                <span className="text-xs font-bold text-slate-300 block">
-                  Veldu undirtegund / geymslupláss:
+                <span className="text-xs font-semibold text-zinc-400 block">
+                  Veldu geymslupláss til að bera saman nákvæmlega sömu útgáfu:
                 </span>
                 <div className="flex flex-wrap gap-2">
-                  {selectedModel.variants.map((v) => (
-                    <button
-                      key={v.storage}
-                      onClick={() => setSelectedStorage(v.storage)}
-                      className={`text-xs px-3 py-2 rounded-xl border font-bold transition flex items-center gap-2 ${
-                        selectedStorage === v.storage
-                          ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
-                          : 'bg-slate-950 text-slate-400 border-slate-800 hover:border-slate-700 hover:text-slate-200'
-                      }`}
-                    >
-                      <span>{v.storage}</span>
-                      <span className="text-[11px] font-normal opacity-80">({formatPrice(v.lowestPrice)})</span>
-                    </button>
-                  ))}
+                  {selectedModel.variants.map((v) => {
+                    const active = selectedStorage === v.storage;
+                    return (
+                      <button
+                        key={v.storage}
+                        onClick={() => setSelectedStorage(v.storage)}
+                        className={`text-xs px-3.5 py-2 rounded-xl border font-semibold transition-colors flex items-center gap-2 tabular-nums ${
+                          active
+                            ? 'bg-white text-zinc-950 border-white shadow-sm'
+                            : 'bg-zinc-950 text-zinc-300 border-white/[0.08] hover:border-white/20'
+                        }`}
+                      >
+                        <span>{v.storage}</span>
+                        <span className={`text-[11px] font-normal ${active ? 'text-zinc-700' : 'text-zinc-400'}`}>
+                          frá {formatPrice(v.lowestPrice)}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
-              {/* 3. VERÐ EFTIR BÚÐUM (Store Comparison for chosen variant) */}
+              {/* 2. Store Offers Comparison for Selected Storage */}
               {currentVariant && (
-                <div className="space-y-3">
+                <div className="space-y-2.5">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-slate-200">
-                      Verð á {selectedModel.name} ({currentVariant.storage}) eftir verslunum:
+                    <span className="font-semibold text-zinc-200">
+                      Verðsamanburður fyrir {selectedModel.name} ({currentVariant.storage})
                     </span>
-                    <span className="text-[11px] text-slate-400">
-                      {currentVariant.offers.length} {currentVariant.offers.length === 1 ? 'verslun býður' : 'verslanir bjóða'}
+                    <span className="text-[11px] text-zinc-400 tabular-nums">
+                      {currentVariant.offers.length}{' '}
+                      {currentVariant.offers.length === 1 ? 'verslun' : 'verslanir'}
                     </span>
                   </div>
 
-                  <div className="border border-slate-800 rounded-xl overflow-hidden divide-y divide-slate-800/80 bg-slate-950">
-                    {currentVariant.offers
+                  <div className="border border-white/[0.08] rounded-xl overflow-hidden divide-y divide-white/[0.06] bg-zinc-950/90">
+                    {[...currentVariant.offers]
                       .sort((a, b) => a.price - b.price)
                       .map((offer, idx) => {
                         const isCheapest = idx === 0;
                         const diff = offer.price - currentVariant.lowestPrice;
+                        const fav = getStoreFavicon(offer.store) || offer.storeLogo;
                         return (
                           <div
                             key={offer.store}
-                            className="p-3 flex items-center justify-between gap-3 hover:bg-slate-900/60 transition"
+                            className={`p-3.5 flex items-center justify-between gap-3 transition-colors ${
+                              isCheapest ? 'bg-emerald-500/[0.06]' : 'hover:bg-zinc-900/60'
+                            }`}
                           >
-                            <div className="flex items-center gap-2.5">
-                              {(getStoreFavicon(offer.store) || offer.storeLogo) && (
+                            <div className="flex items-center gap-3">
+                              {fav && (
                                 /* eslint-disable-next-line @next/next/no-img-element */
                                 <img
-                                  src={(getStoreFavicon(offer.store) || offer.storeLogo)!}
+                                  src={fav}
                                   alt={offer.store}
                                   className="w-5 h-5 rounded-xs object-contain shrink-0"
                                   loading="lazy"
                                 />
                               )}
                               <div>
-                                <div className="flex items-center gap-1.5">
-                                  <span className="text-xs font-bold text-white block">{offer.store}</span>
-                                  {typeof offer.priceChange === 'number' && offer.priceChange < 0 && (
-                                    <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">
-                                      📉 -{formatPrice(Math.abs(offer.priceChange))}
-                                    </span>
-                                  )}
-                                  {typeof offer.priceChange === 'number' && offer.priceChange > 0 && (
-                                    <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-rose-950 text-rose-300 border border-rose-800">
-                                      📈 +{formatPrice(offer.priceChange)}
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs sm:text-sm font-semibold text-white">
+                                    {offer.store}
+                                  </span>
+                                  {isCheapest && (
+                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                                      Lægsta verð
                                     </span>
                                   )}
                                 </div>
-                                {isCheapest ? (
-                                  <span className="text-[10px] font-bold text-emerald-400">
-                                    ★ Lægsta boðna verð
-                                  </span>
-                                ) : (
-                                  <span className="text-[10px] text-rose-400 font-medium">
-                                    +{formatPrice(diff)} dýrara
+                                {!isCheapest && (
+                                  <span className="text-[11px] text-zinc-400 tabular-nums">
+                                    +{formatPrice(diff)} dýrara en ódýrasta boð
                                   </span>
                                 )}
                               </div>
                             </div>
 
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-3 tabular-nums">
                               <span
-                                className={`text-sm font-extrabold ${
-                                  isCheapest ? 'text-emerald-400' : 'text-slate-200'
+                                className={`text-sm sm:text-base font-extrabold ${
+                                  isCheapest ? 'text-emerald-400' : 'text-zinc-100'
                                 }`}
                               >
                                 {formatPrice(offer.price)}
@@ -1519,15 +1890,15 @@ export default function Home() {
                                 href={offer.url}
                                 target="_blank"
                                 rel="noreferrer"
-                                className={`text-xs px-3 py-1.5 rounded-lg font-semibold transition inline-flex items-center gap-1 ${
+                                className={`text-xs px-3.5 py-2 rounded-xl font-semibold transition-colors inline-flex items-center gap-1.5 ${
                                   isCheapest
-                                    ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
-                                    : 'bg-slate-800 hover:bg-slate-700 text-slate-200'
+                                    ? 'bg-emerald-500 hover:bg-emerald-400 text-zinc-950'
+                                    : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-200'
                                 }`}
                               >
-                                Fara í búð
-                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                <span>Skoða í búð</span>
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 19.5l15-15m0 0H8.25m11.25 0v11.25" />
                                 </svg>
                               </a>
                             </div>
@@ -1537,72 +1908,70 @@ export default function Home() {
                   </div>
                 </div>
               )}
+
+              {/* 3. Historical Price Trend Chart */}
+              <div className="bg-zinc-950/80 border border-white/[0.07] rounded-xl p-4 space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-semibold text-zinc-200">
+                    Verðþróun yfir tíma
+                  </span>
+                  <span className="text-zinc-400 text-[11px] tabular-nums">
+                    Lægsta skráða verð: <strong className="text-emerald-400">{formatPrice(selectedModel.lowestPrice)}</strong>
+                  </span>
+                </div>
+
+                {renderTrendSvg(selectedModel.history, 520, 105)}
+              </div>
             </div>
           </div>
         )}
 
-        {/* RAW JSON & SUMMARY MODAL / INSPECTOR */}
+        {/* MODAL 2: EXECUTIVE SUMMARY & RAW JSON INSPECTOR */}
         {showRawJsonModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md animate-in fade-in duration-150">
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+          <div
+            onClick={() => setShowRawJsonModal(false)}
+            className="modal-overlay-backdrop fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md"
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              role="dialog"
+              aria-modal="true"
+              aria-label="Framkvæmdasamantekt og hrágögn"
+              className="modal-scroll-container bg-zinc-900 border border-white/[0.1] rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden"
+            >
               {/* Header */}
-              <div className="p-4 sm:p-5 border-b border-slate-800 flex items-center justify-between gap-4 bg-slate-950/80">
-                <div className="flex items-center gap-3">
-                  <span className="text-xl p-2 rounded-xl bg-blue-950/80 border border-blue-800 text-blue-400 font-mono">
-                    {rawJsonTab === 'summary' ? '📊' : '{ }'}
-                  </span>
-                  <div>
-                    <h2 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
-                      {rawJsonTab === 'summary' ? 'Framkvæmdasamantekt skanna' : 'Hrágögn úr skanna'}{' '}
-                      <span className="text-xs font-mono text-slate-400 font-normal hidden sm:inline">
-                        {rawJsonTab === 'summary' ? '(Executive Scan Summary)' : '(Raw JSON Payload)'}
-                      </span>
-                    </h2>
-                    <p className="text-[11px] text-slate-400">
-                      {meta?.lastRun ? `Keyrt: ${formatDate(meta.lastRun)}` : ''} · {meta?.totalModels || models.length} líkön · {meta?.durationMs || 0} ms svarstími
-                    </p>
-                  </div>
+              <div className="p-4 sm:p-5 border-b border-white/[0.08] flex items-center justify-between gap-4 bg-zinc-950/80">
+                <div>
+                  <h2 className="text-sm sm:text-base font-bold text-white">
+                    {rawJsonTab === 'summary' ? 'Framkvæmdasamantekt skanna' : 'JSON Hrágögn úr bakenda'}
+                  </h2>
+                  <p className="text-[11px] text-zinc-400 tabular-nums mt-0.5">
+                    {meta?.lastRun ? `Keyrt: ${formatDate(meta.lastRun)}` : ''} · {meta?.totalModels || models.length} líkön · {meta?.durationMs || 0} ms svarstími
+                  </p>
                 </div>
 
                 <div className="flex items-center gap-2">
                   <button
                     onClick={handleCopyJson}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-200 transition"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-white/[0.08] text-xs font-semibold text-zinc-200 transition-colors"
                   >
                     {copiedRaw ? (
-                      <>
-                        <span className="text-emerald-400">✓</span>
-                        <span className="text-emerald-400 font-bold">Afritað!</span>
-                      </>
+                      <span className="text-emerald-400 font-bold">✓ Afritað</span>
                     ) : (
-                      <>
-                        <span>📋</span>
-                        <span>Afrita JSON</span>
-                      </>
+                      <span>Afrita JSON</span>
                     )}
                   </button>
 
                   <button
                     onClick={handleDownloadJson}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-200 transition"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-white/[0.08] text-xs font-semibold text-zinc-200 transition-colors"
                   >
-                    <span>⬇️</span>
                     <span className="hidden sm:inline">Sækja .json</span>
                   </button>
 
-                  <a
-                    href="/api/phones"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-200 transition"
-                  >
-                    <span>🔗</span>
-                    <span className="hidden sm:inline">/api/phones</span>
-                  </a>
-
                   <button
                     onClick={() => setShowRawJsonModal(false)}
-                    className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold transition ml-1"
+                    className="px-2.5 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white text-xs font-bold transition-colors"
                   >
                     ✕
                   </button>
@@ -1610,211 +1979,114 @@ export default function Home() {
               </div>
 
               {/* Sub-bar: Tabs & Filter */}
-              <div className="px-4 py-3 border-b border-slate-800/80 bg-slate-950/50 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 text-xs">
-                {/* Tabs */}
-                <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-lg border border-slate-800 overflow-x-auto">
+              <div className="px-4 py-3 border-b border-white/[0.07] bg-zinc-950/50 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 text-xs">
+                <div className="flex items-center gap-1 bg-zinc-900 p-1 rounded-xl border border-white/[0.07] overflow-x-auto no-scrollbar">
                   <button
                     onClick={() => setRawJsonTab('summary')}
-                    className={`px-3 py-1 rounded font-semibold transition shrink-0 ${
-                      rawJsonTab === 'summary' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-400 hover:text-slate-200'
+                    className={`px-3 py-1.5 rounded-lg font-semibold transition-colors shrink-0 ${
+                      rawJsonTab === 'summary' ? 'bg-white text-zinc-950' : 'text-zinc-400 hover:text-zinc-200'
                     }`}
                   >
-                    📊 Samantekt
+                    Samantekt
                   </button>
                   <button
                     onClick={() => setRawJsonTab('all')}
-                    className={`px-3 py-1 rounded font-semibold transition shrink-0 ${
-                      rawJsonTab === 'all' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-400 hover:text-slate-200'
+                    className={`px-3 py-1.5 rounded-lg font-semibold transition-colors shrink-0 ${
+                      rawJsonTab === 'all' ? 'bg-white text-zinc-950' : 'text-zinc-400 hover:text-zinc-200'
                     }`}
                   >
-                    📄 Allur JSON pakki
+                    Allur JSON pakki
                   </button>
                   <button
                     onClick={() => setRawJsonTab('meta')}
-                    className={`px-3 py-1 rounded font-semibold transition shrink-0 ${
-                      rawJsonTab === 'meta' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-400 hover:text-slate-200'
+                    className={`px-3 py-1.5 rounded-lg font-semibold transition-colors shrink-0 ${
+                      rawJsonTab === 'meta' ? 'bg-white text-zinc-950' : 'text-zinc-400 hover:text-zinc-200'
                     }`}
                   >
-                    ⚙️ Aðeins Meta & Kerfi
+                    Meta & Kerfi
                   </button>
                   <button
                     onClick={() => setRawJsonTab('sample')}
-                    className={`px-3 py-1 rounded font-semibold transition shrink-0 ${
-                      rawJsonTab === 'sample' ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-400 hover:text-slate-200'
+                    className={`px-3 py-1.5 rounded-lg font-semibold transition-colors shrink-0 ${
+                      rawJsonTab === 'sample' ? 'bg-white text-zinc-950' : 'text-zinc-400 hover:text-zinc-200'
                     }`}
                   >
-                    🔍 Sýnishorn af líkönum
+                    Sýnishorn
                   </button>
                 </div>
 
-                {/* Filter input (when in raw mode) or descriptive status (when in summary mode) */}
-                {rawJsonTab !== 'summary' ? (
+                {rawJsonTab !== 'summary' && (
                   <div className="relative flex-1 sm:max-w-xs">
                     <input
                       type="text"
-                      placeholder="Sía línur í JSON (t.d. Pixel, Nova, price)..."
+                      placeholder="Sía línur í JSON..."
                       value={rawSearchFilter}
                       onChange={(e) => setRawSearchFilter(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                      className="w-full bg-zinc-950 border border-white/[0.09] rounded-xl px-3 py-1.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500/60"
                     />
-                    {rawSearchFilter && (
-                      <button
-                        onClick={() => setRawSearchFilter('')}
-                        className="absolute right-2 top-1 text-slate-400 hover:text-white text-[10px] bg-slate-800 px-1.5 py-0.5 rounded"
-                      >
-                        X
-                      </button>
-                    )}
-                  </div>
-                ) : (
-                  <div className="text-slate-400 text-[11px] hidden sm:block">
-                    Heildaryfirlit og tölfræði úr skönnun
                   </div>
                 )}
               </div>
 
-              {/* Modal Body: Summary Dashboard or Code Viewer */}
+              {/* Modal Body */}
               {rawJsonTab === 'summary' ? (
-                <div className="p-4 sm:p-6 space-y-6 flex-1 overflow-auto bg-slate-950 text-slate-200">
-                  {/* KPI Cards */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-                    <div className="bg-slate-900/90 border border-slate-800/80 rounded-xl p-3.5">
-                      <span className="text-[11px] font-medium text-slate-400 block">Svarstími & hraði</span>
-                      <span className="text-xl sm:text-2xl font-bold font-mono text-cyan-400">
+                <div className="p-4 sm:p-6 space-y-6 flex-1 overflow-auto bg-zinc-950 text-zinc-200 tabular-nums">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="bg-zinc-900/90 border border-white/[0.07] rounded-xl p-3.5">
+                      <span className="text-[11px] text-zinc-400 block">Svarstími</span>
+                      <span className="text-xl font-bold font-mono text-cyan-400">
                         {meta?.durationMs || 0} ms
                       </span>
-                      <span className="text-[10px] text-slate-500 block mt-1">
-                        {meta?.sourcesScanned || 43} gagnastraumar skannaðir
+                      <span className="text-[10px] text-zinc-500 block mt-1">
+                        {meta?.sourcesScanned || 43} gagnastraumar
                       </span>
                     </div>
 
-                    <div className="bg-slate-900/90 border border-slate-800/80 rounded-xl p-3.5">
-                      <span className="text-[11px] font-medium text-slate-400 block">Heildarfjöldi líkana</span>
-                      <span className="text-xl sm:text-2xl font-bold text-white">
+                    <div className="bg-zinc-900/90 border border-white/[0.07] rounded-xl p-3.5">
+                      <span className="text-[11px] text-zinc-400 block">Símalíkön</span>
+                      <span className="text-xl font-bold text-white">
                         {meta?.totalModels || models.length}
                       </span>
-                      <span className="text-[10px] text-slate-500 block mt-1">
-                        {meta?.totalVariants || 0} útfærslur skráðar
+                      <span className="text-[10px] text-zinc-500 block mt-1">
+                        {meta?.totalVariants || 0} útfærslur
                       </span>
                     </div>
 
-                    <div className="bg-slate-900/90 border border-slate-800/80 rounded-xl p-3.5">
-                      <span className="text-[11px] font-medium text-slate-400 block">Verðbreytingar</span>
-                      <div className="flex items-baseline gap-2 mt-0.5">
-                        <span className="text-lg sm:text-xl font-bold text-emerald-400">
-                          {summaryStats.dropsCount} lækkuð
-                        </span>
-                        {summaryStats.hikesCount > 0 && (
-                          <span className="text-xs font-bold text-rose-400">
-                            +{summaryStats.hikesCount} hækkuð
-                          </span>
-                        )}
-                      </div>
-                      <span className="text-[10px] text-slate-500 block mt-1">
-                        {summaryStats.unchangedCount} óbreytt verð
+                    <div className="bg-zinc-900/90 border border-white/[0.07] rounded-xl p-3.5">
+                      <span className="text-[11px] text-zinc-400 block">Verðlækkanir</span>
+                      <span className="text-xl font-bold text-emerald-400">
+                        {summaryStats.dropsCount}
+                      </span>
+                      <span className="text-[10px] text-zinc-500 block mt-1">
+                        {summaryStats.unchangedCount} óbreytt
                       </span>
                     </div>
 
-                    <div className="bg-slate-900/90 border border-slate-800/80 rounded-xl p-3.5">
-                      <span className="text-[11px] font-medium text-slate-400 block">Verslanir í vöktun</span>
-                      <span className="text-xl sm:text-2xl font-bold text-indigo-400">
+                    <div className="bg-zinc-900/90 border border-white/[0.07] rounded-xl p-3.5">
+                      <span className="text-[11px] text-zinc-400 block">Verslanir</span>
+                      <span className="text-xl font-bold text-white">
                         {meta?.totalStores || 0}
                       </span>
                       <span className="text-[10px] text-emerald-400 block mt-1">
-                        ● 100% tengdar og virkar
+                        ● 100% tengdar
                       </span>
                     </div>
                   </div>
 
-                  {/* Section 1: Price Highlights & Brand Distribution */}
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    {/* Top Savings */}
-                    <div className="bg-slate-900/70 border border-slate-800/80 rounded-xl p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <h4 className="text-xs sm:text-sm font-bold text-white flex items-center gap-2">
-                          <span>💰</span> Mestur verðmunur milli verslana
-                        </h4>
-                        <span className="text-[10px] text-slate-400">Sama geymslurými</span>
-                      </div>
-                      {summaryStats.topSavings.length > 0 ? (
-                        <div className="space-y-2">
-                          {summaryStats.topSavings.slice(0, 3).map((item, idx) => (
-                            <div
-                              key={idx}
-                              className="bg-slate-950/70 border border-slate-800/60 rounded-lg p-2.5 flex items-center justify-between text-xs"
-                            >
-                              <div className="min-w-0 pr-2">
-                                <div className="font-semibold text-white truncate">
-                                  {item.name} {item.variantStorage && `(${item.variantStorage})`}
-                                </div>
-                                <div className="text-[11px] text-slate-400 mt-0.5">
-                                  Ódýrast hjá <strong className="text-emerald-400">{item.cheapestStore}</strong> ({formatPrice(item.lowestPrice)})
-                                  {' vs '}
-                                  <span className="text-slate-400">{item.expensiveStore} ({formatPrice(item.highestPrice)})</span>
-                                </div>
-                              </div>
-                              <div className="text-right shrink-0">
-                                <span className="text-xs font-bold text-emerald-400 bg-emerald-950/80 border border-emerald-800 px-2 py-0.5 rounded">
-                                  Sparar {formatPrice(item.savings)}
-                                </span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-xs text-slate-400">Enginn verðmunur milli verslana fannst.</p>
-                      )}
-                    </div>
-
-                    {/* Brand Distribution */}
-                    <div className="bg-slate-900/70 border border-slate-800/80 rounded-xl p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <h4 className="text-xs sm:text-sm font-bold text-white flex items-center gap-2">
-                          <span>📱</span> Vörumerkjadreifing í skanna
-                        </h4>
-                        <span className="text-[10px] text-slate-400">{models.length} líkön samtals</span>
-                      </div>
-                      <div className="space-y-2">
-                        {summaryStats.sortedBrands.map(([brand, count]) => {
-                          const pct = models.length > 0 ? Math.round((count / models.length) * 100) : 0;
-                          return (
-                            <div key={brand} className="space-y-1">
-                              <div className="flex justify-between text-xs">
-                                <span className="font-medium text-slate-200">{brand}</span>
-                                <span className="text-slate-400 font-mono">
-                                  {count} líkön ({pct}%)
-                                </span>
-                              </div>
-                              <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                                <div
-                                  className="bg-blue-500 h-full rounded-full transition-all duration-300"
-                                  style={{ width: `${pct}%` }}
-                                />
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Section 2: Store Activity Breakdown */}
+                  {/* Store Breakdown */}
                   {summaryStats.storeSummaries.length > 0 && (
-                    <div className="bg-slate-900/70 border border-slate-800/80 rounded-xl p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <h4 className="text-xs sm:text-sm font-bold text-white flex items-center gap-2">
-                          <span>🏪</span> Samantekt eftir verslunum
-                        </h4>
-                        <span className="text-[10px] text-slate-400">Verðbreytingar og ódýrustu boð</span>
-                      </div>
+                    <div className="bg-zinc-900/60 border border-white/[0.07] rounded-xl p-4">
+                      <h4 className="text-xs sm:text-sm font-bold text-white mb-3">
+                        Samantekt eftir verslunum
+                      </h4>
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
                         {summaryStats.storeSummaries.map((st) => (
                           <div
                             key={st.store}
-                            className="bg-slate-950/70 border border-slate-800/60 rounded-lg p-2.5 text-xs space-y-1"
+                            className="bg-zinc-950/80 border border-white/[0.06] rounded-xl p-3 text-xs space-y-1.5"
                           >
                             <div className="flex items-center justify-between">
-                              <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded font-semibold text-[11px] border ${getStoreBadgeColor(st.store)}`}>
+                              <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md font-semibold text-[11px] border ${getStoreBadgeColor(st.store)}`}>
                                 {getStoreFavicon(st.store) && (
                                   /* eslint-disable-next-line @next/next/no-img-element */
                                   <img
@@ -1826,88 +2098,37 @@ export default function Home() {
                                 )}
                                 {st.store}
                               </span>
-                              <span className="text-slate-400 font-mono text-[11px]">
+                              <span className="text-zinc-400 font-mono text-[11px]">
                                 {st.totalPhones} símar
                               </span>
                             </div>
                             <div className="flex items-center justify-between text-[11px] pt-1">
-                              <span className="text-slate-400">Lægsta verð á mkr.:</span>
+                              <span className="text-zinc-400">Lægsta verð:</span>
                               <span className="font-semibold text-emerald-400">{st.cheapestCount} sinnum</span>
-                            </div>
-                            <div className="flex items-center justify-between text-[11px]">
-                              <span className="text-slate-400">Verðlækkanir:</span>
-                              <span className={st.dropsCount > 0 ? 'font-bold text-emerald-400' : 'text-slate-500'}>
-                                {st.dropsCount} stk
-                              </span>
                             </div>
                           </div>
                         ))}
                       </div>
                     </div>
                   )}
-
-                  {/* Section 3: Engine Architecture & Quality Checks */}
-                  <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4 space-y-2.5 text-xs">
-                    <h4 className="font-bold text-white flex items-center gap-2">
-                      <span>🛡️</span> Gæðagreining & Bakendakerfi
-                    </h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-[11px] text-slate-400">
-                      <div className="bg-slate-950/80 p-2.5 rounded-lg border border-slate-800/60">
-                        <span className="font-bold text-slate-200 block mb-0.5">Fyrirspurnarstjórnun</span>
-                        Já.is fyrirspurnir keyra í 14 runum af 4 með 60ms töf til að forðast hraðatakmarkanir (HTTP 429).
-                      </div>
-                      <div className="bg-slate-950/80 p-2.5 rounded-lg border border-slate-800/60">
-                        <span className="font-bold text-slate-200 block mb-0.5">Verðsamræming geymslu</span>
-                        Verðsamanburður og sparnaður er strangt reiknaður á sömu minnisstærð (t.d. 256GB við 256GB).
-                      </div>
-                      <div className="bg-slate-950/80 p-2.5 rounded-lg border border-slate-800/60">
-                        <span className="font-bold text-slate-200 block mb-0.5">Gagnaöryggi & Saga</span>
-                        Vörulisti og verðsöguferill er geymdur bæði á vefþjóni og í staðværu minni (localStorage).
-                      </div>
-                    </div>
-                  </div>
                 </div>
               ) : (
-                <div className="p-4 flex-1 overflow-auto bg-slate-950 font-mono text-[11px] leading-relaxed text-emerald-400/95 selection:bg-blue-700 selection:text-white">
+                <div className="p-4 flex-1 overflow-auto bg-zinc-950 font-mono text-[11px] leading-relaxed text-emerald-400/95">
                   <pre className="whitespace-pre overflow-x-auto">{rawFormattedJson}</pre>
                 </div>
               )}
-
-              {/* Footer */}
-              <div className="p-3 border-t border-slate-800 bg-slate-950 flex items-center justify-between text-[11px] text-slate-400">
-                {rawJsonTab === 'summary' ? (
-                  <>
-                    <span>
-                      Samantekt unnin úr <strong className="text-white">{meta?.totalModels || models.length}</strong> símum og <strong className="text-white">{meta?.totalStores || 0}</strong> verslunum
-                    </span>
-                    <button
-                      onClick={() => setRawJsonTab('all')}
-                      className="text-blue-400 hover:text-blue-300 font-semibold transition flex items-center gap-1"
-                    >
-                      <span>Skoða hrágögn í JSON</span>
-                      <span>→</span>
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <span>
-                      Línufjöldi: <strong className="text-white">{rawFormattedJson.split('\n').length}</strong> línur
-                    </span>
-                    <span className="text-slate-500">
-                      {rawSearchFilter ? `(Síað eftir: "${rawSearchFilter}")` : 'Öll gögn sýnd eins og þau berast úr bakenda'}
-                    </span>
-                  </>
-                )}
-              </div>
             </div>
           </div>
         )}
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-slate-800/80 mt-16 py-6 text-center text-xs text-slate-500">
-        <div className="max-w-7xl mx-auto px-4">
-          <p>© 2026 Farsímavaktin. Vörugögn og verðsöguþróun úr íslenskum vörustraumum.</p>
+      {/* Minimal Modern Footer */}
+      <footer className="border-t border-white/[0.06] mt-16 py-8 text-center text-xs text-zinc-500">
+        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+          <p>© 2026 Farsímavaktin — Rauntíma verðsamanburður á farsímum á Íslandi.</p>
+          <p className="text-[11px] text-zinc-600">
+            Gögn sótt beint úr vörustraumum ELKO, Nova, Símans, Sýnar, Emobi, Tölvulistans o.fl.
+          </p>
         </div>
       </footer>
     </div>
