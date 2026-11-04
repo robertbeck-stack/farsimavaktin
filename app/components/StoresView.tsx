@@ -74,6 +74,7 @@ export function StoresView({ meta, models, onSelectStore }: StoresViewProps) {
   const summaries = meta?.storeSummaries || [];
   const [focusedStore, setFocusedStore] = useState<string>('ALL');
   const [chartMode, setChartMode] = useState<'pct' | 'isk'>('pct');
+  const [hoverIdx, setHoverIdx] = useState<number | null>(null);
 
   const leader = summaries[0];
   const totalDrops = summaries.reduce((acc, s) => acc + s.dropsCount, 0);
@@ -294,8 +295,9 @@ export function StoresView({ meta, models, onSelectStore }: StoresViewProps) {
             </div>
           </div>
 
-          {/* Store Selector Pills for the Line Chart */}
-          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
+          {/* Store Selector Pills for the Line Chart with right fade hint */}
+          <div className="relative">
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 scroll-smooth pr-10">
             <button
               type="button"
               onClick={() => setFocusedStore('ALL')}
@@ -350,16 +352,94 @@ export function StoresView({ meta, models, onSelectStore }: StoresViewProps) {
                 </button>
               );
             })}
+            </div>
+            {/* Subtle right fade indicating scrollable stores */}
+            <div className="pointer-events-none absolute right-0 top-0 bottom-1 w-12 bg-gradient-to-l from-white dark:from-zinc-900/90 to-transparent" />
           </div>
 
           {/* Main SVG Multi-Store Line Chart Canvas */}
-          <div className="rounded-xl bg-zinc-50/80 dark:bg-zinc-950/80 border border-zinc-200/70 dark:border-white/[0.06] p-3 sm:p-4">
+          <div className="relative rounded-xl bg-zinc-50/80 dark:bg-zinc-950/80 border border-zinc-200/70 dark:border-white/[0.06] p-3 sm:p-4">
+            {/* Interactive Hover Card */}
+            {hoverIdx !== null && dateLabels[hoverIdx] && (
+              <div className="absolute top-4 left-4 sm:left-6 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xs border border-zinc-200/90 dark:border-white/10 rounded-xl px-3 py-2 shadow-lg pointer-events-none z-20 flex flex-col gap-1 text-xs transition-opacity duration-150">
+                <div className="flex items-center gap-2 border-b border-zinc-100 dark:border-white/[0.06] pb-1 text-[11px] font-mono text-zinc-500 dark:text-zinc-400">
+                  <span>Dagsetning:</span>
+                  <span className="font-bold text-zinc-900 dark:text-white">
+                    {hoverIdx === dateLabels.length - 1 ? `Í dag (${dateLabels[hoverIdx]})` : dateLabels[hoverIdx]}
+                  </span>
+                </div>
+                {chartStores.length === 1 ? (
+                  (() => {
+                    const st = chartStores[0];
+                    const pt = st.history[hoverIdx];
+                    const base = st.history[0]?.price || 1;
+                    const pct = pt ? ((pt.price - base) / base) * 100 : 0;
+                    return (
+                      <div className="flex items-center gap-3">
+                        <span className="font-semibold text-zinc-900 dark:text-white">{st.store}</span>
+                        <span className="font-mono font-bold text-zinc-800 dark:text-zinc-200">
+                          {formatPrice(pt?.price || 0)}
+                        </span>
+                        <span
+                          className={`font-mono text-[11px] font-bold ${
+                            pct < 0
+                              ? 'text-emerald-600 dark:text-emerald-400'
+                              : pct > 0
+                              ? 'text-rose-600 dark:text-rose-400'
+                              : 'text-zinc-400'
+                          }`}
+                        >
+                          {pct >= 0 ? `+${pct.toFixed(1)}%` : `${pct.toFixed(1)}%`}
+                        </span>
+                      </div>
+                    );
+                  })()
+                ) : (
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 max-w-md">
+                    {chartStores.slice(0, 5).map((st) => {
+                      const pt = st.history[hoverIdx];
+                      const base = st.history[0]?.price || 1;
+                      const pct = pt ? ((pt.price - base) / base) * 100 : 0;
+                      return (
+                        <div key={st.store} className="inline-flex items-center gap-1.5 text-[11px]">
+                          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: st.color }} />
+                          <span className="text-zinc-700 dark:text-zinc-300 font-medium">{st.store}:</span>
+                          <span className="font-mono font-semibold text-zinc-900 dark:text-white">
+                            {chartMode === 'pct'
+                              ? `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%`
+                              : `${Math.round((pt?.price || 0) / 1000)}þ`}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="w-full overflow-x-auto">
               <svg
                 viewBox="0 0 860 280"
-                className="w-full h-60 sm:h-72 overflow-visible select-none"
+                className="w-full h-60 sm:h-72 overflow-visible select-none cursor-crosshair"
                 role="img"
                 aria-label="Línurit yfir verðþróun verslana"
+                onPointerMove={(e) => {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  if (!rect.width) return;
+                  const svgX = ((e.clientX - rect.left) / rect.width) * 860;
+                  const padLeft = 68;
+                  const padRight = 135;
+                  const plotW = 860 - padLeft - padRight;
+                  if (svgX < padLeft - 20 || svgX > padLeft + plotW + 20) {
+                    setHoverIdx(null);
+                    return;
+                  }
+                  const relX = Math.max(0, Math.min(plotW, svgX - padLeft));
+                  const count = dateLabels.length;
+                  const raw = count > 1 ? Math.round((relX / plotW) * (count - 1)) : 0;
+                  setHoverIdx(Math.max(0, Math.min(count - 1, raw)));
+                }}
+                onPointerLeave={() => setHoverIdx(null)}
               >
                 <defs>
                   <linearGradient id="risingZoneGrad" x1="0" y1="0" x2="0" y2="1">
@@ -614,6 +694,50 @@ export function StoresView({ meta, models, onSelectStore }: StoresViewProps) {
                           </g>
                         );
                       })}
+
+                      {/* Interactive Crosshair & Highlight Circles */}
+                      {hoverIdx !== null && (() => {
+                        const hoverX =
+                          padLeft +
+                          (dateLabels.length > 1
+                            ? (hoverIdx / (dateLabels.length - 1)) * plotW
+                            : plotW / 2);
+                        return (
+                          <g className="pointer-events-none">
+                            <line
+                              x1={hoverX}
+                              y1={padTop}
+                              x2={hoverX}
+                              y2={padTop + plotH}
+                              stroke="currentColor"
+                              className="text-zinc-400 dark:text-zinc-500"
+                              strokeWidth="1.5"
+                              strokeDasharray="3 3"
+                            />
+                            {chartStores.map((st) => {
+                              const pt = st.history[hoverIdx];
+                              if (!pt) return null;
+                              const base = st.history[0]?.price || 1;
+                              const val =
+                                chartMode === 'pct'
+                                  ? ((pt.price - base) / base) * 100
+                                  : pt.price;
+                              const cy = getY(val);
+                              return (
+                                <circle
+                                  key={st.store}
+                                  cx={hoverX}
+                                  cy={cy}
+                                  r={chartStores.length === 1 ? 5.5 : 4}
+                                  fill={st.color}
+                                  stroke="#ffffff"
+                                  strokeWidth="2"
+                                />
+                              );
+                            })}
+                          </g>
+                        );
+                      })()}
                     </>
                   );
                 })()}
@@ -675,7 +799,16 @@ export function StoresView({ meta, models, onSelectStore }: StoresViewProps) {
                   const fav = getStoreFavicon(st.store);
 
                   return (
-                    <div key={st.store} className="space-y-1.5 tabular-nums">
+                    <div
+                      key={st.store}
+                      onClick={() => setFocusedStore(focusedStore === st.store ? 'ALL' : st.store)}
+                      title={`Smelltu til að einangra línurit fyrir ${st.store}`}
+                      className={`group cursor-pointer rounded-xl p-1.5 -mx-1.5 transition-colors space-y-1.5 tabular-nums ${
+                        focusedStore === st.store
+                          ? 'bg-zinc-100 dark:bg-zinc-800/80 ring-1 ring-zinc-300 dark:ring-zinc-700'
+                          : 'hover:bg-zinc-50 dark:hover:bg-zinc-800/40'
+                      }`}
+                    >
                       <div className="flex items-center justify-between text-xs">
                         <div className="flex items-center gap-2 min-w-0">
                           <span className="text-[10px] font-mono text-zinc-400 w-4">#{idx + 1}</span>
@@ -751,6 +884,13 @@ export function StoresView({ meta, models, onSelectStore }: StoresViewProps) {
                 </div>
               </div>
 
+              {/* Column Marker Guide */}
+              <div className="flex items-center justify-between text-[10px] font-mono text-zinc-500 dark:text-zinc-400 px-1 pt-1 pb-1 border-b border-zinc-100 dark:border-white/[0.05]">
+                <span className="text-emerald-600 dark:text-emerald-400 font-semibold">← Ódýrari en markaður</span>
+                <span className="text-zinc-400 dark:text-zinc-500 text-[9px]">| Meðaltal (0%) |</span>
+                <span className="text-amber-600 dark:text-amber-400 font-semibold">Dýrari en markaður →</span>
+              </div>
+
               <div className="space-y-2.5 pt-1 tabular-nums">
                 {storesByCompetitiveness.slice(0, 9).map((st) => {
                   const dev = st.vsMarketPercent || 0;
@@ -763,7 +903,16 @@ export function StoresView({ meta, models, onSelectStore }: StoresViewProps) {
                   const isCheaper = dev <= 0;
 
                   return (
-                    <div key={st.store} className="space-y-1">
+                    <div
+                      key={st.store}
+                      onClick={() => setFocusedStore(focusedStore === st.store ? 'ALL' : st.store)}
+                      title={`Smelltu til að einangra línurit fyrir ${st.store}`}
+                      className={`group cursor-pointer rounded-xl p-1.5 -mx-1.5 transition-colors space-y-1 ${
+                        focusedStore === st.store
+                          ? 'bg-zinc-100 dark:bg-zinc-800/80 ring-1 ring-zinc-300 dark:ring-zinc-700'
+                          : 'hover:bg-zinc-50 dark:hover:bg-zinc-800/40'
+                      }`}
+                    >
                       <div className="flex items-center justify-between text-xs">
                         <div className="flex items-center gap-2 min-w-0">
                           {fav && (
