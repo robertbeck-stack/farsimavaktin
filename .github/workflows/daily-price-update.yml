@@ -1,0 +1,39 @@
+name: Dagleg verðuppfærsla (Farsímavaktin)
+
+on:
+  schedule:
+    # Keyrir sjálfkrafa á hverjum degi kl. 07:00 UTC (íslenskur tími)
+    - cron: '0 7 * * *'
+  workflow_dispatch: # Leyfir einnig handvirka keyrslu úr GitHub Actions flipanum
+
+permissions:
+  contents: write
+
+jobs:
+  update-prices:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Sækja kóðagrunn
+        uses: actions/checkout@v4
+
+      - name: Setja upp Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Setja upp pakka
+        run: npm ci
+
+      - name: Keyra vefskafara á allar 14 verslanir og uppfæra price_history.json
+        run: |
+          npx tsx -e "import { GET } from './app/api/phones/route'; GET().then(r => r.json()).then(d => { if (!d.models || d.models.length === 0) { process.exit(1); } console.log('Uppfært:', d.meta.totalModels, 'símalíkön úr', d.meta.totalStores, 'verslunum'); });"
+
+      - name: Vista og ýta uppfærðri verðsögu á GitHub
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/price_history.json
+          git diff --staged --quiet || (git commit -m "chore(data): dagleg verðuppfærsla $(date -u +'%Y-%m-%d')" && git push origin main)

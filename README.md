@@ -93,3 +93,16 @@ npx tsx -e "import { GET } from './app/api/phones/route'; GET().then(r => r.json
 ```bash
 npm run build
 ```
+
+---
+
+## 5. Sjálfvirk dagleg keyrsla (GitHub Actions & Vercel Cron)
+
+Kerfið keyrir **sjálfkrafa einu sinni á sólarhring (kl. 07:00 á morgnana)** á tvennan hátt:
+
+1. **GitHub Actions (`.github/workflows/daily-price-update.yml`)**:
+   - Keyrir á hverjum degi kl. `07:00 UTC` (`cron: '0 7 * * *'`), auk þess sem hægt er að ræsa keyrsluna handvirkt hvenær sem er með **Run workflow** (`workflow_dispatch`) undir *Actions* flipanum á GitHub.
+   - Skannar allar 14 verslanirnar, uppfærir [`data/price_history.json`](data/price_history.json) með nýjustu verðum dagsins og vistar (`git commit & push`) beint inn á `main` greinina — sem kveikir jafnframt sjálfkrafa á nýrri útgáfu (deploy) á Vercel með uppfærðri verðsögu.
+2. **Vercel Cron (`vercel.json`)**:
+   - Kveikir á `/api/phones` endapunktinum kl. `07:05 UTC` á hverjum degi til að endurnýja skyndiminni (edge cache) á framleiðsluvefnum.
+
