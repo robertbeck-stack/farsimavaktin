@@ -577,6 +577,17 @@ export async function GET(request?: Request) {
       .then((r) => (r.ok ? r.text() : ''))
       .catch(() => '');
 
+    // Fetch IcePhone WooCommerce Store API (Category 17 = Snjallsimar)
+    const icephonePromise = fetch(
+      'https://vefverslun.icephone.is/wp-json/wc/store/v1/products?category=17&per_page=100',
+      {
+        headers,
+        next: { revalidate: 900 },
+      }
+    )
+      .then((r) => (r.ok ? r.json() : []))
+      .catch(() => []);
+
     // Fetch Epli.is iPhone pages directly
     const epliPromise = Promise.all(
       [
@@ -626,6 +637,7 @@ export async function GET(request?: Request) {
       elkoPages,
       tlHtml,
       epliPages,
+      icephoneProducts,
     ] = await Promise.all([
       emobiPromise,
       siminnPromise,
@@ -637,6 +649,7 @@ export async function GET(request?: Request) {
       elkoPromise,
       tlPromise,
       epliPromise,
+      icephonePromise,
     ]);
     const validPages = allResponses.filter(Boolean);
 
@@ -961,6 +974,21 @@ export async function GET(request?: Request) {
         const href = p.permalink || 'https://emobi.is';
         const image = p.images?.[0]?.src;
         processItem(title, price, 'Emobi', href, image, undefined, undefined, origPrice);
+      }
+    }
+
+    // Process Direct IcePhone Products
+    if (Array.isArray(icephoneProducts)) {
+      for (const p of icephoneProducts) {
+        const title = p.name ? String(p.name).trim() : '';
+        const rawPrice = p.prices?.price;
+        const price = rawPrice ? parseInt(String(rawPrice), 10) : 0;
+        if (price < 35000) continue; // Filter out small accessories
+        const regPrice = p.prices?.regular_price ? parseInt(String(p.prices.regular_price), 10) : 0;
+        const origPrice = regPrice > price ? regPrice : undefined;
+        const href = p.permalink || 'https://vefverslun.icephone.is';
+        const image = p.images?.[0]?.src;
+        processItem(title, price, 'IcePhone', href, image, undefined, undefined, origPrice);
       }
     }
 

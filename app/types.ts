@@ -168,6 +168,8 @@ export const getStoreBadgeColor = (store: string) => {
     return 'bg-slate-100 text-slate-800 border-slate-300 dark:bg-slate-500/15 dark:text-slate-200 dark:border-slate-500/30';
   if (s.includes('epli'))
     return 'bg-zinc-100 text-zinc-900 border-zinc-300 dark:bg-zinc-500/15 dark:text-zinc-200 dark:border-zinc-500/30';
+  if (s.includes('icephone'))
+    return 'bg-cyan-50 text-cyan-700 border-cyan-200 dark:bg-cyan-500/10 dark:text-cyan-300 dark:border-cyan-500/25';
   return 'bg-zinc-100 text-zinc-700 border-zinc-200 dark:bg-zinc-800/80 dark:text-zinc-300 dark:border-zinc-700/80';
 };
 
@@ -192,6 +194,7 @@ export const getStoreDomain = (store: string): string => {
   if (s.includes('heimilistæki')) return 'ht.is';
   if (s.includes('goshop')) return 'goshop.is';
   if (s.includes('tunglskin')) return 'tunglskin.is';
+  if (s.includes('icephone')) return 'icephone.is';
   return 'ja.is';
 };
 

@@ -33,6 +33,7 @@ const STORE_LINE_COLORS: Record<string, string> = {
   Coolshop: '#ec4899',
   Ofar: '#84cc16',
   Tunglskin: '#eab308',
+  IcePhone: '#06b6d4',
 };
 
 function getStoreLineColor(store: string, idx = 0): string {
