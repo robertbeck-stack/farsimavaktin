@@ -123,6 +123,9 @@ export default function Home() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Theme state (synced with <meta name="color-scheme">, system preference, and localStorage)
+  const [isDark, setIsDark] = useState<boolean>(true);
+
   // Active view: 'list' | 'stores' | 'logs'
   const [activeView, setActiveView] = useState<'list' | 'stores' | 'logs'>('list');
   // Layout mode: 'grid' | 'rows'
@@ -151,6 +154,89 @@ export default function Home() {
   const [copiedRaw, setCopiedRaw] = useState(false);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Suppress transitions briefly during theme change to avoid color smearing
+  const applyThemeWithTransitionSuppression = useCallback((nextDark: boolean, metaValue: string) => {
+    const style = document.createElement('style');
+    style.append(document.createTextNode('*,*::before,*::after{transition:none !important}'));
+    document.head.append(style);
+
+    const metaEl = document.querySelector('meta[name="color-scheme"]');
+    if (metaEl) metaEl.setAttribute('content', metaValue);
+    document.documentElement.classList.toggle('dark', nextDark);
+    setIsDark(nextDark);
+
+    void document.body.offsetHeight;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => style.remove());
+    });
+  }, []);
+
+  // Initialize and synchronize color scheme across system changes and tabs
+  useEffect(() => {
+    const mql = window.matchMedia('(prefers-color-scheme: dark)');
+
+    const syncFromStorageAndSystem = () => {
+      let stored: string | null = null;
+      try {
+        stored = localStorage.getItem('color-scheme');
+      } catch {
+        // Ignore blocked storage
+      }
+      const nextDark = stored === 'dark' || (stored !== 'light' && mql.matches);
+      applyThemeWithTransitionSuppression(nextDark, stored ?? 'light dark');
+    };
+
+    syncFromStorageAndSystem();
+
+    const onMqlChange = () => {
+      let stored: string | null = null;
+      try {
+        stored = localStorage.getItem('color-scheme');
+      } catch {
+        // Ignore
+      }
+      // Do NOT remove stored value if OS happens to match it; only update if following system default
+      if (!stored) {
+        applyThemeWithTransitionSuppression(mql.matches, 'light dark');
+      }
+    };
+
+    const onStorageChange = (e: StorageEvent) => {
+      if (e.key === 'color-scheme') {
+        syncFromStorageAndSystem();
+      }
+    };
+
+    mql.addEventListener('change', onMqlChange);
+    window.addEventListener('storage', onStorageChange);
+    return () => {
+      mql.removeEventListener('change', onMqlChange);
+      window.removeEventListener('storage', onStorageChange);
+    };
+  }, [applyThemeWithTransitionSuppression]);
+
+  const handleToggleTheme = () => {
+    const target: 'light' | 'dark' = isDark ? 'light' : 'dark';
+    const systemScheme: 'light' | 'dark' = window.matchMedia('(prefers-color-scheme: dark)').matches
+      ? 'dark'
+      : 'light';
+
+    let metaContent = 'light dark';
+    try {
+      if (target === systemScheme) {
+        localStorage.removeItem('color-scheme');
+        metaContent = 'light dark';
+      } else {
+        localStorage.setItem('color-scheme', target);
+        metaContent = target;
+      }
+    } catch {
+      metaContent = target;
+    }
+
+    applyThemeWithTransitionSuppression(target === 'dark', metaContent);
+  };
 
   const fetchPhones = useCallback(async (isRefresh = false) => {
     try {
@@ -379,19 +465,19 @@ export default function Home() {
 
   const getStoreBadgeColor = (store: string) => {
     const s = store.toLowerCase();
-    if (s.includes('elko')) return 'bg-blue-500/10 text-blue-300 border-blue-500/25';
-    if (s.includes('nova')) return 'bg-emerald-500/10 text-emerald-300 border-emerald-500/25';
-    if (s.includes('síminn') || s.includes('siminn')) return 'bg-sky-500/10 text-sky-300 border-sky-500/25';
-    if (s.includes('sýn') || s.includes('vodafone')) return 'bg-rose-500/10 text-rose-300 border-rose-500/25';
-    if (s.includes('emobi')) return 'bg-teal-500/10 text-teal-300 border-teal-500/25';
-    if (s.includes('tölvulistinn')) return 'bg-indigo-500/10 text-indigo-300 border-indigo-500/25';
-    if (s.includes('tölvutek')) return 'bg-amber-500/10 text-amber-300 border-amber-500/25';
-    if (s.includes('computer')) return 'bg-cyan-500/10 text-cyan-300 border-cyan-500/25';
-    if (s.includes('tölvutækni')) return 'bg-violet-500/10 text-violet-300 border-violet-500/25';
-    if (s.includes('mi búðin')) return 'bg-orange-500/10 text-orange-300 border-orange-500/25';
-    if (s.includes('coolshop')) return 'bg-purple-500/10 text-purple-300 border-purple-500/25';
-    if (s.includes('ormsson')) return 'bg-sky-500/10 text-sky-300 border-sky-500/25';
-    return 'bg-zinc-800/80 text-zinc-300 border-zinc-700/80';
+    if (s.includes('elko')) return 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:text-blue-300 dark:border-blue-500/25';
+    if (s.includes('nova')) return 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:border-emerald-500/25';
+    if (s.includes('síminn') || s.includes('siminn')) return 'bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-500/10 dark:text-sky-300 dark:border-sky-500/25';
+    if (s.includes('sýn') || s.includes('vodafone')) return 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/10 dark:text-rose-300 dark:border-rose-500/25';
+    if (s.includes('emobi')) return 'bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-500/10 dark:text-teal-300 dark:border-teal-500/25';
+    if (s.includes('tölvulistinn')) return 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-500/10 dark:text-indigo-300 dark:border-indigo-500/25';
+    if (s.includes('tölvutek')) return 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:border-amber-500/25';
+    if (s.includes('computer')) return 'bg-cyan-50 text-cyan-700 border-cyan-200 dark:bg-cyan-500/10 dark:text-cyan-300 dark:border-cyan-500/25';
+    if (s.includes('tölvutækni')) return 'bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-500/10 dark:text-violet-300 dark:border-violet-500/25';
+    if (s.includes('mi búðin')) return 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-500/10 dark:text-orange-300 dark:border-orange-500/25';
+    if (s.includes('coolshop')) return 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-500/10 dark:text-purple-300 dark:border-purple-500/25';
+    if (s.includes('ormsson')) return 'bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-500/10 dark:text-sky-300 dark:border-sky-500/25';
+    return 'bg-zinc-100 text-zinc-700 border-zinc-200 dark:bg-zinc-800/80 dark:text-zinc-300 dark:border-zinc-700/80';
   };
 
   const getStoreFavicon = (store: string): string | null => {
@@ -526,9 +612,11 @@ export default function Home() {
             />
             <circle cx={width / 2} cy={y} r={5} fill="#10b981" stroke="#064e3b" strokeWidth="2" />
           </svg>
-          <div className="flex justify-between items-center text-[11px] text-zinc-400 mt-1 px-1 tabular-nums">
+          <div className="flex justify-between items-center text-[11px] text-zinc-500 dark:text-zinc-400 mt-1 px-1 tabular-nums">
             <span>Fyrsta skráning: {p.date}</span>
-            <span className="font-semibold text-emerald-400">Lægsta verð: {formatPrice(p.price)}</span>
+            <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+              Lægsta verð: {formatPrice(p.price)}
+            </span>
           </div>
         </div>
       );
@@ -573,15 +661,23 @@ export default function Home() {
               cx={c.x}
               cy={c.y}
               r={i === 0 || i === coords.length - 1 ? 4.5 : 3}
-              fill={i === coords.length - 1 ? strokeColor : '#09090b'}
+              fill={i === coords.length - 1 ? strokeColor : isDark ? '#09090b' : '#ffffff'}
               stroke={strokeColor}
               strokeWidth="2"
             />
           ))}
         </svg>
-        <div className="flex justify-between text-[11px] text-zinc-400 mt-1 px-1 tabular-nums">
+        <div className="flex justify-between text-[11px] text-zinc-500 dark:text-zinc-400 mt-1 px-1 tabular-nums">
           <span>Upphaf ({points[0].date}): {formatPrice(points[0].price)}</span>
-          <span className={`font-semibold ${isDrop ? 'text-emerald-400' : isUp ? 'text-rose-400' : 'text-blue-400'}`}>
+          <span
+            className={`font-semibold ${
+              isDrop
+                ? 'text-emerald-600 dark:text-emerald-400'
+                : isUp
+                ? 'text-rose-600 dark:text-rose-400'
+                : 'text-blue-600 dark:text-blue-400'
+            }`}
+          >
             Nú ({points[points.length - 1].date}): {formatPrice(points[points.length - 1].price)}
           </span>
         </div>
@@ -597,58 +693,64 @@ export default function Home() {
     search.trim().length > 0;
 
   return (
-    <div className="min-h-screen bg-[#09090b] text-zinc-100 antialiased selection:bg-emerald-500/30 selection:text-emerald-200 relative overflow-x-hidden">
+    <div className="min-h-screen bg-zinc-50 dark:bg-[#09090b] text-zinc-900 dark:text-zinc-100 antialiased selection:bg-emerald-500/20 selection:text-emerald-900 dark:selection:bg-emerald-500/30 dark:selection:text-emerald-200 relative overflow-x-hidden">
       {/* Ambient Subtle Top Radial Glow */}
       <div
         aria-hidden="true"
-        className="pointer-events-none fixed inset-x-0 top-0 h-[420px] bg-[radial-gradient(ellipse_80%_50%_at_50%_-15%,rgba(16,185,129,0.10),rgba(59,130,246,0.05),transparent)] z-0"
+        className="pointer-events-none fixed inset-x-0 top-0 h-[420px] bg-[radial-gradient(ellipse_80%_50%_at_50%_-15%,rgba(16,185,129,0.08),rgba(59,130,246,0.04),transparent)] dark:bg-[radial-gradient(ellipse_80%_50%_at_50%_-15%,rgba(16,185,129,0.10),rgba(59,130,246,0.05),transparent)] z-0"
       />
 
       {/* Sticky Glass Navigation Bar */}
-      <header className="sticky top-0 z-30 border-b border-white/[0.07] bg-[#09090b]/80 backdrop-blur-xl">
+      <header className="sticky top-0 z-30 border-b border-zinc-200/80 dark:border-white/[0.07] bg-white/85 dark:bg-[#09090b]/80 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
           {/* Brand Logo */}
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500/20 to-blue-500/10 border border-emerald-500/30 flex items-center justify-center shadow-inner shrink-0">
-              <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500/15 to-blue-500/10 border border-emerald-600/25 dark:border-emerald-500/30 flex items-center justify-center shadow-xs shrink-0">
+              <svg
+                className="w-5 h-5 text-emerald-600 dark:text-emerald-400"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={1.8}
+                viewBox="0 0 24 24"
+              >
                 <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
               </svg>
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <span className="text-sm sm:text-base font-bold tracking-tight text-white">
+                <span className="text-sm sm:text-base font-bold tracking-tight text-zinc-900 dark:text-white">
                   Farsímavaktin
                 </span>
-                <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 font-semibold tracking-wide">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/25 font-semibold tracking-wide">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
                   BEIN VÖKTUN
                 </span>
               </div>
-              <p className="text-[11px] text-zinc-400 truncate hidden sm:block">
+              <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate hidden sm:block">
                 Rauntíma verðsamanburður á {models.length} símalíkönum hjá {meta?.totalStores || 10} íslenskum verslunum
               </p>
             </div>
           </div>
 
-          {/* Segmented View Switcher & Refresh */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          {/* Segmented View Switcher, Theme Toggle & Refresh */}
+          <div className="flex items-center gap-2 sm:gap-2.5">
             <nav
               aria-label="Aðalvalmynd"
-              className="bg-zinc-900/90 border border-white/[0.08] p-1 rounded-xl flex items-center text-xs"
+              className="bg-zinc-100 dark:bg-zinc-900/90 border border-zinc-200/80 dark:border-white/[0.08] p-1 rounded-xl flex items-center text-xs"
             >
               <button
                 onClick={() => setActiveView('list')}
                 className={`px-3 py-1.5 rounded-lg font-medium transition-colors duration-150 motion-safe:enabled:active:scale-[0.96] flex items-center gap-1.5 ${
                   activeView === 'list'
-                    ? 'bg-zinc-800 text-white shadow-xs ring-1 ring-white/10'
-                    : 'text-zinc-400 hover:text-zinc-200'
+                    ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-xs ring-1 ring-zinc-900/5 dark:ring-white/10'
+                    : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
                 }`}
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
                 </svg>
                 <span>Vörur</span>
-                <span className="text-[10px] font-mono text-zinc-400 tabular-nums hidden xs:inline">
+                <span className="text-[10px] font-mono text-zinc-500 dark:text-zinc-400 tabular-nums hidden sm:inline">
                   ({models.length})
                 </span>
               </button>
@@ -657,8 +759,8 @@ export default function Home() {
                 onClick={() => setActiveView('stores')}
                 className={`px-3 py-1.5 rounded-lg font-medium transition-colors duration-150 motion-safe:enabled:active:scale-[0.96] flex items-center gap-1.5 ${
                   activeView === 'stores'
-                    ? 'bg-zinc-800 text-white shadow-xs ring-1 ring-white/10'
-                    : 'text-zinc-400 hover:text-zinc-200'
+                    ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-xs ring-1 ring-zinc-900/5 dark:ring-white/10'
+                    : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
                 }`}
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
@@ -671,8 +773,8 @@ export default function Home() {
                 onClick={() => setActiveView('logs')}
                 className={`px-3 py-1.5 rounded-lg font-medium transition-colors duration-150 motion-safe:enabled:active:scale-[0.96] flex items-center gap-1.5 ${
                   activeView === 'logs'
-                    ? 'bg-zinc-800 text-white shadow-xs ring-1 ring-white/10'
-                    : 'text-zinc-400 hover:text-zinc-200'
+                    ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-xs ring-1 ring-zinc-900/5 dark:ring-white/10'
+                    : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
                 }`}
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
@@ -682,15 +784,40 @@ export default function Home() {
               </button>
             </nav>
 
+            {/* Light / Dark Theme Toggle */}
+            <button
+              type="button"
+              onClick={handleToggleTheme}
+              className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-2 rounded-xl bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200/80 dark:border-white/[0.08] shadow-2xs transition-colors duration-150 motion-safe:enabled:active:scale-[0.96]"
+              title={isDark ? 'Skipta yfir í ljóst þema' : 'Skipta yfir í dökkt þema'}
+              aria-label={isDark ? 'Skipta yfir í ljóst þema' : 'Skipta yfir í dökkt þema'}
+            >
+              {isDark ? (
+                <>
+                  <svg className="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
+                  </svg>
+                  <span className="hidden md:inline">Ljóst</span>
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4 text-zinc-700" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" />
+                  </svg>
+                  <span className="hidden md:inline">Dökkt</span>
+                </>
+              )}
+            </button>
+
             {/* Refresh Action */}
             <button
               onClick={() => fetchPhones(true)}
               disabled={refreshing}
-              className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-200 border border-white/[0.08] transition-colors duration-150 motion-safe:enabled:active:scale-[0.96] disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-xl bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border border-zinc-200/80 dark:border-white/[0.08] shadow-2xs transition-colors duration-150 motion-safe:enabled:active:scale-[0.96] disabled:opacity-50"
               title="Sækja nýjustu verð"
             >
               <svg
-                className={`w-3.5 h-3.5 text-emerald-400 ${refreshing ? 'animate-spin' : ''}`}
+                className={`w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 ${refreshing ? 'animate-spin' : ''}`}
                 fill="none"
                 stroke="currentColor"
                 strokeWidth={2}
@@ -714,18 +841,18 @@ export default function Home() {
               <section aria-label="Mestur verðmunur í dag" className="space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-lg bg-amber-500/15 text-amber-400 border border-amber-500/25">
+                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/25">
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                     </span>
-                    <h2 className="text-xs sm:text-sm font-semibold tracking-tight text-zinc-100">
+                    <h2 className="text-xs sm:text-sm font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
                       Mestur verðmunur á sama síma í dag
                     </h2>
                   </div>
-                  <span className="text-xs text-zinc-400 tabular-nums">
+                  <span className="text-xs text-zinc-500 dark:text-zinc-400 tabular-nums">
                     Sparaðu allt að{' '}
-                    <strong className="text-emerald-400 font-semibold">
+                    <strong className="text-emerald-600 dark:text-emerald-400 font-semibold">
                       {formatPrice(meta.topSavings[0]?.savings || 0)}
                     </strong>{' '}
                     með því að velja ódýrustu verslunina
@@ -741,14 +868,14 @@ export default function Home() {
                       <div
                         key={`${item.id}-${item.variantStorage || ''}`}
                         onClick={() => model && handleSelectModel(model, item.variantStorage)}
-                        className="group cursor-pointer rounded-2xl bg-zinc-900/70 hover:bg-zinc-900 border border-white/[0.07] hover:border-emerald-500/40 p-3.5 transition-colors duration-150 flex flex-col justify-between shadow-sm"
+                        className="group cursor-pointer rounded-2xl bg-white dark:bg-zinc-900/70 hover:bg-zinc-50/80 dark:hover:bg-zinc-900 border border-zinc-200/80 dark:border-white/[0.07] hover:border-emerald-500/50 dark:hover:border-emerald-500/40 p-3.5 transition-colors duration-150 flex flex-col justify-between shadow-xs"
                       >
                         <div>
                           <div className="flex items-center justify-between gap-2 mb-2">
-                            <span className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-zinc-800/90 text-zinc-300 border border-white/[0.05]">
+                            <span className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800/90 text-zinc-600 dark:text-zinc-300 border border-zinc-200/70 dark:border-white/[0.05]">
                               {item.brand} {item.variantStorage ? `· ${item.variantStorage}` : ''}
                             </span>
-                            <span className="text-[11px] font-bold text-emerald-300 bg-emerald-500/15 px-2 py-0.5 rounded-md border border-emerald-500/25 tabular-nums">
+                            <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/15 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-500/25 tabular-nums">
                               Sparar {formatPrice(item.savings)}
                             </span>
                           </div>
@@ -766,11 +893,11 @@ export default function Home() {
                               </div>
                             )}
                             <div className="min-w-0">
-                              <h3 className="text-xs sm:text-sm font-semibold text-white truncate group-hover:text-emerald-400 transition-colors">
+                              <h3 className="text-xs sm:text-sm font-semibold text-zinc-900 dark:text-white truncate group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
                                 {item.name}
                               </h3>
-                              <div className="flex items-center gap-1.5 text-[11px] text-zinc-400 mt-0.5 truncate">
-                                <span className="inline-flex items-center gap-1 text-emerald-400 font-medium">
+                              <div className="flex items-center gap-1.5 text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 truncate">
+                                <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium">
                                   {cheapFav && (
                                     /* eslint-disable-next-line @next/next/no-img-element */
                                     <img
@@ -782,8 +909,8 @@ export default function Home() {
                                   )}
                                   {item.cheapestStore}
                                 </span>
-                                <span className="text-zinc-600">vs</span>
-                                <span className="inline-flex items-center gap-1 text-zinc-400">
+                                <span className="text-zinc-400 dark:text-zinc-600">vs</span>
+                                <span className="inline-flex items-center gap-1 text-zinc-500 dark:text-zinc-400">
                                   {expFav && (
                                     /* eslint-disable-next-line @next/next/no-img-element */
                                     <img
@@ -800,11 +927,11 @@ export default function Home() {
                           </div>
                         </div>
 
-                        <div className="pt-2.5 mt-3 border-t border-white/[0.06] flex items-baseline justify-between tabular-nums">
-                          <span className="text-xs text-zinc-500 line-through">
+                        <div className="pt-2.5 mt-3 border-t border-zinc-100 dark:border-white/[0.06] flex items-baseline justify-between tabular-nums">
+                          <span className="text-xs text-zinc-400 dark:text-zinc-500 line-through">
                             {formatPrice(item.highestPrice)}
                           </span>
-                          <span className="text-sm font-bold text-white group-hover:text-emerald-300 transition-colors">
+                          <span className="text-sm font-bold text-zinc-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-300 transition-colors">
                             {formatPrice(item.lowestPrice)}
                           </span>
                         </div>
@@ -818,7 +945,7 @@ export default function Home() {
             {/* COMMAND & FILTER BAR */}
             <section
               aria-label="Leit og síur"
-              className="rounded-2xl bg-zinc-900/70 border border-white/[0.08] p-3.5 sm:p-4 space-y-3.5 shadow-lg backdrop-blur-md"
+              className="rounded-2xl bg-white dark:bg-zinc-900/70 border border-zinc-200/80 dark:border-white/[0.08] p-3.5 sm:p-4 space-y-3.5 shadow-xs dark:shadow-lg backdrop-blur-md"
             >
               {/* Row 1: Search Input + Store Select + Sort Select + Layout Switcher */}
               <div className="flex flex-col lg:flex-row gap-2.5">
@@ -839,17 +966,17 @@ export default function Home() {
                     placeholder="Leita að síma, framleiðanda, verslun eða geymslu (t.d. iPhone 16 Pro, S25, Pixel, 256GB)..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className="w-full bg-zinc-950/90 border border-white/[0.09] focus:border-emerald-500/60 rounded-xl pl-10 pr-14 py-2.5 text-xs sm:text-sm text-white placeholder-zinc-500 focus:outline-none transition-colors"
+                    className="w-full bg-zinc-50 dark:bg-zinc-950/90 border border-zinc-200 dark:border-white/[0.09] focus:border-emerald-500 dark:focus:border-emerald-500/60 rounded-xl pl-10 pr-14 py-2.5 text-xs sm:text-sm text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none transition-colors"
                   />
                   {search ? (
                     <button
                       onClick={() => setSearch('')}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white px-2 py-0.5 rounded-md bg-zinc-800 text-[11px] font-medium"
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white px-2 py-0.5 rounded-md bg-zinc-200/70 dark:bg-zinc-800 text-[11px] font-medium"
                     >
                       Hreinsa
                     </button>
                   ) : (
-                    <kbd className="hidden sm:inline-flex items-center justify-center absolute right-3 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-[10px] font-mono text-zinc-400 bg-zinc-900 border border-white/[0.08] rounded-md pointer-events-none">
+                    <kbd className="hidden sm:inline-flex items-center justify-center absolute right-3 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-[10px] font-mono text-zinc-400 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/[0.08] rounded-md pointer-events-none">
                       /
                     </kbd>
                   )}
@@ -862,7 +989,7 @@ export default function Home() {
                     aria-label="Sía eftir verslun"
                     value={selectedStore}
                     onChange={(e) => setSelectedStore(e.target.value)}
-                    className="bg-zinc-950/90 border border-white/[0.09] hover:border-white/20 rounded-xl px-3 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-emerald-500/60"
+                    className="bg-zinc-50 dark:bg-zinc-950/90 border border-zinc-200 dark:border-white/[0.09] hover:border-zinc-300 dark:hover:border-white/20 rounded-xl px-3 py-2.5 text-xs text-zinc-800 dark:text-zinc-200 focus:outline-none focus:border-emerald-500"
                   >
                     <option value="Allt">Allar verslanir ({meta?.totalStores || 10})</option>
                     {meta?.storesList.map((s) => (
@@ -877,7 +1004,7 @@ export default function Home() {
                     aria-label="Raða vörum"
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value as 'savings' | 'asc' | 'desc' | 'drop')}
-                    className="bg-zinc-950/90 border border-white/[0.09] hover:border-white/20 rounded-xl px-3 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-emerald-500/60"
+                    className="bg-zinc-50 dark:bg-zinc-950/90 border border-zinc-200 dark:border-white/[0.09] hover:border-zinc-300 dark:hover:border-white/20 rounded-xl px-3 py-2.5 text-xs text-zinc-800 dark:text-zinc-200 focus:outline-none focus:border-emerald-500"
                   >
                     <option value="savings">Mestur sparnaður milli búða</option>
                     <option value="asc">Verð: Ódýrast fyrst</option>
@@ -889,15 +1016,15 @@ export default function Home() {
                   <div
                     role="group"
                     aria-label="Útlit vörulista"
-                    className="bg-zinc-950/90 border border-white/[0.09] p-1 rounded-xl flex items-center shrink-0"
+                    className="bg-zinc-100 dark:bg-zinc-950/90 border border-zinc-200 dark:border-white/[0.09] p-1 rounded-xl flex items-center shrink-0"
                   >
                     <button
                       onClick={() => setLayoutMode('grid')}
                       title="Spjaldayfirlit"
                       className={`p-1.5 rounded-lg transition-colors ${
                         layoutMode === 'grid'
-                          ? 'bg-zinc-800 text-white shadow-xs'
-                          : 'text-zinc-400 hover:text-zinc-200'
+                          ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-xs'
+                          : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
                       }`}
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
@@ -909,8 +1036,8 @@ export default function Home() {
                       title="Þéttur línulisti"
                       className={`p-1.5 rounded-lg transition-colors ${
                         layoutMode === 'rows'
-                          ? 'bg-zinc-800 text-white shadow-xs'
-                          : 'text-zinc-400 hover:text-zinc-200'
+                          ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-xs'
+                          : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
                       }`}
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
@@ -947,14 +1074,16 @@ export default function Home() {
                       onClick={() => setSelectedBrand(b.id)}
                       className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-colors duration-150 motion-safe:enabled:active:scale-[0.96] border ${
                         active
-                          ? 'bg-white text-zinc-950 border-white font-semibold shadow-xs'
-                          : 'bg-zinc-950/70 text-zinc-300 border-white/[0.07] hover:border-white/20 hover:text-white'
+                          ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 border-zinc-900 dark:border-white font-semibold shadow-xs'
+                          : 'bg-zinc-50 dark:bg-zinc-950/70 text-zinc-700 dark:text-zinc-300 border-zinc-200/80 dark:border-white/[0.07] hover:border-zinc-300 dark:hover:border-white/20 hover:text-zinc-950 dark:hover:text-white'
                       }`}
                     >
                       <span>{b.label}</span>
                       <span
                         className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono tabular-nums ${
-                          active ? 'bg-zinc-900/15 text-zinc-900 font-bold' : 'bg-zinc-800/90 text-zinc-400'
+                          active
+                            ? 'bg-white/20 dark:bg-zinc-900/15 text-white dark:text-zinc-900 font-bold'
+                            : 'bg-zinc-200/70 dark:bg-zinc-800/90 text-zinc-600 dark:text-zinc-400'
                         }`}
                       >
                         {count}
@@ -965,9 +1094,9 @@ export default function Home() {
               </div>
 
               {/* Row 3: Price Range Quick-Filters & Multi-store Toggle */}
-              <div className="flex flex-wrap items-center justify-between gap-2 pt-2.5 border-t border-white/[0.06] text-xs">
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-2.5 border-t border-zinc-100 dark:border-white/[0.06] text-xs">
                 <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-                  <span className="text-zinc-500 text-[11px] mr-1 shrink-0">Verðbil:</span>
+                  <span className="text-zinc-400 dark:text-zinc-500 text-[11px] mr-1 shrink-0">Verðbil:</span>
                   {(
                     [
                       { id: 'all', label: 'Öll verð' },
@@ -982,8 +1111,8 @@ export default function Home() {
                       onClick={() => setPriceRange(pr.id)}
                       className={`shrink-0 px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors border ${
                         priceRange === pr.id
-                          ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
-                          : 'bg-zinc-950/60 text-zinc-400 border-white/[0.06] hover:text-zinc-200'
+                          ? 'bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-500/30'
+                          : 'bg-zinc-50 dark:bg-zinc-950/60 text-zinc-600 dark:text-zinc-400 border-zinc-200/80 dark:border-white/[0.06] hover:text-zinc-900 dark:hover:text-zinc-200'
                       }`}
                     >
                       {pr.label}
@@ -996,13 +1125,13 @@ export default function Home() {
                     onClick={() => setOnlyMultiStore((v) => !v)}
                     className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors border ${
                       onlyMultiStore
-                        ? 'bg-blue-500/15 text-blue-300 border-blue-500/35'
-                        : 'bg-zinc-950/60 text-zinc-400 border-white/[0.06] hover:text-zinc-200'
+                        ? 'bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-500/35'
+                        : 'bg-zinc-50 dark:bg-zinc-950/60 text-zinc-600 dark:text-zinc-400 border-zinc-200/80 dark:border-white/[0.06] hover:text-zinc-900 dark:hover:text-zinc-200'
                     }`}
                   >
                     <span
                       className={`w-2 h-2 rounded-full ${
-                        onlyMultiStore ? 'bg-blue-400' : 'bg-zinc-600'
+                        onlyMultiStore ? 'bg-blue-500 dark:bg-blue-400' : 'bg-zinc-400 dark:bg-zinc-600'
                       }`}
                     />
                     Í 2+ búðum ({models.filter((m) => m.storesCount >= 2).length})
@@ -1017,7 +1146,7 @@ export default function Home() {
                         setOnlyMultiStore(false);
                         setSearch('');
                       }}
-                      className="text-[11px] px-2.5 py-1 rounded-lg bg-rose-500/10 text-rose-300 border border-rose-500/25 hover:bg-rose-500/20 transition-colors"
+                      className="text-[11px] px-2.5 py-1 rounded-lg bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-300 border border-rose-200 dark:border-rose-500/25 hover:bg-rose-100 dark:hover:bg-rose-500/20 transition-colors"
                     >
                       Hreinsa síur
                     </button>
@@ -1027,16 +1156,16 @@ export default function Home() {
             </section>
 
             {/* RESULTS STATUS LINE */}
-            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-400 px-1">
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-500 dark:text-zinc-400 px-1">
               <div className="flex items-center gap-2">
                 <span>
-                  Sýni <strong className="text-white font-semibold tabular-nums">{filteredModels.length}</strong> af{' '}
+                  Sýni <strong className="text-zinc-900 dark:text-white font-semibold tabular-nums">{filteredModels.length}</strong> af{' '}
                   <span className="tabular-nums">{models.length}</span> símalíkönum
                   {selectedBrand !== 'Allt' && ` · ${selectedBrand}`}
                   {selectedStore !== 'Allt' && ` · ${selectedStore}`}
                 </span>
               </div>
-              <span className="text-[11px] text-zinc-500">
+              <span className="text-[11px] text-zinc-400 dark:text-zinc-500">
                 Veldu geymslupláss beint á spjaldi eða smelltu til að opna fullan verðsamanburð
               </span>
             </div>
@@ -1047,23 +1176,25 @@ export default function Home() {
                 {[...Array(6)].map((_, i) => (
                   <div
                     key={i}
-                    className="h-64 bg-zinc-900/40 border border-white/[0.06] rounded-2xl animate-pulse"
+                    className="h-64 bg-white dark:bg-zinc-900/40 border border-zinc-200/70 dark:border-white/[0.06] rounded-2xl animate-pulse"
                   />
                 ))}
               </div>
             ) : error ? (
-              <div className="text-center py-12 bg-zinc-900/40 border border-rose-500/25 rounded-2xl p-6">
-                <p className="text-rose-400 text-sm font-semibold">{error}</p>
+              <div className="text-center py-12 bg-white dark:bg-zinc-900/40 border border-rose-300 dark:border-rose-500/25 rounded-2xl p-6">
+                <p className="text-rose-600 dark:text-rose-400 text-sm font-semibold">{error}</p>
                 <button
                   onClick={() => fetchPhones(true)}
-                  className="mt-3 px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs font-medium text-white"
+                  className="mt-3 px-4 py-2 rounded-xl bg-zinc-900 dark:bg-zinc-800 hover:bg-zinc-800 dark:hover:bg-zinc-700 text-xs font-medium text-white"
                 >
                   Reyna aftur
                 </button>
               </div>
             ) : filteredModels.length === 0 ? (
-              <div className="text-center py-16 bg-zinc-900/30 border border-white/[0.06] rounded-2xl space-y-3">
-                <p className="text-zinc-300 text-sm font-medium">Engir símar fundust með völdum síum</p>
+              <div className="text-center py-16 bg-white dark:bg-zinc-900/30 border border-zinc-200/80 dark:border-white/[0.06] rounded-2xl space-y-3">
+                <p className="text-zinc-600 dark:text-zinc-300 text-sm font-medium">
+                  Engir símar fundust með völdum síum
+                </p>
                 <button
                   onClick={() => {
                     setSelectedBrand('Allt');
@@ -1072,7 +1203,7 @@ export default function Home() {
                     setOnlyMultiStore(false);
                     setSearch('');
                   }}
-                  className="text-xs px-3.5 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-medium transition-colors"
+                  className="text-xs px-3.5 py-2 rounded-xl bg-zinc-900 dark:bg-zinc-800 hover:bg-zinc-800 dark:hover:bg-zinc-700 text-white dark:text-zinc-200 font-medium transition-colors"
                 >
                   Endurstilla allar síur
                 </button>
@@ -1096,14 +1227,14 @@ export default function Home() {
                     <article
                       key={model.id}
                       onClick={() => handleSelectModel(model, activeVariant?.storage)}
-                      className={`group cursor-pointer rounded-2xl bg-zinc-900/65 hover:bg-zinc-900/95 border border-white/[0.07] hover:border-white/[0.16] p-4 flex flex-col justify-between transition-colors duration-150 shadow-sm ${
+                      className={`group cursor-pointer rounded-2xl bg-white dark:bg-zinc-900/65 hover:bg-zinc-50/60 dark:hover:bg-zinc-900/95 border border-zinc-200/80 dark:border-white/[0.07] hover:border-zinc-300 dark:hover:border-white/[0.16] p-4 flex flex-col justify-between transition-colors duration-150 shadow-xs ${
                         idx >= 12 ? 'deferred-phone-card' : ''
                       }`}
                     >
                       <div>
                         {/* Card Top: Studio Image Pedestal + Title + Storage Selector */}
                         <div className="flex items-start gap-3.5">
-                          <div className="w-16 h-16 rounded-xl bg-white p-1.5 shrink-0 flex items-center justify-center outline-1 -outline-offset-1 outline-black/10 shadow-xs">
+                          <div className="w-16 h-16 rounded-xl bg-white p-1.5 shrink-0 flex items-center justify-center outline-1 -outline-offset-1 outline-black/10 shadow-2xs">
                             {model.image ? (
                               /* eslint-disable-next-line @next/next/no-img-element */
                               <img
@@ -1121,25 +1252,25 @@ export default function Home() {
 
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center justify-between gap-1.5 mb-1">
-                              <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+                              <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
                                 {model.brand}
                               </span>
                               {variantSavings > 0 ? (
-                                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/25 tabular-nums">
+                                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/25 tabular-nums">
                                   Sparar {formatPrice(variantSavings)}
                                 </span>
                               ) : model.priceChangePercent < 0 ? (
-                                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/25 tabular-nums">
+                                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/25 tabular-nums">
                                   {model.priceChangePercent}%
                                 </span>
                               ) : (
-                                <span className="text-[10px] text-zinc-500 tabular-nums">
+                                <span className="text-[10px] text-zinc-400 dark:text-zinc-500 tabular-nums">
                                   {model.storesCount} {model.storesCount === 1 ? 'verslun' : 'verslanir'}
                                 </span>
                               )}
                             </div>
 
-                            <h3 className="text-sm font-semibold text-white group-hover:text-emerald-400 transition-colors line-clamp-1">
+                            <h3 className="text-sm font-semibold text-zinc-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors line-clamp-1">
                               {model.name}
                             </h3>
 
@@ -1160,8 +1291,8 @@ export default function Home() {
                                     }}
                                     className={`text-[10px] px-2 py-0.5 rounded-md font-medium transition-colors border ${
                                       isSelected
-                                        ? 'bg-zinc-100 text-zinc-950 border-white font-semibold'
-                                        : 'bg-zinc-950/90 text-zinc-400 border-white/[0.08] hover:text-zinc-200 hover:border-white/20'
+                                        ? 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-950 border-zinc-900 dark:border-white font-semibold'
+                                        : 'bg-zinc-100 dark:bg-zinc-950/90 text-zinc-600 dark:text-zinc-400 border-zinc-200/80 dark:border-white/[0.08] hover:text-zinc-900 dark:hover:text-zinc-200'
                                     }`}
                                   >
                                     {v.storage}
@@ -1173,7 +1304,7 @@ export default function Home() {
                         </div>
 
                         {/* Direct Store Offers Comparison List inside Card */}
-                        <div className="mt-3.5 pt-3 border-t border-white/[0.06] space-y-1.5">
+                        <div className="mt-3.5 pt-3 border-t border-zinc-100 dark:border-white/[0.06] space-y-1.5">
                           {sortedOffers.slice(0, 3).map((offer, oIdx) => {
                             const fav = getStoreFavicon(offer.store) || offer.storeLogo;
                             const isCheapest = oIdx === 0;
@@ -1186,8 +1317,8 @@ export default function Home() {
                                 onClick={(e) => e.stopPropagation()}
                                 className={`flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs transition-colors border ${
                                   isCheapest
-                                    ? 'bg-emerald-500/[0.08] hover:bg-emerald-500/[0.14] border-emerald-500/25 text-white'
-                                    : 'bg-zinc-950/60 hover:bg-zinc-950 border-white/[0.05] text-zinc-300'
+                                    ? 'bg-emerald-50/70 hover:bg-emerald-50 dark:bg-emerald-500/[0.08] dark:hover:bg-emerald-500/[0.14] border-emerald-200/80 dark:border-emerald-500/25 text-zinc-900 dark:text-white'
+                                    : 'bg-zinc-50 hover:bg-zinc-100/80 dark:bg-zinc-950/60 dark:hover:bg-zinc-950 border-zinc-200/60 dark:border-white/[0.05] text-zinc-700 dark:text-zinc-300'
                                 }`}
                               >
                                 <div className="flex items-center gap-2 min-w-0">
@@ -1202,7 +1333,7 @@ export default function Home() {
                                   )}
                                   <span className="font-medium truncate">{offer.store}</span>
                                   {isCheapest && sortedOffers.length > 1 && (
-                                    <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300">
+                                    <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.2 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
                                       Ódýrast
                                     </span>
                                   )}
@@ -1211,12 +1342,14 @@ export default function Home() {
                                 <div className="flex items-center gap-1.5 shrink-0 tabular-nums">
                                   <span
                                     className={`font-bold ${
-                                      isCheapest ? 'text-emerald-400' : 'text-zinc-200'
+                                      isCheapest
+                                        ? 'text-emerald-700 dark:text-emerald-400'
+                                        : 'text-zinc-800 dark:text-zinc-200'
                                     }`}
                                   >
                                     {formatPrice(offer.price)}
                                   </span>
-                                  <svg className="w-3 h-3 text-zinc-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                  <svg className="w-3 h-3 text-zinc-400 dark:text-zinc-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 19.5l15-15m0 0H8.25m11.25 0v11.25" />
                                   </svg>
                                 </div>
@@ -1225,7 +1358,7 @@ export default function Home() {
                           })}
 
                           {sortedOffers.length > 3 && (
-                            <div className="text-[11px] text-center text-zinc-400 pt-0.5">
+                            <div className="text-[11px] text-center text-zinc-500 dark:text-zinc-400 pt-0.5">
                               + {sortedOffers.length - 3} verslanir í viðbót
                             </div>
                           )}
@@ -1233,15 +1366,17 @@ export default function Home() {
                       </div>
 
                       {/* Card Footer */}
-                      <div className="mt-3 pt-2.5 border-t border-white/[0.06] flex items-center justify-between text-xs">
+                      <div className="mt-3 pt-2.5 border-t border-zinc-100 dark:border-white/[0.06] flex items-center justify-between text-xs">
                         <div className="tabular-nums">
-                          <span className="text-[10px] text-zinc-400 block">Lægsta verð ({activeVariant?.storage}):</span>
-                          <span className="text-base font-extrabold text-white">
+                          <span className="text-[10px] text-zinc-500 dark:text-zinc-400 block">
+                            Lægsta verð ({activeVariant?.storage}):
+                          </span>
+                          <span className="text-base font-extrabold text-zinc-900 dark:text-white">
                             {formatPrice(activeVariant?.lowestPrice || model.lowestPrice)}
                           </span>
                         </div>
 
-                        <span className="inline-flex items-center gap-1 text-xs font-medium text-zinc-300 group-hover:text-white bg-zinc-800/80 group-hover:bg-zinc-800 px-3 py-1.5 rounded-xl border border-white/[0.07] transition-colors">
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-zinc-700 dark:text-zinc-300 group-hover:text-zinc-950 dark:group-hover:text-white bg-zinc-100 dark:bg-zinc-800/80 group-hover:bg-zinc-200/80 dark:group-hover:bg-zinc-800 px-3 py-1.5 rounded-xl border border-zinc-200/80 dark:border-white/[0.07] transition-colors">
                           <span>Skoða samanburð</span>
                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
@@ -1254,7 +1389,7 @@ export default function Home() {
               </div>
             ) : (
               /* COMPACT HIGH-DENSITY ROW LIST VIEW */
-              <div className="rounded-2xl bg-zinc-900/60 border border-white/[0.08] overflow-hidden divide-y divide-white/[0.06]">
+              <div className="rounded-2xl bg-white dark:bg-zinc-900/60 border border-zinc-200/80 dark:border-white/[0.08] overflow-hidden divide-y divide-zinc-100 dark:divide-white/[0.06] shadow-xs">
                 {filteredModels.map((model, idx) => {
                   const activeStorage = cardStorageMap[model.id] || model.variants[0]?.storage || '';
                   const activeVariant =
@@ -1271,7 +1406,7 @@ export default function Home() {
                     <div
                       key={model.id}
                       onClick={() => handleSelectModel(model, activeVariant?.storage)}
-                      className={`p-3.5 sm:px-5 hover:bg-zinc-900/95 cursor-pointer transition-colors duration-150 flex flex-col sm:flex-row sm:items-center justify-between gap-3 group ${
+                      className={`p-3.5 sm:px-5 hover:bg-zinc-50 dark:hover:bg-zinc-900/95 cursor-pointer transition-colors duration-150 flex flex-col sm:flex-row sm:items-center justify-between gap-3 group ${
                         idx >= 18 ? 'deferred-phone-row' : ''
                       }`}
                     >
@@ -1295,17 +1430,17 @@ export default function Home() {
 
                         <div className="min-w-0">
                           <div className="flex items-center gap-2 mb-0.5">
-                            <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+                            <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
                               {model.brand}
                             </span>
                             {variantSavings > 0 && (
-                              <span className="text-[10px] font-semibold text-emerald-300 bg-emerald-500/15 px-1.5 py-0.2 rounded border border-emerald-500/25 tabular-nums">
+                              <span className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/15 px-1.5 py-0.2 rounded border border-emerald-200 dark:border-emerald-500/25 tabular-nums">
                                 Sparar {formatPrice(variantSavings)}
                               </span>
                             )}
                           </div>
 
-                          <h3 className="text-sm font-semibold text-white truncate group-hover:text-emerald-400 transition-colors">
+                          <h3 className="text-sm font-semibold text-zinc-900 dark:text-white truncate group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
                             {model.name}
                           </h3>
 
@@ -1325,8 +1460,8 @@ export default function Home() {
                                   }}
                                   className={`text-[10px] px-2 py-0.5 rounded-md font-medium transition-colors border ${
                                     isSelected
-                                      ? 'bg-zinc-100 text-zinc-950 border-white font-semibold'
-                                      : 'bg-zinc-950 text-zinc-400 border-white/[0.08] hover:text-zinc-200'
+                                      ? 'bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-950 border-zinc-900 dark:border-white font-semibold'
+                                      : 'bg-zinc-100 dark:bg-zinc-950 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-white/[0.08] hover:text-zinc-900 dark:hover:text-zinc-200'
                                   }`}
                                 >
                                   {v.storage}
@@ -1334,7 +1469,7 @@ export default function Home() {
                               );
                             })}
 
-                            <span className="text-zinc-700 text-xs mx-0.5">·</span>
+                            <span className="text-zinc-300 dark:text-zinc-700 text-xs mx-0.5">·</span>
 
                             {sortedOffers.slice(0, 4).map((offer, oIdx) => {
                               const fav = getStoreFavicon(offer.store);
@@ -1343,8 +1478,8 @@ export default function Home() {
                                   key={offer.store}
                                   className={`inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-md border tabular-nums ${
                                     oIdx === 0
-                                      ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-300 font-medium'
-                                      : 'bg-zinc-950/90 border-white/[0.06] text-zinc-300'
+                                      ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/25 text-emerald-700 dark:text-emerald-300 font-medium'
+                                      : 'bg-zinc-50 dark:bg-zinc-950/90 border-zinc-200/80 dark:border-white/[0.06] text-zinc-700 dark:text-zinc-300'
                                   }`}
                                 >
                                   {fav && (
@@ -1357,7 +1492,7 @@ export default function Home() {
                                     />
                                   )}
                                   <span>{offer.store}</span>
-                                  <span className="text-zinc-400">{formatPrice(offer.price)}</span>
+                                  <span className="text-zinc-500 dark:text-zinc-400">{formatPrice(offer.price)}</span>
                                 </span>
                               );
                             })}
@@ -1366,16 +1501,16 @@ export default function Home() {
                       </div>
 
                       {/* Right: Lowest Price & Action */}
-                      <div className="flex sm:flex-col items-center sm:items-end justify-between shrink-0 gap-1 border-t sm:border-t-0 border-white/[0.06] pt-2 sm:pt-0 tabular-nums">
+                      <div className="flex sm:flex-col items-center sm:items-end justify-between shrink-0 gap-1 border-t sm:border-t-0 border-zinc-100 dark:border-white/[0.06] pt-2 sm:pt-0 tabular-nums">
                         <div className="text-left sm:text-right">
-                          <span className="text-[10px] text-zinc-400 block">
+                          <span className="text-[10px] text-zinc-500 dark:text-zinc-400 block">
                             Lægsta verð ({activeVariant?.storage}):
                           </span>
-                          <span className="text-base font-extrabold text-emerald-400">
+                          <span className="text-base font-extrabold text-emerald-600 dark:text-emerald-400">
                             {formatPrice(activeVariant?.lowestPrice || model.lowestPrice)}
                           </span>
                         </div>
-                        <span className="text-[11px] text-zinc-400 group-hover:text-white inline-flex items-center gap-1">
+                        <span className="text-[11px] text-zinc-500 dark:text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-white inline-flex items-center gap-1">
                           <span>Allar verslanir ({sortedOffers.length})</span>
                           <span>→</span>
                         </span>
@@ -1392,29 +1527,29 @@ export default function Home() {
         {activeView === 'stores' && (
           <div className="space-y-6">
             {/* Store Analytics Header */}
-            <div className="bg-zinc-900/70 border border-white/[0.08] rounded-2xl p-6 shadow-lg space-y-5">
+            <div className="bg-white dark:bg-zinc-900/70 border border-zinc-200/80 dark:border-white/[0.08] rounded-2xl p-6 shadow-xs dark:shadow-lg space-y-5">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                  <h2 className="text-base sm:text-lg font-bold text-white tracking-tight">
+                  <h2 className="text-base sm:text-lg font-bold text-zinc-900 dark:text-white tracking-tight">
                     Verslanagreining og verðstaða á markaði
                   </h2>
-                  <p className="text-xs text-zinc-400 mt-1">
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
                     Samanburður á því hvaða verslanir bjóða oftast lægsta verðið og hvernig verð hreyfast á milli daga.
                   </p>
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium px-3 py-1.5 rounded-xl bg-zinc-950 border border-white/[0.08] text-zinc-300 tabular-nums">
+                  <span className="text-xs font-medium px-3 py-1.5 rounded-xl bg-zinc-100 dark:bg-zinc-950 border border-zinc-200 dark:border-white/[0.08] text-zinc-700 dark:text-zinc-300 tabular-nums">
                     {meta?.totalStores || 0} verslanir virkar
                   </span>
                 </div>
               </div>
 
               {/* KPI Summary Row */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4 border-t border-white/[0.07] text-xs tabular-nums">
-                <div className="bg-zinc-950/90 p-4 rounded-xl border border-white/[0.07]">
-                  <span className="text-zinc-400 block text-[11px]">Flest lægstu verð á markaðnum</span>
-                  <span className="text-sm sm:text-base font-bold text-emerald-400 mt-1.5 flex items-center gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4 border-t border-zinc-100 dark:border-white/[0.07] text-xs tabular-nums">
+                <div className="bg-zinc-50 dark:bg-zinc-950/90 p-4 rounded-xl border border-zinc-200/70 dark:border-white/[0.07]">
+                  <span className="text-zinc-500 dark:text-zinc-400 block text-[11px]">Flest lægstu verð á markaðnum</span>
+                  <span className="text-sm sm:text-base font-bold text-emerald-600 dark:text-emerald-400 mt-1.5 flex items-center gap-2">
                     {getStoreFavicon(meta?.storeSummaries?.[0]?.store || 'Nova') && (
                       /* eslint-disable-next-line @next/next/no-img-element */
                       <img
@@ -1427,15 +1562,15 @@ export default function Home() {
                     {meta?.storeSummaries?.[0]?.store || 'Nova'} ({meta?.storeSummaries?.[0]?.cheapestCount || 0} símar)
                   </span>
                 </div>
-                <div className="bg-zinc-950/90 p-4 rounded-xl border border-white/[0.07]">
-                  <span className="text-zinc-400 block text-[11px]">Heildarverðlækkanir í dag</span>
-                  <span className="text-sm sm:text-base font-bold text-cyan-400 mt-1.5 block">
+                <div className="bg-zinc-50 dark:bg-zinc-950/90 p-4 rounded-xl border border-zinc-200/70 dark:border-white/[0.07]">
+                  <span className="text-zinc-500 dark:text-zinc-400 block text-[11px]">Heildarverðlækkanir í dag</span>
+                  <span className="text-sm sm:text-base font-bold text-cyan-600 dark:text-cyan-400 mt-1.5 block">
                     {meta?.storeSummaries?.reduce((acc, s) => acc + s.dropsCount, 0) || 0} símar lækkuðu
                   </span>
                 </div>
-                <div className="bg-zinc-950/90 p-4 rounded-xl border border-white/[0.07]">
-                  <span className="text-zinc-400 block text-[11px]">Heildarverðhækkanir í dag</span>
-                  <span className="text-sm sm:text-base font-bold text-rose-400 mt-1.5 block">
+                <div className="bg-zinc-50 dark:bg-zinc-950/90 p-4 rounded-xl border border-zinc-200/70 dark:border-white/[0.07]">
+                  <span className="text-zinc-500 dark:text-zinc-400 block text-[11px]">Heildarverðhækkanir í dag</span>
+                  <span className="text-sm sm:text-base font-bold text-rose-600 dark:text-rose-400 mt-1.5 block">
                     {meta?.storeSummaries?.reduce((acc, s) => acc + s.hikesCount, 0) || 0} símar hækkuðu
                   </span>
                 </div>
@@ -1451,7 +1586,7 @@ export default function Home() {
                 return (
                   <div
                     key={st.store}
-                    className="bg-zinc-900/70 border border-white/[0.08] hover:border-white/[0.15] rounded-2xl p-5 shadow-md flex flex-col justify-between space-y-4 transition-colors"
+                    className="bg-white dark:bg-zinc-900/70 border border-zinc-200/80 dark:border-white/[0.08] hover:border-zinc-300 dark:hover:border-white/[0.15] rounded-2xl p-5 shadow-xs dark:shadow-md flex flex-col justify-between space-y-4 transition-colors"
                   >
                     <div>
                       {/* Top Header */}
@@ -1470,35 +1605,35 @@ export default function Home() {
                             {st.store}
                           </span>
                           {isLeader && (
-                            <span className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                            <span className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/30">
                               Verðleiðtogi
                             </span>
                           )}
                         </div>
 
-                        <span className="text-xs text-zinc-400 font-mono tabular-nums">
+                        <span className="text-xs text-zinc-500 dark:text-zinc-400 font-mono tabular-nums">
                           {st.totalPhones} símar í boði
                         </span>
                       </div>
 
                       {/* Store Metrics */}
                       <div className="grid grid-cols-2 gap-2.5 text-xs mb-3 tabular-nums">
-                        <div className="bg-zinc-950/80 p-3 rounded-xl border border-white/[0.06]">
-                          <span className="text-[11px] text-zinc-400 block">Lægst verð á markaði</span>
-                          <span className="text-sm font-bold text-emerald-400 mt-0.5 block">
+                        <div className="bg-zinc-50 dark:bg-zinc-950/80 p-3 rounded-xl border border-zinc-200/70 dark:border-white/[0.06]">
+                          <span className="text-[11px] text-zinc-500 dark:text-zinc-400 block">Lægst verð á markaði</span>
+                          <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-0.5 block">
                             Í {st.cheapestCount} líkönum
                           </span>
                         </div>
 
-                        <div className="bg-zinc-950/80 p-3 rounded-xl border border-white/[0.06]">
-                          <span className="text-[11px] text-zinc-400 block">Heildarbreyting í dag</span>
+                        <div className="bg-zinc-50 dark:bg-zinc-950/80 p-3 rounded-xl border border-zinc-200/70 dark:border-white/[0.06]">
+                          <span className="text-[11px] text-zinc-500 dark:text-zinc-400 block">Heildarbreyting í dag</span>
                           <span
                             className={`text-sm font-bold mt-0.5 block ${
                               st.netChangeAmount < 0
-                                ? 'text-emerald-400'
+                                ? 'text-emerald-600 dark:text-emerald-400'
                                 : st.netChangeAmount > 0
-                                ? 'text-rose-400'
-                                : 'text-zinc-300'
+                                ? 'text-rose-600 dark:text-rose-400'
+                                : 'text-zinc-700 dark:text-zinc-300'
                             }`}
                           >
                             {st.netChangeAmount < 0
@@ -1511,11 +1646,11 @@ export default function Home() {
                       </div>
 
                       {/* Daily Changes Breakdown */}
-                      <div className="flex items-center justify-between text-[11px] px-3 py-2 bg-zinc-950/60 rounded-xl border border-white/[0.05] text-zinc-400 tabular-nums">
-                        <span className="text-emerald-400 font-medium">
+                      <div className="flex items-center justify-between text-[11px] px-3 py-2 bg-zinc-50 dark:bg-zinc-950/60 rounded-xl border border-zinc-200/60 dark:border-white/[0.05] text-zinc-500 dark:text-zinc-400 tabular-nums">
+                        <span className="text-emerald-600 dark:text-emerald-400 font-medium">
                           {st.dropsCount} lækkanir
                         </span>
-                        <span className="text-rose-400 font-medium">
+                        <span className="text-rose-600 dark:text-rose-400 font-medium">
                           {st.hikesCount} hækkanir
                         </span>
                         <span className="text-zinc-500">
@@ -1525,13 +1660,13 @@ export default function Home() {
 
                       {/* Biggest Drop at Store */}
                       {st.biggestDrop && (
-                        <div className="mt-3 p-3 rounded-xl bg-emerald-500/[0.08] border border-emerald-500/20 text-xs tabular-nums">
-                          <span className="text-[10px] text-emerald-300 font-semibold block mb-0.5">
+                        <div className="mt-3 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-500/[0.08] border border-emerald-200 dark:border-emerald-500/20 text-xs tabular-nums">
+                          <span className="text-[10px] text-emerald-700 dark:text-emerald-300 font-semibold block mb-0.5">
                             Mesta lækkun dagsins hjá {st.store}:
                           </span>
-                          <div className="flex items-baseline justify-between text-zinc-200">
+                          <div className="flex items-baseline justify-between text-zinc-800 dark:text-zinc-200">
                             <span className="font-semibold line-clamp-1 mr-2">{st.biggestDrop.modelName}</span>
-                            <span className="text-emerald-400 font-bold shrink-0">
+                            <span className="text-emerald-600 dark:text-emerald-400 font-bold shrink-0">
                               -{formatPrice(st.biggestDrop.dropAmount)} (-{st.biggestDrop.dropPercent}%)
                             </span>
                           </div>
@@ -1545,7 +1680,7 @@ export default function Home() {
                         setSelectedStore(st.store);
                         setActiveView('list');
                       }}
-                      className="w-full text-xs font-semibold py-2.5 rounded-xl bg-zinc-800/90 hover:bg-white text-zinc-200 hover:text-zinc-950 border border-white/[0.08] transition-colors duration-150 motion-safe:enabled:active:scale-[0.98] flex items-center justify-center gap-1.5"
+                      className="w-full text-xs font-semibold py-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-800/90 hover:bg-zinc-900 dark:hover:bg-white text-zinc-800 dark:text-zinc-200 hover:text-white dark:hover:text-zinc-950 border border-zinc-200/80 dark:border-white/[0.08] transition-colors duration-150 motion-safe:enabled:active:scale-[0.98] flex items-center justify-center gap-1.5"
                     >
                       <span>Skoða alla síma hjá {st.store} ({st.totalPhones})</span>
                       <span>→</span>
@@ -1561,13 +1696,13 @@ export default function Home() {
         {activeView === 'logs' && (
           <div className="space-y-6">
             {/* Status Card */}
-            <div className="bg-zinc-900/70 border border-white/[0.08] rounded-2xl p-6 shadow-lg space-y-4">
+            <div className="bg-white dark:bg-zinc-900/70 border border-zinc-200/80 dark:border-white/[0.08] rounded-2xl p-6 shadow-xs dark:shadow-lg space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                  <h2 className="text-base sm:text-lg font-bold text-white tracking-tight">
+                  <h2 className="text-base sm:text-lg font-bold text-zinc-900 dark:text-white tracking-tight">
                     Vöktunarstaða og keyrsluferill
                   </h2>
-                  <p className="text-xs text-zinc-400 mt-0.5">
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
                     Rauntímayfirlit yfir gagnasöfnun úr 43 vörustraumum hjá íslenskum verslunum.
                   </p>
                 </div>
@@ -1578,7 +1713,7 @@ export default function Home() {
                       setRawJsonTab('summary');
                       setShowRawJsonModal(true);
                     }}
-                    className="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-white/[0.08] transition-colors"
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-white/[0.08] transition-colors"
                   >
                     <span>Skoða samantekt & JSON</span>
                   </button>
@@ -1586,7 +1721,7 @@ export default function Home() {
                   <button
                     onClick={() => fetchPhones(true)}
                     disabled={refreshing}
-                    className="inline-flex items-center gap-2 text-xs font-semibold px-4 py-2 rounded-xl bg-white hover:bg-zinc-200 text-zinc-950 transition-colors disabled:opacity-50"
+                    className="inline-flex items-center gap-2 text-xs font-semibold px-4 py-2 rounded-xl bg-zinc-900 dark:bg-white hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-zinc-950 transition-colors disabled:opacity-50"
                   >
                     <svg
                       className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`}
@@ -1607,28 +1742,28 @@ export default function Home() {
               </div>
 
               {meta && (
-                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-4 border-t border-white/[0.07] tabular-nums">
-                  <div className="bg-zinc-950/80 p-3.5 rounded-xl border border-white/[0.06]">
-                    <span className="text-[11px] text-zinc-400 block">Síðast keyrt</span>
-                    <span className="text-sm font-bold text-emerald-400 font-mono mt-0.5 block">
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-4 border-t border-zinc-100 dark:border-white/[0.07] tabular-nums">
+                  <div className="bg-zinc-50 dark:bg-zinc-950/80 p-3.5 rounded-xl border border-zinc-200/70 dark:border-white/[0.06]">
+                    <span className="text-[11px] text-zinc-500 dark:text-zinc-400 block">Síðast keyrt</span>
+                    <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400 font-mono mt-0.5 block">
                       {formatDate(meta.lastRun)}
                     </span>
                   </div>
-                  <div className="bg-zinc-950/80 p-3.5 rounded-xl border border-white/[0.06]">
-                    <span className="text-[11px] text-zinc-400 block">Svarstími bakenda</span>
-                    <span className="text-sm font-bold text-cyan-400 font-mono mt-0.5 block">
+                  <div className="bg-zinc-50 dark:bg-zinc-950/80 p-3.5 rounded-xl border border-zinc-200/70 dark:border-white/[0.06]">
+                    <span className="text-[11px] text-zinc-500 dark:text-zinc-400 block">Svarstími bakenda</span>
+                    <span className="text-sm font-bold text-cyan-600 dark:text-cyan-400 font-mono mt-0.5 block">
                       {meta.durationMs} ms
                     </span>
                   </div>
-                  <div className="bg-zinc-950/80 p-3.5 rounded-xl border border-white/[0.06]">
-                    <span className="text-[11px] text-zinc-400 block">Símar / Verslanir</span>
-                    <span className="text-sm font-bold text-white mt-0.5 block">
+                  <div className="bg-zinc-50 dark:bg-zinc-950/80 p-3.5 rounded-xl border border-zinc-200/70 dark:border-white/[0.06]">
+                    <span className="text-[11px] text-zinc-500 dark:text-zinc-400 block">Símar / Verslanir</span>
+                    <span className="text-sm font-bold text-zinc-900 dark:text-white mt-0.5 block">
                       {meta.totalModels} líkön / {meta.totalStores} búðir
                     </span>
                   </div>
-                  <div className="bg-zinc-950/80 p-3.5 rounded-xl border border-white/[0.06]">
-                    <span className="text-[11px] text-zinc-400 block">Stöðukóði</span>
-                    <span className="text-sm font-bold text-emerald-400 mt-0.5 block">
+                  <div className="bg-zinc-50 dark:bg-zinc-950/80 p-3.5 rounded-xl border border-zinc-200/70 dark:border-white/[0.06]">
+                    <span className="text-[11px] text-zinc-500 dark:text-zinc-400 block">Stöðukóði</span>
+                    <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-0.5 block">
                       ● 200 OK ({meta.status})
                     </span>
                   </div>
@@ -1637,8 +1772,8 @@ export default function Home() {
             </div>
 
             {/* Active Connected Stores */}
-            <div className="bg-zinc-900/70 border border-white/[0.08] rounded-2xl p-6 shadow-lg space-y-3">
-              <h3 className="text-sm font-bold text-white">
+            <div className="bg-white dark:bg-zinc-900/70 border border-zinc-200/80 dark:border-white/[0.08] rounded-2xl p-6 shadow-xs dark:shadow-lg space-y-3">
+              <h3 className="text-sm font-bold text-zinc-900 dark:text-white">
                 Tengdar verslanir í vöktun ({meta?.totalStores || 0})
               </h3>
               <div className="flex flex-wrap gap-2">
@@ -1665,13 +1800,13 @@ export default function Home() {
             </div>
 
             {/* History Table */}
-            <div className="bg-zinc-900/70 border border-white/[0.08] rounded-2xl p-6 shadow-lg space-y-4">
+            <div className="bg-white dark:bg-zinc-900/70 border border-zinc-200/80 dark:border-white/[0.08] rounded-2xl p-6 shadow-xs dark:shadow-lg space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-sm font-bold text-white">
+                  <h3 className="text-sm font-bold text-zinc-900 dark:text-white">
                     Ferill síðustu keyrslna
                   </h3>
-                  <p className="text-[11px] text-zinc-400 mt-0.5">
+                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
                     Smelltu á línu til að opna framkvæmdasamantekt eða skoða JSON hrágögn
                   </p>
                 </div>
@@ -1680,7 +1815,7 @@ export default function Home() {
                     setRawJsonTab('summary');
                     setShowRawJsonModal(true);
                   }}
-                  className="text-xs px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-white/[0.08] transition-colors"
+                  className="text-xs px-3 py-1.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-white/[0.08] transition-colors"
                 >
                   Opna samantekt
                 </button>
@@ -1688,7 +1823,7 @@ export default function Home() {
 
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs tabular-nums">
-                  <thead className="border-b border-white/[0.08] text-zinc-400 bg-zinc-950/60">
+                  <thead className="border-b border-zinc-200 dark:border-white/[0.08] text-zinc-500 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-950/60">
                     <tr>
                       <th className="py-2.5 px-3">Tímasetning</th>
                       <th className="py-2.5 px-3">Staða</th>
@@ -1698,7 +1833,7 @@ export default function Home() {
                       <th className="py-2.5 px-3 text-right">Aðgerð</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-white/[0.06] text-zinc-300">
+                  <tbody className="divide-y divide-zinc-100 dark:divide-white/[0.06] text-zinc-700 dark:text-zinc-300">
                     {logs.map((log) => (
                       <tr
                         key={log.id}
@@ -1706,19 +1841,21 @@ export default function Home() {
                           setRawJsonTab('summary');
                           setShowRawJsonModal(true);
                         }}
-                        className="hover:bg-zinc-800/40 cursor-pointer transition-colors group"
+                        className="hover:bg-zinc-50 dark:hover:bg-zinc-800/40 cursor-pointer transition-colors group"
                       >
-                        <td className="py-2.5 px-3 font-mono text-zinc-200 group-hover:text-emerald-400 transition-colors">
+                        <td className="py-2.5 px-3 font-mono text-zinc-800 dark:text-zinc-200 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
                           {formatDate(log.timestamp)}
                         </td>
                         <td className="py-2.5 px-3">
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/25">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/25">
                             ● {log.status}
                           </span>
                         </td>
-                        <td className="py-2.5 px-3 font-semibold text-white">{log.modelsCount} líkön</td>
+                        <td className="py-2.5 px-3 font-semibold text-zinc-900 dark:text-white">
+                          {log.modelsCount} líkön
+                        </td>
                         <td className="py-2.5 px-3">{log.storesCount} verslanir</td>
-                        <td className="py-2.5 px-3 font-mono text-cyan-400">{log.durationMs} ms</td>
+                        <td className="py-2.5 px-3 font-mono text-cyan-600 dark:text-cyan-400">{log.durationMs} ms</td>
                         <td className="py-2.5 px-3 text-right">
                           <button
                             onClick={(e) => {
@@ -1726,7 +1863,7 @@ export default function Home() {
                               setRawJsonTab('summary');
                               setShowRawJsonModal(true);
                             }}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-800 group-hover:bg-white text-[11px] font-medium text-zinc-300 group-hover:text-zinc-950 transition-colors"
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 group-hover:bg-zinc-900 dark:group-hover:bg-white text-[11px] font-medium text-zinc-700 dark:text-zinc-300 group-hover:text-white dark:group-hover:text-zinc-950 transition-colors"
                           >
                             Samantekt →
                           </button>
@@ -1744,17 +1881,17 @@ export default function Home() {
         {selectedModel && (
           <div
             onClick={() => setSelectedModel(null)}
-            className="modal-overlay-backdrop fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md"
+            className="modal-overlay-backdrop fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 dark:bg-black/80 backdrop-blur-md"
           >
             <div
               onClick={(e) => e.stopPropagation()}
               role="dialog"
               aria-modal="true"
               aria-labelledby="modal-phone-title"
-              className="modal-scroll-container bg-zinc-900 border border-white/[0.1] rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl p-5 sm:p-6 space-y-5"
+              className="modal-scroll-container bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/[0.1] rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl p-5 sm:p-6 space-y-5"
             >
               {/* Header */}
-              <div className="flex items-start justify-between gap-4 border-b border-white/[0.08] pb-4">
+              <div className="flex items-start justify-between gap-4 border-b border-zinc-200 dark:border-white/[0.08] pb-4">
                 <div className="flex items-center gap-3.5">
                   <div className="w-16 h-16 bg-white rounded-xl p-1.5 outline-1 -outline-offset-1 outline-black/10 flex items-center justify-center overflow-hidden shrink-0">
                     {selectedModel.image ? (
@@ -1770,16 +1907,16 @@ export default function Home() {
                   </div>
                   <div>
                     <div className="flex flex-wrap items-center gap-2 mb-1">
-                      <span className="text-[11px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md bg-zinc-800 text-zinc-300">
+                      <span className="text-[11px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300">
                         {selectedModel.brand}
                       </span>
                       {selectedModel.maxSavings > 0 && (
-                        <span className="text-[11px] font-semibold text-emerald-300 bg-emerald-500/15 px-2 py-0.5 rounded-md border border-emerald-500/25 tabular-nums">
+                        <span className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/15 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-500/25 tabular-nums">
                           Allt að {formatPrice(selectedModel.maxSavings)} verðmunur
                         </span>
                       )}
                     </div>
-                    <h2 id="modal-phone-title" className="text-base sm:text-xl font-bold text-white">
+                    <h2 id="modal-phone-title" className="text-base sm:text-xl font-bold text-zinc-900 dark:text-white">
                       {selectedModel.name}
                     </h2>
                   </div>
@@ -1787,7 +1924,7 @@ export default function Home() {
 
                 <button
                   onClick={() => setSelectedModel(null)}
-                  className="text-zinc-400 hover:text-white px-2.5 py-1.5 rounded-xl bg-zinc-800/90 hover:bg-zinc-700 text-xs font-semibold transition-colors shrink-0"
+                  className="text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white px-2.5 py-1.5 rounded-xl bg-zinc-100 dark:bg-zinc-800/90 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-xs font-semibold transition-colors shrink-0"
                 >
                   ✕ Loka
                 </button>
@@ -1795,7 +1932,7 @@ export default function Home() {
 
               {/* 1. Storage Variant Selector */}
               <div className="space-y-2">
-                <span className="text-xs font-semibold text-zinc-400 block">
+                <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 block">
                   Veldu geymslupláss til að bera saman nákvæmlega sömu útgáfu:
                 </span>
                 <div className="flex flex-wrap gap-2">
@@ -1807,12 +1944,12 @@ export default function Home() {
                         onClick={() => setSelectedStorage(v.storage)}
                         className={`text-xs px-3.5 py-2 rounded-xl border font-semibold transition-colors flex items-center gap-2 tabular-nums ${
                           active
-                            ? 'bg-white text-zinc-950 border-white shadow-sm'
-                            : 'bg-zinc-950 text-zinc-300 border-white/[0.08] hover:border-white/20'
+                            ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 border-zinc-900 dark:border-white shadow-xs'
+                            : 'bg-zinc-50 dark:bg-zinc-950 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-white/[0.08] hover:border-zinc-300 dark:hover:border-white/20'
                         }`}
                       >
                         <span>{v.storage}</span>
-                        <span className={`text-[11px] font-normal ${active ? 'text-zinc-700' : 'text-zinc-400'}`}>
+                        <span className={`text-[11px] font-normal ${active ? 'text-zinc-300 dark:text-zinc-700' : 'text-zinc-500 dark:text-zinc-400'}`}>
                           frá {formatPrice(v.lowestPrice)}
                         </span>
                       </button>
@@ -1825,16 +1962,16 @@ export default function Home() {
               {currentVariant && (
                 <div className="space-y-2.5">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="font-semibold text-zinc-200">
+                    <span className="font-semibold text-zinc-800 dark:text-zinc-200">
                       Verðsamanburður fyrir {selectedModel.name} ({currentVariant.storage})
                     </span>
-                    <span className="text-[11px] text-zinc-400 tabular-nums">
+                    <span className="text-[11px] text-zinc-500 dark:text-zinc-400 tabular-nums">
                       {currentVariant.offers.length}{' '}
                       {currentVariant.offers.length === 1 ? 'verslun' : 'verslanir'}
                     </span>
                   </div>
 
-                  <div className="border border-white/[0.08] rounded-xl overflow-hidden divide-y divide-white/[0.06] bg-zinc-950/90">
+                  <div className="border border-zinc-200 dark:border-white/[0.08] rounded-xl overflow-hidden divide-y divide-zinc-100 dark:divide-white/[0.06] bg-zinc-50/70 dark:bg-zinc-950/90">
                     {[...currentVariant.offers]
                       .sort((a, b) => a.price - b.price)
                       .map((offer, idx) => {
@@ -1845,7 +1982,9 @@ export default function Home() {
                           <div
                             key={offer.store}
                             className={`p-3.5 flex items-center justify-between gap-3 transition-colors ${
-                              isCheapest ? 'bg-emerald-500/[0.06]' : 'hover:bg-zinc-900/60'
+                              isCheapest
+                                ? 'bg-emerald-50/70 dark:bg-emerald-500/[0.06]'
+                                : 'hover:bg-white dark:hover:bg-zinc-900/60'
                             }`}
                           >
                             <div className="flex items-center gap-3">
@@ -1860,17 +1999,17 @@ export default function Home() {
                               )}
                               <div>
                                 <div className="flex items-center gap-2">
-                                  <span className="text-xs sm:text-sm font-semibold text-white">
+                                  <span className="text-xs sm:text-sm font-semibold text-zinc-900 dark:text-white">
                                     {offer.store}
                                   </span>
                                   {isCheapest && (
-                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
                                       Lægsta verð
                                     </span>
                                   )}
                                 </div>
                                 {!isCheapest && (
-                                  <span className="text-[11px] text-zinc-400 tabular-nums">
+                                  <span className="text-[11px] text-zinc-500 dark:text-zinc-400 tabular-nums">
                                     +{formatPrice(diff)} dýrara en ódýrasta boð
                                   </span>
                                 )}
@@ -1880,7 +2019,9 @@ export default function Home() {
                             <div className="flex items-center gap-3 tabular-nums">
                               <span
                                 className={`text-sm sm:text-base font-extrabold ${
-                                  isCheapest ? 'text-emerald-400' : 'text-zinc-100'
+                                  isCheapest
+                                    ? 'text-emerald-600 dark:text-emerald-400'
+                                    : 'text-zinc-900 dark:text-zinc-100'
                                 }`}
                               >
                                 {formatPrice(offer.price)}
@@ -1892,8 +2033,8 @@ export default function Home() {
                                 rel="noreferrer"
                                 className={`text-xs px-3.5 py-2 rounded-xl font-semibold transition-colors inline-flex items-center gap-1.5 ${
                                   isCheapest
-                                    ? 'bg-emerald-500 hover:bg-emerald-400 text-zinc-950'
-                                    : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-200'
+                                    ? 'bg-emerald-600 dark:bg-emerald-500 hover:bg-emerald-500 dark:hover:bg-emerald-400 text-white dark:text-zinc-950'
+                                    : 'bg-zinc-200/80 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200'
                                 }`}
                               >
                                 <span>Skoða í búð</span>
@@ -1910,13 +2051,16 @@ export default function Home() {
               )}
 
               {/* 3. Historical Price Trend Chart */}
-              <div className="bg-zinc-950/80 border border-white/[0.07] rounded-xl p-4 space-y-2">
+              <div className="bg-zinc-50 dark:bg-zinc-950/80 border border-zinc-200 dark:border-white/[0.07] rounded-xl p-4 space-y-2">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="font-semibold text-zinc-200">
+                  <span className="font-semibold text-zinc-800 dark:text-zinc-200">
                     Verðþróun yfir tíma
                   </span>
-                  <span className="text-zinc-400 text-[11px] tabular-nums">
-                    Lægsta skráða verð: <strong className="text-emerald-400">{formatPrice(selectedModel.lowestPrice)}</strong>
+                  <span className="text-zinc-500 dark:text-zinc-400 text-[11px] tabular-nums">
+                    Lægsta skráða verð:{' '}
+                    <strong className="text-emerald-600 dark:text-emerald-400">
+                      {formatPrice(selectedModel.lowestPrice)}
+                    </strong>
                   </span>
                 </div>
 
@@ -1930,22 +2074,22 @@ export default function Home() {
         {showRawJsonModal && (
           <div
             onClick={() => setShowRawJsonModal(false)}
-            className="modal-overlay-backdrop fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md"
+            className="modal-overlay-backdrop fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 dark:bg-black/85 backdrop-blur-md"
           >
             <div
               onClick={(e) => e.stopPropagation()}
               role="dialog"
               aria-modal="true"
               aria-label="Framkvæmdasamantekt og hrágögn"
-              className="modal-scroll-container bg-zinc-900 border border-white/[0.1] rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden"
+              className="modal-scroll-container bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/[0.1] rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden"
             >
               {/* Header */}
-              <div className="p-4 sm:p-5 border-b border-white/[0.08] flex items-center justify-between gap-4 bg-zinc-950/80">
+              <div className="p-4 sm:p-5 border-b border-zinc-200 dark:border-white/[0.08] flex items-center justify-between gap-4 bg-zinc-50 dark:bg-zinc-950/80">
                 <div>
-                  <h2 className="text-sm sm:text-base font-bold text-white">
+                  <h2 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-white">
                     {rawJsonTab === 'summary' ? 'Framkvæmdasamantekt skanna' : 'JSON Hrágögn úr bakenda'}
                   </h2>
-                  <p className="text-[11px] text-zinc-400 tabular-nums mt-0.5">
+                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400 tabular-nums mt-0.5">
                     {meta?.lastRun ? `Keyrt: ${formatDate(meta.lastRun)}` : ''} · {meta?.totalModels || models.length} líkön · {meta?.durationMs || 0} ms svarstími
                   </p>
                 </div>
@@ -1953,10 +2097,10 @@ export default function Home() {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={handleCopyJson}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-white/[0.08] text-xs font-semibold text-zinc-200 transition-colors"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-white/[0.08] text-xs font-semibold text-zinc-700 dark:text-zinc-200 transition-colors"
                   >
                     {copiedRaw ? (
-                      <span className="text-emerald-400 font-bold">✓ Afritað</span>
+                      <span className="text-emerald-600 dark:text-emerald-400 font-bold">✓ Afritað</span>
                     ) : (
                       <span>Afrita JSON</span>
                     )}
@@ -1964,14 +2108,14 @@ export default function Home() {
 
                   <button
                     onClick={handleDownloadJson}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-white/[0.08] text-xs font-semibold text-zinc-200 transition-colors"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-white/[0.08] text-xs font-semibold text-zinc-700 dark:text-zinc-200 transition-colors"
                   >
                     <span className="hidden sm:inline">Sækja .json</span>
                   </button>
 
                   <button
                     onClick={() => setShowRawJsonModal(false)}
-                    className="px-2.5 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white text-xs font-bold transition-colors"
+                    className="px-2.5 py-1.5 rounded-xl bg-zinc-200/70 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 hover:text-zinc-950 dark:hover:text-white text-xs font-bold transition-colors"
                   >
                     ✕
                   </button>
@@ -1979,12 +2123,14 @@ export default function Home() {
               </div>
 
               {/* Sub-bar: Tabs & Filter */}
-              <div className="px-4 py-3 border-b border-white/[0.07] bg-zinc-950/50 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 text-xs">
-                <div className="flex items-center gap-1 bg-zinc-900 p-1 rounded-xl border border-white/[0.07] overflow-x-auto no-scrollbar">
+              <div className="px-4 py-3 border-b border-zinc-200 dark:border-white/[0.07] bg-zinc-100/60 dark:bg-zinc-950/50 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 text-xs">
+                <div className="flex items-center gap-1 bg-zinc-200/70 dark:bg-zinc-900 p-1 rounded-xl border border-zinc-200 dark:border-white/[0.07] overflow-x-auto no-scrollbar">
                   <button
                     onClick={() => setRawJsonTab('summary')}
                     className={`px-3 py-1.5 rounded-lg font-semibold transition-colors shrink-0 ${
-                      rawJsonTab === 'summary' ? 'bg-white text-zinc-950' : 'text-zinc-400 hover:text-zinc-200'
+                      rawJsonTab === 'summary'
+                        ? 'bg-white dark:bg-white text-zinc-950 shadow-2xs'
+                        : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
                     }`}
                   >
                     Samantekt
@@ -1992,7 +2138,9 @@ export default function Home() {
                   <button
                     onClick={() => setRawJsonTab('all')}
                     className={`px-3 py-1.5 rounded-lg font-semibold transition-colors shrink-0 ${
-                      rawJsonTab === 'all' ? 'bg-white text-zinc-950' : 'text-zinc-400 hover:text-zinc-200'
+                      rawJsonTab === 'all'
+                        ? 'bg-white dark:bg-white text-zinc-950 shadow-2xs'
+                        : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
                     }`}
                   >
                     Allur JSON pakki
@@ -2000,7 +2148,9 @@ export default function Home() {
                   <button
                     onClick={() => setRawJsonTab('meta')}
                     className={`px-3 py-1.5 rounded-lg font-semibold transition-colors shrink-0 ${
-                      rawJsonTab === 'meta' ? 'bg-white text-zinc-950' : 'text-zinc-400 hover:text-zinc-200'
+                      rawJsonTab === 'meta'
+                        ? 'bg-white dark:bg-white text-zinc-950 shadow-2xs'
+                        : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
                     }`}
                   >
                     Meta & Kerfi
@@ -2008,7 +2158,9 @@ export default function Home() {
                   <button
                     onClick={() => setRawJsonTab('sample')}
                     className={`px-3 py-1.5 rounded-lg font-semibold transition-colors shrink-0 ${
-                      rawJsonTab === 'sample' ? 'bg-white text-zinc-950' : 'text-zinc-400 hover:text-zinc-200'
+                      rawJsonTab === 'sample'
+                        ? 'bg-white dark:bg-white text-zinc-950 shadow-2xs'
+                        : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200'
                     }`}
                   >
                     Sýnishorn
@@ -2022,7 +2174,7 @@ export default function Home() {
                       placeholder="Sía línur í JSON..."
                       value={rawSearchFilter}
                       onChange={(e) => setRawSearchFilter(e.target.value)}
-                      className="w-full bg-zinc-950 border border-white/[0.09] rounded-xl px-3 py-1.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500/60"
+                      className="w-full bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-white/[0.09] rounded-xl px-3 py-1.5 text-xs text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:border-emerald-500"
                     />
                   </div>
                 )}
@@ -2030,11 +2182,11 @@ export default function Home() {
 
               {/* Modal Body */}
               {rawJsonTab === 'summary' ? (
-                <div className="p-4 sm:p-6 space-y-6 flex-1 overflow-auto bg-zinc-950 text-zinc-200 tabular-nums">
+                <div className="p-4 sm:p-6 space-y-6 flex-1 overflow-auto bg-white dark:bg-zinc-950 text-zinc-800 dark:text-zinc-200 tabular-nums">
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <div className="bg-zinc-900/90 border border-white/[0.07] rounded-xl p-3.5">
-                      <span className="text-[11px] text-zinc-400 block">Svarstími</span>
-                      <span className="text-xl font-bold font-mono text-cyan-400">
+                    <div className="bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200/80 dark:border-white/[0.07] rounded-xl p-3.5">
+                      <span className="text-[11px] text-zinc-500 dark:text-zinc-400 block">Svarstími</span>
+                      <span className="text-xl font-bold font-mono text-cyan-600 dark:text-cyan-400">
                         {meta?.durationMs || 0} ms
                       </span>
                       <span className="text-[10px] text-zinc-500 block mt-1">
@@ -2042,9 +2194,9 @@ export default function Home() {
                       </span>
                     </div>
 
-                    <div className="bg-zinc-900/90 border border-white/[0.07] rounded-xl p-3.5">
-                      <span className="text-[11px] text-zinc-400 block">Símalíkön</span>
-                      <span className="text-xl font-bold text-white">
+                    <div className="bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200/80 dark:border-white/[0.07] rounded-xl p-3.5">
+                      <span className="text-[11px] text-zinc-500 dark:text-zinc-400 block">Símalíkön</span>
+                      <span className="text-xl font-bold text-zinc-900 dark:text-white">
                         {meta?.totalModels || models.length}
                       </span>
                       <span className="text-[10px] text-zinc-500 block mt-1">
@@ -2052,9 +2204,9 @@ export default function Home() {
                       </span>
                     </div>
 
-                    <div className="bg-zinc-900/90 border border-white/[0.07] rounded-xl p-3.5">
-                      <span className="text-[11px] text-zinc-400 block">Verðlækkanir</span>
-                      <span className="text-xl font-bold text-emerald-400">
+                    <div className="bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200/80 dark:border-white/[0.07] rounded-xl p-3.5">
+                      <span className="text-[11px] text-zinc-500 dark:text-zinc-400 block">Verðlækkanir</span>
+                      <span className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
                         {summaryStats.dropsCount}
                       </span>
                       <span className="text-[10px] text-zinc-500 block mt-1">
@@ -2062,12 +2214,12 @@ export default function Home() {
                       </span>
                     </div>
 
-                    <div className="bg-zinc-900/90 border border-white/[0.07] rounded-xl p-3.5">
-                      <span className="text-[11px] text-zinc-400 block">Verslanir</span>
-                      <span className="text-xl font-bold text-white">
+                    <div className="bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200/80 dark:border-white/[0.07] rounded-xl p-3.5">
+                      <span className="text-[11px] text-zinc-500 dark:text-zinc-400 block">Verslanir</span>
+                      <span className="text-xl font-bold text-zinc-900 dark:text-white">
                         {meta?.totalStores || 0}
                       </span>
-                      <span className="text-[10px] text-emerald-400 block mt-1">
+                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400 block mt-1">
                         ● 100% tengdar
                       </span>
                     </div>
@@ -2075,15 +2227,15 @@ export default function Home() {
 
                   {/* Store Breakdown */}
                   {summaryStats.storeSummaries.length > 0 && (
-                    <div className="bg-zinc-900/60 border border-white/[0.07] rounded-xl p-4">
-                      <h4 className="text-xs sm:text-sm font-bold text-white mb-3">
+                    <div className="bg-zinc-50/70 dark:bg-zinc-900/60 border border-zinc-200/80 dark:border-white/[0.07] rounded-xl p-4">
+                      <h4 className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white mb-3">
                         Samantekt eftir verslunum
                       </h4>
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
                         {summaryStats.storeSummaries.map((st) => (
                           <div
                             key={st.store}
-                            className="bg-zinc-950/80 border border-white/[0.06] rounded-xl p-3 text-xs space-y-1.5"
+                            className="bg-white dark:bg-zinc-950/80 border border-zinc-200/70 dark:border-white/[0.06] rounded-xl p-3 text-xs space-y-1.5"
                           >
                             <div className="flex items-center justify-between">
                               <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md font-semibold text-[11px] border ${getStoreBadgeColor(st.store)}`}>
@@ -2098,13 +2250,15 @@ export default function Home() {
                                 )}
                                 {st.store}
                               </span>
-                              <span className="text-zinc-400 font-mono text-[11px]">
+                              <span className="text-zinc-500 dark:text-zinc-400 font-mono text-[11px]">
                                 {st.totalPhones} símar
                               </span>
                             </div>
                             <div className="flex items-center justify-between text-[11px] pt-1">
-                              <span className="text-zinc-400">Lægsta verð:</span>
-                              <span className="font-semibold text-emerald-400">{st.cheapestCount} sinnum</span>
+                              <span className="text-zinc-500 dark:text-zinc-400">Lægsta verð:</span>
+                              <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                                {st.cheapestCount} sinnum
+                              </span>
                             </div>
                           </div>
                         ))}
@@ -2123,10 +2277,10 @@ export default function Home() {
       </main>
 
       {/* Minimal Modern Footer */}
-      <footer className="border-t border-white/[0.06] mt-16 py-8 text-center text-xs text-zinc-500">
+      <footer className="border-t border-zinc-200/80 dark:border-white/[0.06] mt-16 py-8 text-center text-xs text-zinc-500">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
           <p>© 2026 Farsímavaktin — Rauntíma verðsamanburður á farsímum á Íslandi.</p>
-          <p className="text-[11px] text-zinc-600">
+          <p className="text-[11px] text-zinc-400 dark:text-zinc-600">
             Gögn sótt beint úr vörustraumum ELKO, Nova, Símans, Sýnar, Emobi, Tölvulistans o.fl.
           </p>
         </div>

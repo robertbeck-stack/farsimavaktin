@@ -1,8 +1,39 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
-  --background: #09090b;
-  --foreground: #fafafa;
+  --bg-light: #fafafa;
+  --bg-dark: #09090b;
+  --fg-light: #09090b;
+  --fg-dark: #fafafa;
+
+  --background: var(--bg-light);
+  --foreground: var(--fg-light);
+
+  @media (prefers-color-scheme: dark) {
+    --background: var(--bg-dark);
+    --foreground: var(--fg-dark);
+  }
+
+  color-scheme: light dark;
+
+  &:has(> head > meta[name="color-scheme"][content="dark"]) {
+    color-scheme: dark;
+    --background: var(--bg-dark);
+    --foreground: var(--fg-dark);
+  }
+
+  &:has(> head > meta[name="color-scheme"][content="light"]) {
+    color-scheme: light;
+    --background: var(--bg-light);
+    --foreground: var(--fg-light);
+  }
+
+  @supports (color: light-dark(white, black)) {
+    --background: light-dark(var(--bg-light), var(--bg-dark));
+    --foreground: light-dark(var(--fg-light), var(--fg-dark));
+  }
 }
 
 @theme inline {
@@ -13,7 +44,6 @@
 }
 
 html {
-  color-scheme: dark;
   scroll-behavior: smooth;
 }
 
@@ -46,7 +76,7 @@ body {
   overscroll-behavior: contain;
 }
 
-/* Subtle custom scrollbars for horizontal pill bars and code viewers */
+/* Subtle custom scrollbars for horizontal pill bars */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }

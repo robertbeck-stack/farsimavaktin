@@ -14,7 +14,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Farsímavaktin 🇮🇸 | Verðsamanburður á farsímum á Íslandi",
-  description: "Berðu saman verð á farsímum í rauntíma hjá ELKO, Vodafone, Mi búðinni, Coolshop og öllum helstu verslunum á Íslandi.",
+  description:
+    "Berðu saman verð á farsímum í rauntíma hjá ELKO, Nova, Símanum, Sýn, Emobi, Mi búðinni og öllum helstu verslunum á Íslandi.",
 };
 
 export default function RootLayout({
@@ -23,8 +24,20 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="is" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col bg-[#09090b] text-zinc-100 font-sans">
+    <html
+      lang="is"
+      suppressHydrationWarning
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+    >
+      <head>
+        <meta name="color-scheme" content="light dark" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{var s=localStorage.getItem("color-scheme");var m=document.querySelector('meta[name="color-scheme"]');if(m)m.content=s||"light dark";var d=s==="dark"||(s!=="light"&&window.matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.classList.toggle("dark",d);}catch(e){}`,
+          }}
+        />
+      </head>
+      <body className="min-h-full flex flex-col bg-zinc-50 dark:bg-[#09090b] text-zinc-900 dark:text-zinc-100 font-sans">
         {children}
       </body>
     </html>
