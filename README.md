@@ -66,7 +66,7 @@ Allur bakendarökstuðningur er í [`app/api/phones/route.ts`](app/api/phones/ro
 
 Framendinn er skrifaður í **Next.js 16 (App Router)** og **Tailwind CSS v4** með fullum stuðningi við bæði **Ljóst þema (Light Mode)** og **Dökkt þema (Dark Mode)** án flökts við hleðslu (FOUC-vörn í [`app/layout.tsx`](app/layout.tsx)):
 
-- [`app/page.tsx`](app/page.tsx) — Aðalsíða, haus (Header), þemaskiptir (`Ljóst` / `Dökkt`), flipastýring og sjálfvirk bakgrunnsuppfærsla á 15 mínútna fresti.
+- [`app/page.tsx`](app/page.tsx) — Aðalsíða, haus (Header), þemaskiptir (`Ljóst` / `Dökkt`) og flipastýring. Sækir daglega verðskrá samstundis úr `data/price_history.json` við opnun (og býður upp á handvirka uppfærslu með `?refresh=1`).
 - [`app/types.ts`](app/types.ts) — Samræmd gagnaskil (`PhoneModelGroup`, `StoreOffer`, `MetaData`), verð- og dagsetningarsnið, litaflokkun verslana og `getStoreFavicon()` fyrir lógó allra 14 verslana.
 - [`app/components/ProductsView.tsx`](app/components/ProductsView.tsx) — Flipinn **Vörur**: Hero-kort (*Mesti sparnaður í dag* og *Mestu verðlækkanir*), ítarleg leit og síun (eftir verslun, framleiðanda, verðbili, lækkunum og fjölda verslana), ásamt bæði **Spjaldasýn (Grid)** og **Töflusýn (Table)**.
 - [`app/components/StoresView.tsx`](app/components/StoresView.tsx) — Flipinn **Verslanir**: Heildaryfirlit og greining á öllum 14 verslunum (hlutfall lægstu verða, verðlækkanir/hækkanir, og stærsta einstaka lækkun í hverri verslun).
@@ -96,13 +96,13 @@ npm run build
 
 ---
 
-## 5. Sjálfvirk dagleg keyrsla (GitHub Actions & Vercel Cron)
+## 5. Sjálfvirk dagleg keyrsla (GitHub Actions)
 
-Kerfið keyrir **sjálfkrafa einu sinni á sólarhring (kl. 07:00 á morgnana)** á tvennan hátt:
+Kerfið keyrir **eingöngu einu sinni á sólarhring (kl. 07:00 á morgnana)**:
 
-1. **GitHub Actions (`.github/workflows/daily-price-update.yml`)**:
-   - Keyrir á hverjum degi kl. `07:00 UTC` (`cron: '0 7 * * *'`), auk þess sem hægt er að ræsa keyrsluna handvirkt hvenær sem er með **Run workflow** (`workflow_dispatch`) undir *Actions* flipanum á GitHub.
-   - Skannar allar 14 verslanirnar, uppfærir [`data/price_history.json`](data/price_history.json) með nýjustu verðum dagsins og vistar (`git commit & push`) beint inn á `main` greinina — sem kveikir jafnframt sjálfkrafa á nýrri útgáfu (deploy) á Vercel með uppfærðri verðsögu.
-2. **Vercel Cron (`vercel.json`)**:
-   - Kveikir á `/api/phones` endapunktinum kl. `07:05 UTC` á hverjum degi til að endurnýja skyndiminni (edge cache) á framleiðsluvefnum.
+- **GitHub Actions ([`.github/workflows/daily-price-update.yml`](.github/workflows/daily-price-update.yml))**:
+  - Keyrir á hverjum degi kl. `07:00 UTC` (`cron: '0 7 * * *'`), auk þess sem hægt er að ræsa keyrsluna handvirkt með **Run workflow** (`workflow_dispatch`) undir *Actions* flipanum á GitHub.
+  - Skannar allar 14 verslanirnar, uppfærir [`data/price_history.json`](data/price_history.json) (bæði `savedCatalog`, `meta`, `history` og `storeOffers`) og vistar (`git commit & push`) beint inn á `main` greinina.
+- **Samstundis hleðsla fyrir notendur**:
+  - Þegar notendur opna vefinn les `/api/phones` daglegu gögnin beint úr [`data/price_history.json`](data/price_history.json) á `<5ms` án þess að skafa verslanirnar í hvert skipti sem síðan er opnuð.
 

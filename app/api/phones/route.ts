@@ -415,9 +415,33 @@ function getRealModelHistory(
   };
 }
 
-export async function GET() {
+export async function GET(request?: Request) {
   const startTime = Date.now();
   try {
+    const historyFile = path.join(process.cwd(), 'data', 'price_history.json');
+    const forceRefresh = request ? new URL(request.url).searchParams.get('refresh') === '1' : true;
+
+    // Serve daily snapshot from data/price_history.json immediately unless ?refresh=1 or CLI run
+    if (!forceRefresh && fs.existsSync(historyFile)) {
+      try {
+        const raw = fs.readFileSync(historyFile, 'utf-8');
+        const parsed = JSON.parse(raw);
+        if (parsed.savedCatalog && parsed.meta) {
+          const cachedModels = (Object.values(parsed.savedCatalog) as PhoneModelGroup[]).sort((a, b) =>
+            a.name.localeCompare(b.name, 'is')
+          );
+          if (cachedModels.length > 0) {
+            return NextResponse.json({
+              models: cachedModels,
+              meta: parsed.meta,
+            });
+          }
+        }
+      } catch {
+        // Fallback to live scrape if snapshot cannot be read
+      }
+    }
+
     const headers = {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
       'Accept': 'application/json',
@@ -1086,7 +1110,6 @@ export async function GET() {
     }
 
     // Load persistent real price history ledger & verified models catalog
-    const historyFile = path.join(process.cwd(), 'data', 'price_history.json');
     let historyStore: Record<string, PricePoint[]> = {};
     let storeOffersStore: Record<string, PricePoint[]> = {};
     let savedCatalog: Record<string, PhoneModelGroup> = {};
@@ -1178,29 +1201,6 @@ export async function GET() {
         return updatedModel;
       })
       .sort((a, b) => a.name.localeCompare(b.name, 'is'));
-
-    try {
-      const dir = path.dirname(historyFile);
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-      }
-      fs.writeFileSync(
-        historyFile,
-        JSON.stringify(
-          {
-            lastUpdated: new Date().toISOString(),
-            history: historyStore,
-            storeOffers: storeOffersStore,
-            savedCatalog: cleanSavedCatalog,
-          },
-          null,
-          2
-        ),
-        'utf-8'
-      );
-    } catch {
-      // Ignore read-only filesystem errors on serverless
-    }
 
     const allStores = Array.from(new Set(models.flatMap((m) => m.stores))).sort();
     const allBrands = Array.from(new Set(models.map((m) => m.brand))).sort();
@@ -1339,6 +1339,30 @@ export async function GET() {
       status: 'SUCCESS',
       sourcesScanned: queryUrls.length + 30,
     };
+
+    try {
+      const dir = path.dirname(historyFile);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      fs.writeFileSync(
+        historyFile,
+        JSON.stringify(
+          {
+            lastUpdated: new Date().toISOString(),
+            meta,
+            history: historyStore,
+            storeOffers: storeOffersStore,
+            savedCatalog: cleanSavedCatalog,
+          },
+          null,
+          2
+        ),
+        'utf-8'
+      );
+    } catch {
+      // Ignore read-only filesystem errors on serverless
+    }
 
     return NextResponse.json({
       models,

@@ -141,7 +141,7 @@ export default function Home() {
       else setLoading(true);
       setError(null);
 
-      const res = await fetch('/api/phones');
+      const res = await fetch(isRefresh ? '/api/phones?refresh=1' : '/api/phones');
       if (!res.ok) throw new Error('Mistókst að sækja gögn');
       const data = await res.json();
 
