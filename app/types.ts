@@ -15,6 +15,13 @@ export interface StoreDailySummary {
   hikesCount: number;
   unchangedCount: number;
   netChangeAmount: number;
+  avgPrice?: number;
+  minPrice?: number;
+  maxPrice?: number;
+  vsMarketPercent?: number;
+  trend?: 'DOWN' | 'UP' | 'SAME';
+  trendPercent?: number;
+  history?: PricePoint[];
   biggestDrop?: {
     modelName: string;
     oldPrice: number;

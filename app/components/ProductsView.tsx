@@ -1,6 +1,6 @@
 'use client';
 
-import { RefObject } from 'react';
+import { RefObject, useState } from 'react';
 import {
   PhoneModelGroup,
   MetaData,
@@ -62,12 +62,86 @@ export function ProductsView({
   fetchPhones,
   searchInputRef,
 }: ProductsViewProps) {
+  const [showMarketCharts, setShowMarketCharts] = useState(true);
+
   const hasActiveFilters =
     selectedBrand !== 'Allt' ||
     selectedStore !== 'Allt' ||
     priceRange !== 'all' ||
     onlyMultiStore ||
     search.trim().length > 0;
+
+  // Compute Brand Price Range & Average stats for Brand Chart
+  const brandStats = Array.from(
+    models.reduce((map, m) => {
+      const entry = map.get(m.brand) || {
+        brand: m.brand,
+        count: 0,
+        min: Infinity,
+        max: 0,
+        sum: 0,
+        drops: 0,
+      };
+      entry.count++;
+      if (m.lowestPrice < entry.min) entry.min = m.lowestPrice;
+      if (m.highestPrice > entry.max) entry.max = m.highestPrice;
+      entry.sum += m.lowestPrice;
+      if (m.trend === 'DOWN' || m.priceChangePercent < 0) entry.drops++;
+      map.set(m.brand, entry);
+      return map;
+    }, new Map<string, { brand: string; count: number; min: number; max: number; sum: number; drops: number }>())
+  )
+    .map(([, v]) => ({
+      ...v,
+      avg: Math.round(v.sum / Math.max(1, v.count)),
+    }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 7);
+
+  const globalMaxPrice = Math.max(250000, ...brandStats.map((b) => b.max));
+
+  // Compute Price Bracket Distribution for Histogram Chart
+  const priceBrackets: {
+    id: PriceRangeFilter;
+    label: string;
+    sub: string;
+    count: number;
+    drops: number;
+  }[] = [
+    {
+      id: 'under50',
+      label: '< 50 þús.',
+      sub: 'Ódýrir / Grunn',
+      count: models.filter((m) => m.lowestPrice < 50000).length,
+      drops: models.filter((m) => m.lowestPrice < 50000 && m.priceChangePercent < 0).length,
+    },
+    {
+      id: '50to120',
+      label: '50–120 þús.',
+      sub: 'Milliflokkur',
+      count: models.filter((m) => m.lowestPrice >= 50000 && m.lowestPrice <= 120000).length,
+      drops: models.filter(
+        (m) => m.lowestPrice >= 50000 && m.lowestPrice <= 120000 && m.priceChangePercent < 0
+      ).length,
+    },
+    {
+      id: '120to200',
+      label: '120–200 þús.',
+      sub: 'Hámarksafköst',
+      count: models.filter((m) => m.lowestPrice > 120000 && m.lowestPrice <= 200000).length,
+      drops: models.filter(
+        (m) => m.lowestPrice > 120000 && m.lowestPrice <= 200000 && m.priceChangePercent < 0
+      ).length,
+    },
+    {
+      id: 'over200',
+      label: '200 þús.+',
+      sub: 'meistaraflokkur',
+      count: models.filter((m) => m.lowestPrice > 200000).length,
+      drops: models.filter((m) => m.lowestPrice > 200000 && m.priceChangePercent < 0).length,
+    },
+  ];
+  const maxBracketCount = Math.max(1, ...priceBrackets.map((b) => b.count));
 
   return (
     <div className="space-y-6">
@@ -174,6 +248,189 @@ export function ProductsView({
               );
             })}
           </div>
+        </section>
+      )}
+
+      {/* MARKET ANALYTICS CHARTS BENTO (BRAND PRICE SPREAD + PRICE DISTRIBUTION HISTOGRAM) */}
+      {models.length > 0 && (
+        <section aria-label="Markaðsgröf og verðdreifing" className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center justify-center w-6 h-6 rounded-lg bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border border-cyan-500/25">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+                </svg>
+              </span>
+              <h2 className="text-xs sm:text-sm font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
+                Markaðsgröf: Verðbil eftir framleiðendum og verðdreifing
+              </h2>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowMarketCharts((v) => !v)}
+              className="text-xs font-medium px-3 py-1 rounded-xl bg-white dark:bg-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200/80 dark:border-white/[0.08] transition-colors"
+            >
+              {showMarketCharts ? 'Fela gröf ▲' : 'Sýna markaðsgröf ▼'}
+            </button>
+          </div>
+
+          {showMarketCharts && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* Chart A: Brand Price Range Whisker & Average Chart */}
+              <div className="rounded-2xl bg-white dark:bg-zinc-900/70 border border-zinc-200/80 dark:border-white/[0.08] p-4 sm:p-5 shadow-xs space-y-3.5 tabular-nums">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white">
+                      Verðbil og meðalverð eftir framleiðendum
+                    </h3>
+                    <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                      Lægsta verð, meðalverð (punktur) og hæsta verð — smelltu á merki til að sía
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-2.5">
+                  {brandStats.map((b) => {
+                    const leftPct = Math.min(92, Math.max(0, (b.min / globalMaxPrice) * 100));
+                    const rightPct = Math.min(100, Math.max(leftPct + 3, (b.max / globalMaxPrice) * 100));
+                    const avgPct = Math.min(98, Math.max(2, (b.avg / globalMaxPrice) * 100));
+                    const isSelected = selectedBrand === b.brand;
+
+                    return (
+                      <button
+                        key={b.brand}
+                        type="button"
+                        onClick={() => setSelectedBrand(isSelected ? 'Allt' : b.brand)}
+                        className={`w-full text-left p-2 rounded-xl transition-colors border ${
+                          isSelected
+                            ? 'bg-emerald-50/70 dark:bg-emerald-500/10 border-emerald-300 dark:border-emerald-500/30'
+                            : 'hover:bg-zinc-50 dark:hover:bg-zinc-800/50 border-transparent'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between text-xs mb-1.5">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-zinc-900 dark:text-white">{b.brand}</span>
+                            <span className="text-[10px] font-mono text-zinc-400">
+                              ({b.count} símar)
+                            </span>
+                            {b.drops > 0 && (
+                              <span className="text-[10px] font-mono font-semibold text-emerald-600 dark:text-emerald-400">
+                                ↓{b.drops} lækka
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[11px] font-mono text-zinc-600 dark:text-zinc-300">
+                            <span className="text-zinc-400">{Math.round(b.min / 1000)}þ</span>
+                            {' – '}
+                            <strong className="text-emerald-600 dark:text-emerald-400">
+                              meðalt. {formatPrice(b.avg)}
+                            </strong>
+                            {' – '}
+                            <span className="text-zinc-400">{Math.round(b.max / 1000)}þ</span>
+                          </div>
+                        </div>
+
+                        {/* Range Whisker Track */}
+                        <div className="relative w-full h-2.5 rounded-full bg-zinc-100 dark:bg-zinc-800/90">
+                          <div
+                            className="absolute top-0.5 bottom-0.5 rounded-full bg-gradient-to-r from-emerald-500/50 via-cyan-500/60 to-blue-500/50"
+                            style={{
+                              left: `${leftPct}%`,
+                              width: `${Math.max(3, rightPct - leftPct)}%`,
+                            }}
+                          />
+                          {/* Average Price Marker Dot */}
+                          <div
+                            className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white dark:border-zinc-900 shadow-xs"
+                            style={{ left: `${avgPct}%` }}
+                            title={`Meðalverð ${b.brand}: ${formatPrice(b.avg)}`}
+                          />
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Chart B: Price Bracket Histogram & Drop Activity */}
+              <div className="rounded-2xl bg-white dark:bg-zinc-900/70 border border-zinc-200/80 dark:border-white/[0.08] p-4 sm:p-5 shadow-xs flex flex-col justify-between space-y-4 tabular-nums">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white">
+                      Verðdreifing símalíkana á markaðnum
+                    </h3>
+                    <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                      Fjöldi símalíkana í hverju verðbili — smelltu á súlu til að sía vörulista
+                    </p>
+                  </div>
+                  <span className="text-[11px] font-mono text-zinc-500 dark:text-zinc-400">
+                    {models.length} líkön alls
+                  </span>
+                </div>
+
+                {/* Vertical Column Bars */}
+                <div className="grid grid-cols-4 gap-3 items-end h-44 pt-4 px-2">
+                  {priceBrackets.map((br) => {
+                    const heightPct = Math.max(10, Math.round((br.count / maxBracketCount) * 100));
+                    const isSelected = priceRange === br.id;
+                    return (
+                      <button
+                        key={br.id}
+                        type="button"
+                        onClick={() => setPriceRange(isSelected ? 'all' : br.id)}
+                        className="group flex flex-col items-center justify-end h-full text-center focus:outline-none"
+                      >
+                        <div className="text-xs font-extrabold text-zinc-900 dark:text-white mb-1">
+                          {br.count}
+                        </div>
+                        {br.drops > 0 && (
+                          <div className="text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400 mb-1">
+                            ↓{br.drops} lækka
+                          </div>
+                        )}
+                        <div className="w-full max-w-[68px] bg-zinc-100 dark:bg-zinc-800/80 rounded-t-xl overflow-hidden flex items-end h-28 p-1">
+                          <div
+                            className={`w-full rounded-lg transition-all ${
+                              isSelected
+                                ? 'bg-gradient-to-t from-emerald-600 to-emerald-400 shadow-sm'
+                                : 'bg-gradient-to-t from-cyan-600/80 to-emerald-400/85 group-hover:from-emerald-600 group-hover:to-emerald-400'
+                            }`}
+                            style={{ height: `${heightPct}%` }}
+                          />
+                        </div>
+                        <div
+                          className={`mt-2 text-[11px] font-bold ${
+                            isSelected
+                              ? 'text-emerald-600 dark:text-emerald-400'
+                              : 'text-zinc-800 dark:text-zinc-200'
+                          }`}
+                        >
+                          {br.label}
+                        </div>
+                        <div className="text-[10px] text-zinc-400 dark:text-zinc-500 truncate max-w-full">
+                          {br.sub}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="pt-2.5 border-t border-zinc-100 dark:border-white/[0.06] flex items-center justify-between text-[11px] text-zinc-500 dark:text-zinc-400">
+                  <span>Grænar tölur (↓) sýna síma sem hafa lækkað í verði í hverjum flokki</span>
+                  {priceRange !== 'all' && (
+                    <button
+                      type="button"
+                      onClick={() => setPriceRange('all')}
+                      className="text-emerald-600 dark:text-emerald-400 font-semibold hover:underline"
+                    >
+                      Sýna öll verðbil
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </section>
       )}
 
@@ -575,6 +832,16 @@ export function ProductsView({
                           </div>
 
                           <div className="flex items-center gap-1.5 shrink-0 tabular-nums">
+                            {typeof offer.priceChange === 'number' && offer.priceChange < 0 && (
+                              <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
+                                ↓ -{Math.round(Math.abs(offer.priceChange) / 1000)}þ
+                              </span>
+                            )}
+                            {typeof offer.priceChange === 'number' && offer.priceChange > 0 && (
+                              <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-rose-500/15 text-rose-700 dark:text-rose-300">
+                                ↑ +{Math.round(offer.priceChange / 1000)}þ
+                              </span>
+                            )}
                             <span
                               className={`font-bold ${
                                 isCheapest
@@ -600,15 +867,63 @@ export function ProductsView({
                   </div>
                 </div>
 
-                {/* Card Footer */}
-                <div className="mt-3 pt-2.5 border-t border-zinc-100 dark:border-white/[0.06] flex items-center justify-between text-xs">
-                  <div className="tabular-nums">
-                    <span className="text-[10px] text-zinc-500 dark:text-zinc-400 block">
-                      Lægsta verð ({activeVariant?.storage}):
-                    </span>
-                    <span className="text-base font-extrabold text-zinc-900 dark:text-white">
-                      {formatPrice(activeVariant?.lowestPrice || model.lowestPrice)}
-                    </span>
+                {/* Card Footer with Mini Trend Sparkline */}
+                <div className="mt-3 pt-2.5 border-t border-zinc-100 dark:border-white/[0.06] flex items-center justify-between gap-2 text-xs">
+                  <div className="flex items-center gap-2.5 tabular-nums">
+                    <div>
+                      <span className="text-[10px] text-zinc-500 dark:text-zinc-400 block">
+                        Lægsta verð ({activeVariant?.storage}):
+                      </span>
+                      <span className="text-base font-extrabold text-zinc-900 dark:text-white">
+                        {formatPrice(activeVariant?.lowestPrice || model.lowestPrice)}
+                      </span>
+                    </div>
+
+                    {/* Mini Product Price Trend Sparkline */}
+                    {(() => {
+                      const hist =
+                        model.history && model.history.length >= 2
+                          ? model.history
+                          : [
+                              {
+                                date: 'start',
+                                price: model.lowestPrice - (model.priceChangeAmount || 0),
+                              },
+                              { date: 'now', price: model.lowestPrice },
+                            ];
+                      const pVals = hist.map((h) => h.price);
+                      const minP = Math.min(...pVals);
+                      const maxP = Math.max(...pVals);
+                      const span = Math.max(100, maxP - minP);
+                      const isDown = model.trend === 'DOWN' || model.priceChangePercent < 0;
+                      const isUp = model.trend === 'UP' || model.priceChangePercent > 0;
+                      const stroke = isDown ? '#10b981' : isUp ? '#f43f5e' : '#06b6d4';
+                      const pts = hist
+                        .map((pt, i) => {
+                          const x = 3 + (i / Math.max(1, hist.length - 1)) * 46;
+                          const y =
+                            maxP === minP ? 12 : 4 + ((maxP - pt.price) / span) * 16;
+                          return `${x},${y}`;
+                        })
+                        .join(' ');
+                      return (
+                        <div
+                          className="hidden sm:flex flex-col items-center px-2 py-1 rounded-lg bg-zinc-50 dark:bg-zinc-950/70 border border-zinc-200/60 dark:border-white/[0.05]"
+                          title="Verðþróun símalíkans"
+                        >
+                          <svg viewBox="0 0 52 24" className="w-12 h-5 overflow-visible">
+                            <polyline
+                              fill="none"
+                              stroke={stroke}
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              points={pts}
+                            />
+                          </svg>
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   <span className="inline-flex items-center gap-1 text-xs font-medium text-zinc-700 dark:text-zinc-300 group-hover:text-zinc-950 dark:group-hover:text-white bg-zinc-100 dark:bg-zinc-800/80 group-hover:bg-zinc-200/80 dark:group-hover:bg-zinc-800 px-3 py-1.5 rounded-xl border border-zinc-200/80 dark:border-white/[0.07] transition-colors">

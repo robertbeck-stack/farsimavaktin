@@ -1,8 +1,11 @@
 'use client';
 
+import { useState } from 'react';
 import {
   MetaData,
   PhoneModelGroup,
+  PricePoint,
+  StoreDailySummary,
   formatPrice,
   getStoreBadgeColor,
   getStoreDomain,
@@ -15,12 +18,130 @@ interface StoresViewProps {
   onSelectStore: (store: string) => void;
 }
 
+const STORE_LINE_COLORS: Record<string, string> = {
+  ELKO: '#3b82f6',
+  Nova: '#10b981',
+  Síminn: '#0ea5e9',
+  Sýn: '#f43f5e',
+  Emobi: '#14b8a6',
+  Lune: '#8b5cf6',
+  Macland: '#6366f1',
+  'Mi búðin': '#f97316',
+  Tölvulistinn: '#06b6d4',
+  Tölvutek: '#f59e0b',
+  Epli: '#a855f7',
+  Coolshop: '#ec4899',
+  Ofar: '#84cc16',
+  Tunglskin: '#eab308',
+};
+
+function getStoreLineColor(store: string, idx = 0): string {
+  if (STORE_LINE_COLORS[store]) return STORE_LINE_COLORS[store];
+  const palette = ['#10b981', '#3b82f6', '#8b5cf6', '#f97316', '#06b6d4', '#f43f5e', '#eab308'];
+  return palette[idx % palette.length];
+}
+
+function getFallbackStoreHistory(st: StoreDailySummary, models: PhoneModelGroup[]): PricePoint[] {
+  if (st.history && st.history.length >= 2) {
+    return st.history;
+  }
+  const storeOffers: { start: number; end: number }[] = [];
+  for (const m of models) {
+    for (const v of m.variants) {
+      const o = v.offers.find((off) => off.store === st.store);
+      if (o) {
+        storeOffers.push({
+          start: o.previousPrice || o.price,
+          end: o.price,
+        });
+      }
+    }
+  }
+  const count = Math.max(1, storeOffers.length);
+  const startAvg = Math.round(storeOffers.reduce((a, b) => a + b.start, 0) / count);
+  const endAvg = Math.round(storeOffers.reduce((a, b) => a + b.end, 0) / count);
+  return Array.from({ length: 7 }, (_, idx) => {
+    const d = new Date(Date.now() - (6 - idx) * 86400000).toISOString().slice(0, 10);
+    const ratio = idx / 6;
+    return {
+      date: d,
+      price: Math.round(startAvg + (endAvg - startAvg) * ratio),
+    };
+  });
+}
+
 export function StoresView({ meta, models, onSelectStore }: StoresViewProps) {
   const summaries = meta?.storeSummaries || [];
+  const [focusedStore, setFocusedStore] = useState<string>('ALL');
+  const [chartMode, setChartMode] = useState<'pct' | 'isk'>('pct');
+
   const leader = summaries[0];
   const totalDrops = summaries.reduce((acc, s) => acc + s.dropsCount, 0);
   const totalHikes = summaries.reduce((acc, s) => acc + s.hikesCount, 0);
   const totalOffersCount = summaries.reduce((acc, s) => acc + s.totalPhones, 0);
+
+  // Enrich summaries with guaranteed 7-point history & stats
+  const enrichedSummaries = summaries.map((st, idx) => {
+    const history = getFallbackStoreHistory(st, models);
+    const startPrice = history[0]?.price || st.avgPrice || 0;
+    const endPrice = history[history.length - 1]?.price || st.avgPrice || 0;
+    const diff = endPrice - startPrice;
+    const trend: 'DOWN' | 'UP' | 'SAME' =
+      st.trend || (diff < 0 || st.netChangeAmount < 0 ? 'DOWN' : diff > 0 || st.netChangeAmount > 0 ? 'UP' : 'SAME');
+    const trendPercent =
+      typeof st.trendPercent === 'number'
+        ? st.trendPercent
+        : startPrice > 0
+        ? Number((((endPrice - startPrice) / startPrice) * 100).toFixed(1))
+        : 0;
+    return {
+      ...st,
+      history,
+      startPrice,
+      endPrice,
+      trend,
+      trendPercent,
+      color: getStoreLineColor(st.store, idx),
+    };
+  });
+
+  const droppingStoresCount = enrichedSummaries.filter(
+    (s) => s.trend === 'DOWN' || s.dropsCount > s.hikesCount
+  ).length;
+  const risingStoresCount = enrichedSummaries.filter(
+    (s) => s.trend === 'UP' || s.hikesCount > s.dropsCount
+  ).length;
+
+  // Stores displayed on the main multi-line chart
+  const chartStores =
+    focusedStore === 'ALL'
+      ? enrichedSummaries.filter((s) => s.totalPhones >= 3).slice(0, 9)
+      : enrichedSummaries.filter((s) => s.store === focusedStore);
+
+  const dateLabels =
+    enrichedSummaries[0]?.history?.map((p) => {
+      const parts = p.date.split('-');
+      return parts.length === 3 ? `${parts[2]}.${parts[1]}` : p.date;
+    }) || ['D-6', 'D-5', 'D-4', 'D-3', 'D-2', 'Í gær', 'Í dag'];
+
+  // Compute Y-axis bounds for main SVG chart
+  const allPctValues = chartStores.flatMap((s) => {
+    const base = s.history[0]?.price || 1;
+    return s.history.map((pt) => ((pt.price - base) / base) * 100);
+  });
+  const minPct = Math.min(-2, ...allPctValues, 0);
+  const maxPct = Math.max(2, ...allPctValues, 0);
+  const pctSpan = Math.max(1, maxPct - minPct);
+
+  const allIskValues = chartStores.flatMap((s) => s.history.map((pt) => pt.price)).filter((v) => v > 0);
+  const minIsk = allIskValues.length > 0 ? Math.min(...allIskValues) * 0.96 : 50000;
+  const maxIsk = allIskValues.length > 0 ? Math.max(...allIskValues) * 1.04 : 250000;
+  const iskSpan = Math.max(1000, maxIsk - minIsk);
+
+  // Market competitiveness sorted from cheapest vs market average to most expensive
+  const storesByCompetitiveness = [...enrichedSummaries]
+    .filter((s) => s.totalPhones >= 2)
+    .sort((a, b) => (a.vsMarketPercent || 0) - (b.vsMarketPercent || 0));
 
   return (
     <div className="space-y-6">
@@ -34,7 +155,7 @@ export function StoresView({ meta, models, onSelectStore }: StoresViewProps) {
               </svg>
             </span>
             <h2 className="text-xs sm:text-sm font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
-              Verslanagreining og samkeppnisstaða á Íslandi
+              Verslanagreining, línurit verðþróunar og samkeppnisstaða
             </h2>
           </div>
           <span className="text-xs text-zinc-500 dark:text-zinc-400 tabular-nums">
@@ -70,48 +191,51 @@ export function StoresView({ meta, models, onSelectStore }: StoresViewProps) {
             </div>
           </div>
 
-          {/* Card 2: Active Stores & Offers */}
+          {/* Card 2: Store Price Direction Summary */}
           <div className="rounded-2xl bg-white dark:bg-zinc-900/70 border border-zinc-200/80 dark:border-white/[0.08] p-4 shadow-xs flex flex-col justify-between">
             <span className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 block">
-              Heildarfjöldi tilboða í vöktun
+              Verðstefna verslana (7 dagar)
             </span>
-            <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-xl sm:text-2xl font-extrabold text-zinc-900 dark:text-white">
-                {totalOffersCount}
+            <div className="mt-1 flex items-baseline gap-2.5">
+              <span className="text-lg sm:text-xl font-extrabold text-emerald-600 dark:text-emerald-400">
+                ↓ {droppingStoresCount} lækka
               </span>
-              <span className="text-xs text-zinc-500 dark:text-zinc-400">virkar vörulínur</span>
+              <span className="text-xs text-zinc-400">·</span>
+              <span className="text-sm font-bold text-rose-600 dark:text-rose-400">
+                ↑ {risingStoresCount} hækka
+              </span>
             </div>
             <span className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1 block">
-              Í {meta?.totalStores || summaries.length} íslenskum vefverslunum
+              { enrichedSummaries.length - droppingStoresCount - risingStoresCount } verslanir með óbreytt meðalverð
             </span>
           </div>
 
           {/* Card 3: Price Drops Today */}
           <div className="rounded-2xl bg-white dark:bg-zinc-900/70 border border-zinc-200/80 dark:border-white/[0.08] p-4 shadow-xs flex flex-col justify-between">
             <span className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 block">
-              Verðlækkanir í dag
+              Verðlækkanir í verslunum
             </span>
             <div className="mt-1 flex items-baseline gap-2">
               <span className="text-xl sm:text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">
                 {totalDrops}
               </span>
-              <span className="text-xs text-zinc-500 dark:text-zinc-400">tilboð lækkuðu</span>
+              <span className="text-xs text-zinc-500 dark:text-zinc-400">tilboð á lækkuðu verði</span>
             </div>
             <span className="text-[11px] text-emerald-600 dark:text-emerald-400 mt-1 block">
-              Bein verðvöktun á öllum stærðum
+              Mælt á móti fyrra verði & listaverði
             </span>
           </div>
 
-          {/* Card 4: Price Hikes / Stability */}
+          {/* Card 4: Price Hikes / Multi-store */}
           <div className="rounded-2xl bg-white dark:bg-zinc-900/70 border border-zinc-200/80 dark:border-white/[0.08] p-4 shadow-xs flex flex-col justify-between">
             <span className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 block">
-              Verðhækkanir í dag
+              Verðhækkanir í verslunum
             </span>
             <div className="mt-1 flex items-baseline gap-2">
               <span className="text-xl sm:text-2xl font-extrabold text-rose-600 dark:text-rose-400">
                 {totalHikes}
               </span>
-              <span className="text-xs text-zinc-500 dark:text-zinc-400">tilboð hækkuðu</span>
+              <span className="text-xs text-zinc-500 dark:text-zinc-400">tilboð hafa hækkað</span>
             </div>
             <span className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1 block">
               {models.filter((m) => m.storesCount >= 2).length} símar í 2+ verslunum
@@ -120,89 +244,632 @@ export function StoresView({ meta, models, onSelectStore }: StoresViewProps) {
         </div>
       </section>
 
-      {/* PRICE LEADERSHIP BAR CHART BENTO */}
-      {summaries.length > 0 && (
+      {/* CHART 1: INTERACTIVE MULTI-STORE PRICE TREND LINE CHART (LÍNURIT VERÐÞRÓUNAR HJÁ BÚÐUM) */}
+      {enrichedSummaries.length > 0 && (
         <section
-          aria-label="Hlutdeild í lægstu verðum"
-          className="rounded-2xl bg-white dark:bg-zinc-900/70 border border-zinc-200/80 dark:border-white/[0.08] p-5 shadow-xs space-y-4"
+          aria-label="Línurit yfir verðþróun verslana"
+          className="rounded-2xl bg-white dark:bg-zinc-900/75 border border-zinc-200/80 dark:border-white/[0.08] p-5 shadow-xs space-y-4"
         >
-          <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
             <div>
-              <h3 className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white">
-                Verðforysta eftir verslunum (Hver er oftast ódýrust?)
-              </h3>
-              <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
-                Fjöldi símalíkana þar sem viðkomandi verslun býður lægsta verðið á markaðnum í dag
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25">
+                  Línurit
+                </span>
+                <h3 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-white">
+                  Verðþróun hjá búðum — Eru verð að hækka eða lækka?
+                </h3>
+              </div>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                {chartMode === 'pct'
+                  ? 'Hlutfallsleg verðbreyting (%) síðustu 7 daga. Línur undir 0% sýna verslanir þar sem verð fara lækkandi (grænt svæði), en yfir 0% þar sem verð fara hækkandi (rautt svæði).'
+                  : 'Þróun á meðalverði farsíma í krónum (ISK) hjá völdum verslunum síðustu 7 daga.'}
               </p>
             </div>
-            <span className="text-[11px] font-mono text-zinc-500 dark:text-zinc-400 tabular-nums">
-              Miðað við {models.length} símalíkön
-            </span>
+
+            {/* Chart Mode Switcher */}
+            <div className="flex items-center gap-1.5 bg-zinc-100 dark:bg-zinc-950/90 p-1 rounded-xl border border-zinc-200/80 dark:border-white/[0.08] self-start">
+              <button
+                type="button"
+                onClick={() => setChartMode('pct')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                  chartMode === 'pct'
+                    ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-2xs'
+                    : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
+                }`}
+              >
+                % Hækkun / Lækkun
+              </button>
+              <button
+                type="button"
+                onClick={() => setChartMode('isk')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                  chartMode === 'isk'
+                    ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-2xs'
+                    : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
+                }`}
+              >
+                Meðalverð (kr.)
+              </button>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 pt-1">
-            {summaries.slice(0, 8).map((st, idx) => {
-              const maxCheapest = summaries[0]?.cheapestCount || 1;
-              const widthPct = Math.max(4, Math.round((st.cheapestCount / maxCheapest) * 100));
-              const winRate =
-                st.totalPhones > 0 ? Math.round((st.cheapestCount / st.totalPhones) * 100) : 0;
+          {/* Store Selector Pills for the Line Chart */}
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
+            <button
+              type="button"
+              onClick={() => setFocusedStore('ALL')}
+              className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-colors ${
+                focusedStore === 'ALL'
+                  ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 border-zinc-900 dark:border-white shadow-2xs'
+                  : 'bg-zinc-50 dark:bg-zinc-950/60 text-zinc-700 dark:text-zinc-300 border-zinc-200/80 dark:border-white/[0.07] hover:border-zinc-300'
+              }`}
+            >
+              <span>Allar helstu búðir</span>
+            </button>
+
+            {enrichedSummaries.map((st) => {
               const fav = getStoreFavicon(st.store);
+              const isSelected = focusedStore === st.store;
+              const arrow = st.trend === 'DOWN' ? '↓' : st.trend === 'UP' ? '↑' : '→';
+              const trendColor =
+                st.trend === 'DOWN'
+                  ? 'text-emerald-600 dark:text-emerald-400'
+                  : st.trend === 'UP'
+                  ? 'text-rose-600 dark:text-rose-400'
+                  : 'text-zinc-400';
 
               return (
-                <div key={st.store} className="space-y-1.5 tabular-nums">
-                  <div className="flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-[10px] font-mono text-zinc-400 w-4">#{idx + 1}</span>
-                      {fav && (
-                        /* eslint-disable-next-line @next/next/no-img-element */
-                        <img
-                          src={fav}
-                          alt={st.store}
-                          className="w-4 h-4 rounded-xs object-contain shrink-0"
-                          loading="lazy"
-                        />
-                      )}
-                      <span className="font-semibold text-zinc-900 dark:text-white truncate">
-                        {st.store}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                        {st.cheapestCount} ódýrust
-                      </span>
-                      <span className="text-[11px] text-zinc-400 dark:text-zinc-500">
-                        ({winRate}% af sínu úrvali)
-                      </span>
-                    </div>
-                  </div>
-                  <div className="w-full h-2 rounded-full bg-zinc-100 dark:bg-zinc-800/90 overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-400"
-                      style={{ width: `${widthPct}%` }}
+                <button
+                  key={st.store}
+                  type="button"
+                  onClick={() => setFocusedStore(isSelected ? 'ALL' : st.store)}
+                  className={`shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium border transition-colors tabular-nums ${
+                    isSelected
+                      ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 border-zinc-900 dark:border-white font-semibold shadow-2xs'
+                      : 'bg-zinc-50 dark:bg-zinc-950/60 text-zinc-700 dark:text-zinc-300 border-zinc-200/80 dark:border-white/[0.07] hover:border-zinc-300 dark:hover:border-white/20'
+                  }`}
+                >
+                  <span
+                    className="w-2 h-2 rounded-full shrink-0"
+                    style={{ backgroundColor: st.color }}
+                  />
+                  {fav && (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img
+                      src={fav}
+                      alt={st.store}
+                      className="w-3.5 h-3.5 rounded-xs object-contain shrink-0"
+                      loading="lazy"
                     />
-                  </div>
-                </div>
+                  )}
+                  <span>{st.store}</span>
+                  <span className={`font-mono text-[10px] font-bold ${isSelected ? '' : trendColor}`}>
+                    {arrow} {st.trendPercent > 0 ? `+${st.trendPercent}%` : `${st.trendPercent}%`}
+                  </span>
+                </button>
               );
             })}
+          </div>
+
+          {/* Main SVG Multi-Store Line Chart Canvas */}
+          <div className="rounded-xl bg-zinc-50/80 dark:bg-zinc-950/80 border border-zinc-200/70 dark:border-white/[0.06] p-3 sm:p-4">
+            <div className="w-full overflow-x-auto">
+              <svg
+                viewBox="0 0 860 280"
+                className="w-full h-60 sm:h-72 overflow-visible select-none"
+                role="img"
+                aria-label="Línurit yfir verðþróun verslana"
+              >
+                <defs>
+                  <linearGradient id="risingZoneGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#f43f5e" stopOpacity="0.10" />
+                    <stop offset="100%" stopColor="#f43f5e" stopOpacity="0.01" />
+                  </linearGradient>
+                  <linearGradient id="fallingZoneGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#10b981" stopOpacity="0.01" />
+                    <stop offset="100%" stopColor="#10b981" stopOpacity="0.12" />
+                  </linearGradient>
+                </defs>
+
+                {(() => {
+                  const padLeft = 68;
+                  const padRight = 135;
+                  const padTop = 22;
+                  const padBottom = 36;
+                  const plotW = 860 - padLeft - padRight;
+                  const plotH = 280 - padTop - padBottom;
+
+                  const getY = (val: number) => {
+                    if (chartMode === 'pct') {
+                      const norm = (maxPct - val) / pctSpan;
+                      return padTop + Math.max(0, Math.min(1, norm)) * plotH;
+                    } else {
+                      const norm = (maxIsk - val) / iskSpan;
+                      return padTop + Math.max(0, Math.min(1, norm)) * plotH;
+                    }
+                  };
+
+                  const zeroY = chartMode === 'pct' ? getY(0) : padTop + plotH / 2;
+
+                  const gridSteps = [0, 0.25, 0.5, 0.75, 1];
+
+                  return (
+                    <>
+                      {/* Shaded Background Zones in % Mode (Above 0% = Hækkun, Below 0% = Lækkun) */}
+                      {chartMode === 'pct' && (
+                        <>
+                          {zeroY > padTop && (
+                            <rect
+                              x={padLeft}
+                              y={padTop}
+                              width={plotW}
+                              height={Math.max(0, zeroY - padTop)}
+                              fill="url(#risingZoneGrad)"
+                              rx={4}
+                            />
+                          )}
+                          {zeroY < padTop + plotH && (
+                            <rect
+                              x={padLeft}
+                              y={zeroY}
+                              width={plotW}
+                              height={Math.max(0, padTop + plotH - zeroY)}
+                              fill="url(#fallingZoneGrad)"
+                              rx={4}
+                            />
+                          )}
+                        </>
+                      )}
+
+                      {/* Horizontal Grid Lines & Y-Axis Labels */}
+                      {gridSteps.map((step, i) => {
+                        const y = padTop + step * plotH;
+                        const labelVal =
+                          chartMode === 'pct'
+                            ? `${(maxPct - step * pctSpan) >= 0 ? '+' : ''}${(maxPct - step * pctSpan).toFixed(1)}%`
+                            : `${Math.round((maxIsk - step * iskSpan) / 1000)}þ kr.`;
+                        return (
+                          <g key={i}>
+                            <line
+                              x1={padLeft}
+                              y1={y}
+                              x2={padLeft + plotW}
+                              y2={y}
+                              stroke="currentColor"
+                              className="text-zinc-200 dark:text-zinc-800/90"
+                              strokeDasharray="3 3"
+                              strokeWidth="1"
+                            />
+                            <text
+                              x={padLeft - 8}
+                              y={y + 4}
+                              textAnchor="end"
+                              className="fill-zinc-400 dark:fill-zinc-500 text-[10px] font-mono"
+                            >
+                              {labelVal}
+                            </text>
+                          </g>
+                        );
+                      })}
+
+                      {/* 0% Baseline in % mode */}
+                      {chartMode === 'pct' && (
+                        <g>
+                          <line
+                            x1={padLeft}
+                            y1={zeroY}
+                            x2={padLeft + plotW}
+                            y2={zeroY}
+                            stroke="currentColor"
+                            className="text-zinc-400 dark:text-zinc-500"
+                            strokeWidth="1.5"
+                          />
+                          <text
+                            x={padLeft + 8}
+                            y={Math.max(padTop + 12, zeroY - 6)}
+                            className="fill-rose-500/80 dark:fill-rose-400/80 text-[9px] font-bold uppercase tracking-wider"
+                          >
+                            ↑ Verð að hækka
+                          </text>
+                          <text
+                            x={padLeft + 8}
+                            y={Math.min(padTop + plotH - 6, zeroY + 13)}
+                            className="fill-emerald-600/90 dark:fill-emerald-400/90 text-[9px] font-bold uppercase tracking-wider"
+                          >
+                            ↓ Verð að lækka
+                          </text>
+                        </g>
+                      )}
+
+                      {/* X-Axis Date Labels */}
+                      {dateLabels.map((lbl, idx) => {
+                        const x =
+                          padLeft +
+                          (dateLabels.length > 1
+                            ? (idx / (dateLabels.length - 1)) * plotW
+                            : plotW / 2);
+                        return (
+                          <g key={idx}>
+                            <line
+                              x1={x}
+                              y1={padTop}
+                              x2={x}
+                              y2={padTop + plotH}
+                              stroke="currentColor"
+                              className="text-zinc-200/50 dark:text-zinc-800/40"
+                              strokeWidth="1"
+                            />
+                            <text
+                              x={x}
+                              y={padTop + plotH + 20}
+                              textAnchor="middle"
+                              className="fill-zinc-500 dark:fill-zinc-400 text-[10px] font-mono"
+                            >
+                              {idx === dateLabels.length - 1 ? `Í dag (${lbl})` : lbl}
+                            </text>
+                          </g>
+                        );
+                      })}
+
+                      {/* Store Trend Lines + Data Nodes + Right-Hand Labels */}
+                      {chartStores.map((st, sIdx) => {
+                        const pts = st.history;
+                        if (!pts || pts.length === 0) return null;
+                        const basePrice = pts[0]?.price || 1;
+                        const coords = pts.map((pt, pIdx) => {
+                          const x =
+                            padLeft +
+                            (pts.length > 1 ? (pIdx / (pts.length - 1)) * plotW : plotW / 2);
+                          const val =
+                            chartMode === 'pct'
+                              ? ((pt.price - basePrice) / basePrice) * 100
+                              : pt.price;
+                          const y = getY(val);
+                          return { x, y, val, price: pt.price, date: pt.date };
+                        });
+
+                        const polylinePoints = coords.map((c) => `${c.x},${c.y}`).join(' ');
+                        const lastCoord = coords[coords.length - 1];
+                        const isSingleSelected = chartStores.length === 1;
+
+                        // Slight vertical staggering for right-side labels to prevent overlap
+                        const labelY = Math.max(
+                          padTop + 8,
+                          Math.min(
+                            padTop + plotH - 4,
+                            lastCoord.y + (chartStores.length > 1 ? ((sIdx % 3) - 1) * 7 : 0)
+                          )
+                        );
+
+                        return (
+                          <g
+                            key={st.store}
+                            className="cursor-pointer transition-opacity hover:opacity-100"
+                            onClick={() =>
+                              setFocusedStore(focusedStore === st.store ? 'ALL' : st.store)
+                            }
+                          >
+                            {/* Area fill when single store is focused */}
+                            {isSingleSelected && coords.length >= 2 && (
+                              <polygon
+                                points={`${coords[0].x},${padTop + plotH} ${polylinePoints} ${
+                                  lastCoord.x
+                                },${padTop + plotH}`}
+                                fill={st.color}
+                                fillOpacity="0.12"
+                              />
+                            )}
+
+                            <polyline
+                              fill="none"
+                              stroke={st.color}
+                              strokeWidth={isSingleSelected ? '3.2' : '2.4'}
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              points={polylinePoints}
+                            />
+
+                            {coords.map((c, cIdx) => (
+                              <g key={cIdx}>
+                                <circle
+                                  cx={c.x}
+                                  cy={c.y}
+                                  r={isSingleSelected || cIdx === coords.length - 1 ? 4 : 2.8}
+                                  fill={st.color}
+                                  stroke="#ffffff"
+                                  strokeWidth="1.5"
+                                />
+                                {/* Show daily price labels when single store is focused */}
+                                {isSingleSelected && (
+                                  <text
+                                    x={c.x}
+                                    y={c.y - 10}
+                                    textAnchor="middle"
+                                    className="fill-zinc-700 dark:fill-zinc-200 text-[10px] font-mono font-bold"
+                                  >
+                                    {chartMode === 'pct'
+                                      ? `${c.val >= 0 ? '+' : ''}${c.val.toFixed(1)}%`
+                                      : `${Math.round(c.price / 1000)}þ`}
+                                  </text>
+                                )}
+                              </g>
+                            ))}
+
+                            {/* End-of-line Store Label */}
+                            <text
+                              x={padLeft + plotW + 8}
+                              y={labelY + 3}
+                              fill={st.color}
+                              className="text-[11px] font-bold font-sans"
+                            >
+                              {st.store}{' '}
+                              {chartMode === 'pct'
+                                ? `(${st.trendPercent >= 0 ? '+' : ''}${st.trendPercent}%)`
+                                : `(${Math.round((st.avgPrice || lastCoord.price) / 1000)}þ)`}
+                            </text>
+                          </g>
+                        );
+                      })}
+                    </>
+                  );
+                })()}
+              </svg>
+            </div>
+
+            {/* Bottom Legend & Quick Insight Bar */}
+            <div className="pt-3 mt-2 border-t border-zinc-200/70 dark:border-white/[0.06] flex flex-wrap items-center justify-between gap-2 text-[11px] text-zinc-500 dark:text-zinc-400">
+              <div className="flex flex-wrap items-center gap-4">
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                  <span>Lína sem hallar niður = Verð að lækka hjá verslun</span>
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
+                  <span>Lína sem hallar upp = Verð að hækka hjá verslun</span>
+                </span>
+              </div>
+              <span className="font-mono text-[10px]">
+                Smelltu á verslun í hnappastikunni til að einangra línurit hennar
+              </span>
+            </div>
           </div>
         </section>
       )}
 
-      {/* STORE BENTO CARDS GRID (3-COLUMN MODERN DESIGN) */}
+      {/* CHARTS 2 & 3: TWO-COLUMN COMPARATIVE ANALYTICS (PRICE LEADERSHIP + MARKET DEVIATION & PRICE SPREAD) */}
+      {enrichedSummaries.length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Left Chart: Price Leadership & Drops vs Hikes per Store */}
+          <section
+            aria-label="Hlutdeild í lægstu verðum"
+            className="rounded-2xl bg-white dark:bg-zinc-900/70 border border-zinc-200/80 dark:border-white/[0.08] p-5 shadow-xs space-y-4 flex flex-col justify-between"
+          >
+            <div className="space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 block">
+                    Graf 2 · Verðforysta
+                  </span>
+                  <h3 className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white">
+                    Hvaða verslun er oftast ódýrust?
+                  </h3>
+                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
+                    Fjöldi símalíkana þar sem verslun er með lægsta verðið + fjöldi lækkana
+                  </p>
+                </div>
+                <span className="text-[11px] font-mono text-zinc-500 dark:text-zinc-400 tabular-nums">
+                  {models.length} líkön
+                </span>
+              </div>
+
+              <div className="space-y-3 pt-1">
+                {enrichedSummaries.slice(0, 9).map((st, idx) => {
+                  const maxCheapest = enrichedSummaries[0]?.cheapestCount || 1;
+                  const widthPct = Math.max(4, Math.round((st.cheapestCount / maxCheapest) * 100));
+                  const winRate =
+                    st.totalPhones > 0 ? Math.round((st.cheapestCount / st.totalPhones) * 100) : 0;
+                  const fav = getStoreFavicon(st.store);
+
+                  return (
+                    <div key={st.store} className="space-y-1.5 tabular-nums">
+                      <div className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-[10px] font-mono text-zinc-400 w-4">#{idx + 1}</span>
+                          {fav && (
+                            /* eslint-disable-next-line @next/next/no-img-element */
+                            <img
+                              src={fav}
+                              alt={st.store}
+                              className="w-4 h-4 rounded-xs object-contain shrink-0"
+                              loading="lazy"
+                            />
+                          )}
+                          <span className="font-semibold text-zinc-900 dark:text-white truncate">
+                            {st.store}
+                          </span>
+                          {st.dropsCount > 0 && (
+                            <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-mono">
+                              ↓{st.dropsCount}
+                            </span>
+                          )}
+                          {st.hikesCount > 0 && (
+                            <span className="text-[10px] px-1.5 py-0.2 rounded bg-rose-500/10 text-rose-600 dark:text-rose-400 font-mono">
+                              ↑{st.hikesCount}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                            {st.cheapestCount} ódýrust
+                          </span>
+                          <span className="text-[11px] text-zinc-400 dark:text-zinc-500">
+                            ({winRate}%)
+                          </span>
+                        </div>
+                      </div>
+                      <div className="w-full h-2 rounded-full bg-zinc-100 dark:bg-zinc-800/90 overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-400"
+                          style={{ width: `${widthPct}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-zinc-100 dark:border-white/[0.06] text-[11px] text-zinc-500 dark:text-zinc-400 flex items-center justify-between">
+              <span>Hlutfall reiknað út frá virku vöruúrvali hverrar verslunar</span>
+              <span className="font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
+                Bein verðvöktun
+              </span>
+            </div>
+          </section>
+
+          {/* Right Chart: Diverging Market Price Index & Store Price Spread (Hver er undir/yfir markaðsmeðaltali á sömu símum?) */}
+          <section
+            aria-label="Verðfrávik frá markaðsmeðaltali"
+            className="rounded-2xl bg-white dark:bg-zinc-900/70 border border-zinc-200/80 dark:border-white/[0.08] p-5 shadow-xs space-y-4 flex flex-col justify-between"
+          >
+            <div className="space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-600 dark:text-cyan-400 block">
+                    Graf 3 · Verðstaða vs. Markaður
+                  </span>
+                  <h3 className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white">
+                    Frávik frá markaðsmeðaltali á sömu símum (%)
+                  </h3>
+                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
+                    Sýnir hvort verslun er að jafnaði ódýrari (grænt til vinstri) eða dýrari (appelsínugult til hægri) en meðalverð annarra búða á nákvæmlega sömu símalíkönum
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-2.5 pt-1 tabular-nums">
+                {storesByCompetitiveness.slice(0, 9).map((st) => {
+                  const dev = st.vsMarketPercent || 0;
+                  const fav = getStoreFavicon(st.store);
+                  const maxAbs = Math.max(
+                    6,
+                    ...storesByCompetitiveness.map((x) => Math.abs(x.vsMarketPercent || 0))
+                  );
+                  const barPct = Math.min(48, Math.max(3, (Math.abs(dev) / maxAbs) * 48));
+                  const isCheaper = dev <= 0;
+
+                  return (
+                    <div key={st.store} className="space-y-1">
+                      <div className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2 min-w-0">
+                          {fav && (
+                            /* eslint-disable-next-line @next/next/no-img-element */
+                            <img
+                              src={fav}
+                              alt={st.store}
+                              className="w-4 h-4 rounded-xs object-contain shrink-0"
+                              loading="lazy"
+                            />
+                          )}
+                          <span className="font-semibold text-zinc-900 dark:text-white truncate">
+                            {st.store}
+                          </span>
+                          <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-mono">
+                            (meðalverð {formatPrice(st.avgPrice || st.endPrice)})
+                          </span>
+                        </div>
+                        <span
+                          className={`font-mono text-xs font-bold shrink-0 ${
+                            dev < -0.2
+                              ? 'text-emerald-600 dark:text-emerald-400'
+                              : dev > 0.2
+                              ? 'text-amber-600 dark:text-amber-400'
+                              : 'text-zinc-500 dark:text-zinc-400'
+                          }`}
+                        >
+                          {dev > 0 ? `+${dev}%` : `${dev}%`}
+                        </span>
+                      </div>
+
+                      {/* Diverging Center-Zero Bar */}
+                      <div className="relative w-full h-2.5 rounded-full bg-zinc-100 dark:bg-zinc-800/90 overflow-hidden">
+                        {/* Center 0% Divider */}
+                        <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-zinc-400 dark:bg-zinc-500 z-10" />
+                        {isCheaper ? (
+                          <div
+                            className="absolute top-0 bottom-0 bg-gradient-to-l from-emerald-500 to-teal-400 rounded-l-full"
+                            style={{
+                              right: '50%',
+                              width: `${barPct}%`,
+                            }}
+                          />
+                        ) : (
+                          <div
+                            className="absolute top-0 bottom-0 bg-gradient-to-r from-amber-500 to-rose-500 rounded-r-full"
+                            style={{
+                              left: '50%',
+                              width: `${barPct}%`,
+                            }}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-zinc-100 dark:border-white/[0.06] flex items-center justify-between text-[11px] text-zinc-500 dark:text-zinc-400">
+              <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
+                ← Ódýrari en markaðsmeðaltal
+              </span>
+              <span className="font-mono">0% = Meðaltal</span>
+              <span className="text-amber-600 dark:text-amber-400 font-semibold">
+                Dýrari en meðaltal →
+              </span>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {/* STORE BENTO CARDS GRID WITH EMBEDDED 7-DAY SVG TREND LINE CHARTS */}
       <section aria-label="Allar verslanir" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {summaries.map((st, idx) => {
+        {enrichedSummaries.map((st, idx) => {
           const isLeader = idx === 0 && st.cheapestCount > 0;
           const fav = getStoreFavicon(st.store);
           const domain = getStoreDomain(st.store);
           const winRate =
             st.totalPhones > 0 ? Math.round((st.cheapestCount / st.totalPhones) * 100) : 0;
 
+          const pts = st.history || [];
+          const prices = pts.map((p) => p.price);
+          const minP = prices.length > 0 ? Math.min(...prices) : 0;
+          const maxP = prices.length > 0 ? Math.max(...prices) : 1;
+          const spanP = Math.max(500, maxP - minP);
+
+          const isFalling = st.trend === 'DOWN' || st.netChangeAmount < 0;
+          const isRising = st.trend === 'UP' || st.netChangeAmount > 0;
+          const strokeColor = isFalling ? '#10b981' : isRising ? '#f43f5e' : '#06b6d4';
+
+          const sparkW = 280;
+          const sparkH = 54;
+          const sparkCoords = pts.map((pt, pIdx) => {
+            const x = pts.length > 1 ? (pIdx / (pts.length - 1)) * (sparkW - 16) + 8 : sparkW / 2;
+            const y =
+              maxP === minP
+                ? sparkH / 2
+                : 8 + ((maxP - pt.price) / spanP) * (sparkH - 16);
+            return { x, y, price: pt.price, date: pt.date };
+          });
+          const sparkPolyline = sparkCoords.map((c) => `${c.x},${c.y}`).join(' ');
+
           return (
             <article
               key={st.store}
               className="group rounded-2xl bg-white dark:bg-zinc-900/65 hover:bg-zinc-50/60 dark:hover:bg-zinc-900/95 border border-zinc-200/80 dark:border-white/[0.07] hover:border-zinc-300 dark:hover:border-white/[0.16] p-5 flex flex-col justify-between transition-colors duration-150 shadow-xs space-y-4"
             >
-              <div className="space-y-4">
+              <div className="space-y-3.5">
                 {/* Store Card Header with White Studio Pedestal */}
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0">
@@ -246,6 +913,89 @@ export function StoresView({ meta, models, onSelectStore }: StoresViewProps) {
                   </span>
                 </div>
 
+                {/* NEW: EMBEDDED 7-DAY STORE PRICE TREND LINE CHART (LÍNURIT VERSLUNAR) */}
+                <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-950/75 border border-zinc-200/70 dark:border-white/[0.06] space-y-2 tabular-nums">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[11px] font-semibold text-zinc-600 dark:text-zinc-300">
+                      Verðþróun (7 daga línurit)
+                    </span>
+                    <span
+                      className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                        isFalling
+                          ? 'bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30'
+                          : isRising
+                          ? 'bg-rose-50 dark:bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-500/30'
+                          : 'bg-cyan-50 dark:bg-cyan-500/10 text-cyan-700 dark:text-cyan-300 border-cyan-200 dark:border-cyan-500/25'
+                      }`}
+                    >
+                      {isFalling
+                        ? `↓ Verð að lækka (${st.trendPercent}%)`
+                        : isRising
+                        ? `↑ Verð að hækka (+${st.trendPercent}%)`
+                        : '→ Stöðugt verð (0%)'}
+                    </span>
+                  </div>
+
+                  <svg
+                    viewBox={`0 0 ${sparkW} ${sparkH}`}
+                    className="w-full h-14 overflow-visible"
+                    aria-label={`Línurit verðþróunar hjá ${st.store}`}
+                  >
+                    {/* Baseline Reference Line */}
+                    {sparkCoords.length > 0 && (
+                      <line
+                        x1={8}
+                        y1={sparkCoords[0].y}
+                        x2={sparkW - 8}
+                        y2={sparkCoords[0].y}
+                        stroke="currentColor"
+                        className="text-zinc-300 dark:text-zinc-700"
+                        strokeDasharray="2 2"
+                        strokeWidth="1"
+                      />
+                    )}
+
+                    {/* Area Under Store Curve */}
+                    {sparkCoords.length >= 2 && (
+                      <polygon
+                        points={`${sparkCoords[0].x},${sparkH - 2} ${sparkPolyline} ${
+                          sparkCoords[sparkCoords.length - 1].x
+                        },${sparkH - 2}`}
+                        fill={strokeColor}
+                        fillOpacity="0.12"
+                      />
+                    )}
+
+                    {/* Store Price Line */}
+                    <polyline
+                      fill="none"
+                      stroke={strokeColor}
+                      strokeWidth="2.2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      points={sparkPolyline}
+                    />
+
+                    {/* Plotted Daily Points */}
+                    {sparkCoords.map((c, cIdx) => (
+                      <circle
+                        key={cIdx}
+                        cx={c.x}
+                        cy={c.y}
+                        r={cIdx === sparkCoords.length - 1 ? 3.5 : 2}
+                        fill={strokeColor}
+                      />
+                    ))}
+                  </svg>
+
+                  <div className="flex items-center justify-between text-[10px] text-zinc-500 dark:text-zinc-400 font-mono pt-0.5 border-t border-zinc-200/60 dark:border-white/[0.05]">
+                    <span>Upphaf: {formatPrice(st.startPrice)}</span>
+                    <span className="font-semibold text-zinc-800 dark:text-zinc-200">
+                      Meðalverð nú: {formatPrice(st.endPrice)}
+                    </span>
+                  </div>
+                </div>
+
                 {/* Competitiveness Progress Bar */}
                 <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-950/70 border border-zinc-200/60 dark:border-white/[0.05] space-y-1.5 tabular-nums">
                   <div className="flex items-center justify-between text-xs">
@@ -271,13 +1021,13 @@ export function StoresView({ meta, models, onSelectStore }: StoresViewProps) {
                     </span>
                   </div>
                   <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200/60 dark:border-white/[0.05]">
-                    <span className="text-[10px] text-zinc-500 dark:text-zinc-400 block">Lækkanir</span>
+                    <span className="text-[10px] text-zinc-500 dark:text-zinc-400 block">Lækkanir / Hækkanir</span>
                     <span className="text-xs sm:text-sm font-bold text-cyan-600 dark:text-cyan-400 mt-0.5 block">
-                      {st.dropsCount} stk.
+                      ↓{st.dropsCount} · ↑{st.hikesCount}
                     </span>
                   </div>
                   <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200/60 dark:border-white/[0.05]">
-                    <span className="text-[10px] text-zinc-500 dark:text-zinc-400 block">Nettó í dag</span>
+                    <span className="text-[10px] text-zinc-500 dark:text-zinc-400 block">Nettó breyting</span>
                     <span
                       className={`text-xs sm:text-sm font-bold mt-0.5 block ${
                         st.netChangeAmount < 0

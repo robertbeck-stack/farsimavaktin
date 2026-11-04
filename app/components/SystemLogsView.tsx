@@ -138,6 +138,213 @@ export function SystemLogsView({
         </div>
       </section>
 
+      {/* SECTION 1.5: MARKET INDEX LINE CHART & STORE PRICE ACTIVITY BENTO */}
+      {(meta?.storeSummaries || []).length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Left: Aggregate Market Price Index 7-Day SVG Line Chart */}
+          <section
+            aria-label="Línurit markaðsvísitölu"
+            className="rounded-2xl bg-white dark:bg-zinc-900/70 border border-zinc-200/80 dark:border-white/[0.08] p-5 shadow-xs space-y-4 flex flex-col justify-between tabular-nums"
+          >
+            {(() => {
+              const summaries = meta?.storeSummaries || [];
+              const dayCount = 7;
+              const marketHistory = Array.from({ length: dayCount }, (_, dIdx) => {
+                let sum = 0;
+                let weightSum = 0;
+                for (const st of summaries) {
+                  const pt = st.history?.[dIdx]?.price || st.avgPrice || 0;
+                  if (pt > 0) {
+                    const w = Math.max(1, st.totalPhones);
+                    sum += pt * w;
+                    weightSum += w;
+                  }
+                }
+                const dateStr =
+                  summaries[0]?.history?.[dIdx]?.date ||
+                  new Date(Date.now() - (6 - dIdx) * 86400000).toISOString().slice(0, 10);
+                return {
+                  date: dateStr,
+                  price: weightSum > 0 ? Math.round(sum / weightSum) : 150000,
+                };
+              });
+
+              const pVals = marketHistory.map((m) => m.price);
+              const minP = Math.min(...pVals);
+              const maxP = Math.max(...pVals);
+              const spanP = Math.max(500, maxP - minP);
+              const startP = marketHistory[0].price;
+              const endP = marketHistory[marketHistory.length - 1].price;
+              const diffP = endP - startP;
+              const diffPct = startP > 0 ? (((endP - startP) / startP) * 100).toFixed(1) : '0.0';
+              const isDown = diffP <= 0;
+              const color = isDown ? '#10b981' : '#f43f5e';
+
+              const w = 440;
+              const h = 140;
+              const coords = marketHistory.map((pt, i) => {
+                const x = 24 + (i / (dayCount - 1)) * (w - 48);
+                const y = 20 + ((maxP - pt.price) / spanP) * (h - 46);
+                return { x, y, ...pt };
+              });
+              const poly = coords.map((c) => `${c.x},${c.y}`).join(' ');
+
+              return (
+                <>
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 block">
+                        Heildarlínurit markaðarins
+                      </span>
+                      <h3 className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white">
+                        Vegin verðvísitala farsímamarkaðarins (7 dagar)
+                      </h3>
+                      <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
+                        Vegið meðalverð allra virkra tilboða í {meta?.totalStores || 14} verslunum
+                      </p>
+                    </div>
+                    <span
+                      className={`text-xs font-mono font-bold px-2.5 py-1 rounded-xl border shrink-0 ${
+                        isDown
+                          ? 'bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30'
+                          : 'bg-rose-50 dark:bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-500/30'
+                      }`}
+                    >
+                      {isDown ? `↓ ${diffPct}%` : `↑ +${diffPct}%`}
+                    </span>
+                  </div>
+
+                  <div className="rounded-xl bg-zinc-50 dark:bg-zinc-950/80 border border-zinc-200/70 dark:border-white/[0.06] p-3">
+                    <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-32 overflow-visible">
+                      <polygon
+                        points={`${coords[0].x},${h - 20} ${poly} ${coords[coords.length - 1].x},${h - 20}`}
+                        fill={color}
+                        fillOpacity="0.12"
+                      />
+                      <polyline
+                        fill="none"
+                        stroke={color}
+                        strokeWidth="2.8"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        points={poly}
+                      />
+                      {coords.map((c, idx) => (
+                        <g key={idx}>
+                          <circle cx={c.x} cy={c.y} r={3.5} fill={color} stroke="#fff" strokeWidth="1.2" />
+                          <text
+                            x={c.x}
+                            y={c.y - 8}
+                            textAnchor="middle"
+                            className="fill-zinc-700 dark:fill-zinc-300 text-[9px] font-mono font-semibold"
+                          >
+                            {Math.round(c.price / 1000)}þ
+                          </text>
+                          <text
+                            x={c.x}
+                            y={h - 4}
+                            textAnchor="middle"
+                            className="fill-zinc-400 dark:fill-zinc-500 text-[9px] font-mono"
+                          >
+                            {c.date.slice(8, 10)}.{c.date.slice(5, 7)}
+                          </text>
+                        </g>
+                      ))}
+                    </svg>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs pt-1 text-zinc-500 dark:text-zinc-400">
+                    <span>Upphaf tímabils: <strong className="text-zinc-800 dark:text-zinc-200">{formatPrice(startP)}</strong></span>
+                    <span>Staðan í dag: <strong className="text-emerald-600 dark:text-emerald-400">{formatPrice(endP)}</strong></span>
+                  </div>
+                </>
+              );
+            })()}
+          </section>
+
+          {/* Right: Store Drop vs Hike Activity Breakdown Chart */}
+          <section
+            aria-label="Verðbreytingar eftir verslunum"
+            className="rounded-2xl bg-white dark:bg-zinc-900/70 border border-zinc-200/80 dark:border-white/[0.08] p-5 shadow-xs space-y-4 flex flex-col justify-between tabular-nums"
+          >
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-600 dark:text-cyan-400 block">
+                Virkni eftir búðum
+              </span>
+              <h3 className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white">
+                Verðlækkanir og verðhækkanir eftir verslunum
+              </h3>
+              <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
+                Hvaða verslanir eru með flestar virkar verðlækkanir (grænt) vs. hækkanir (rautt)
+              </p>
+            </div>
+
+            <div className="space-y-2.5">
+              {(meta?.storeSummaries || [])
+                .slice()
+                .sort((a, b) => b.dropsCount + b.hikesCount - (a.dropsCount + a.hikesCount))
+                .slice(0, 7)
+                .map((st) => {
+                  const fav = getStoreFavicon(st.store);
+                  const maxAct = Math.max(
+                    1,
+                    ...(meta?.storeSummaries || []).map((x) => x.dropsCount + x.hikesCount)
+                  );
+                  const dropPct = Math.round((st.dropsCount / maxAct) * 100);
+                  const hikePct = Math.round((st.hikesCount / maxAct) * 100);
+
+                  return (
+                    <div key={st.store} className="space-y-1">
+                      <div className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2">
+                          {fav && (
+                            /* eslint-disable-next-line @next/next/no-img-element */
+                            <img
+                              src={fav}
+                              alt={st.store}
+                              className="w-4 h-4 rounded-xs object-contain"
+                              loading="lazy"
+                            />
+                          )}
+                          <span className="font-semibold text-zinc-900 dark:text-white">{st.store}</span>
+                        </div>
+                        <div className="flex items-center gap-2 font-mono text-[11px]">
+                          <span className="text-emerald-600 dark:text-emerald-400 font-bold">
+                            ↓ {st.dropsCount} lækkanir
+                          </span>
+                          <span className="text-zinc-300 dark:text-zinc-700">|</span>
+                          <span className="text-rose-600 dark:text-rose-400 font-bold">
+                            ↑ {st.hikesCount} hækkanir
+                          </span>
+                        </div>
+                      </div>
+                      <div className="w-full h-2 rounded-full bg-zinc-100 dark:bg-zinc-800/90 overflow-hidden flex">
+                        {st.dropsCount > 0 && (
+                          <div
+                            className="h-full bg-emerald-500"
+                            style={{ width: `${Math.max(4, dropPct)}%` }}
+                          />
+                        )}
+                        {st.hikesCount > 0 && (
+                          <div
+                            className="h-full bg-rose-500"
+                            style={{ width: `${Math.max(4, hikePct)}%` }}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+
+            <div className="pt-2.5 border-t border-zinc-100 dark:border-white/[0.06] flex items-center justify-between text-[11px] text-zinc-500 dark:text-zinc-400">
+              <span>Samtals lækkanir í vöktun: <strong className="text-emerald-600 dark:text-emerald-400">{(meta?.storeSummaries || []).reduce((a, b) => a + b.dropsCount, 0)} tilboð</strong></span>
+              <span>Samtals hækkanir: <strong className="text-rose-600 dark:text-rose-400">{(meta?.storeSummaries || []).reduce((a, b) => a + b.hikesCount, 0)} tilboð</strong></span>
+            </div>
+          </section>
+        </div>
+      )}
+
       {/* SECTION 2: EXECUTIVE SCAN SUMMARY BENTO (2-COLUMN) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Left: Top Price Spreads & Quality Checks */}
