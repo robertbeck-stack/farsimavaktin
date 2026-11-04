@@ -159,6 +159,8 @@ export const getStoreBadgeColor = (store: string) => {
     return 'bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200 dark:bg-fuchsia-500/10 dark:text-fuchsia-300 dark:border-fuchsia-500/25';
   if (s.includes('macland'))
     return 'bg-slate-100 text-slate-800 border-slate-300 dark:bg-slate-500/15 dark:text-slate-200 dark:border-slate-500/30';
+  if (s.includes('epli'))
+    return 'bg-zinc-100 text-zinc-900 border-zinc-300 dark:bg-zinc-500/15 dark:text-zinc-200 dark:border-zinc-500/30';
   return 'bg-zinc-100 text-zinc-700 border-zinc-200 dark:bg-zinc-800/80 dark:text-zinc-300 dark:border-zinc-700/80';
 };
 
@@ -172,6 +174,7 @@ export const getStoreDomain = (store: string): string => {
   if (s.includes('mi búðin') || s.includes('mibudin')) return 'mibudin.is';
   if (s.includes('lune')) return 'lune.is';
   if (s.includes('macland')) return 'macland.is';
+  if (s.includes('epli')) return 'epli.is';
   if (s.includes('tölvulistinn')) return 'tl.is';
   if (s.includes('tölvutek')) return 'tolvutek.is';
   if (s.includes('computer')) return 'computer.is';

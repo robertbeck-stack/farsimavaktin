@@ -218,7 +218,7 @@ const strictAccessoryRegex =
   /(?:hulstur|\bcase\b|\bcover\b|skjávörn|skjavorn|skjáfilma|filmur|filma|gler|öryggisgler|oryggisgler|hleðslutæki|hledslutæki|hleðsl|snúra|snura|standur|adapter|armband|\bstrap\b|húfa|gleraugu|reim|veski|wallet|penni|\bpen\b|sleeve|festing|myndavélavörn|screen\s*protector|lens\s*protector|powerbank|power\s*bank|\bmah\b|veggspjald|framköllun|\bring\b|\btag\b|airtag|magsafe|earpods|\bwatch\b|\bbuds\b|spigen|panzerglass|tech21|avionaut|kjóll|kjoll|peysa|buxur|fatnaður|fatnadur|talstöð|talstod|barnapía|barnapia|babyalarm|babymonitor|barnavakt|hljóðnemi|hljodnemi|spjaldtölva|spjaldtolva|\btab\b|\bpad\b|ipad|folio|hlíf|hlif|headset|heyrnartól|heyrnartol|heyrnatól|heyrnatol|hátalari|hatalari|snjallúr|snjallur|heilsuúr|heilsuur|smart\s*band|smartwatch|airpods|smartvision|gítar|gitar|sjónvarp|sjonvarp|fjarstýring|fjarstyring|tv\s*stick|tv\s*box|mi\s*box|apple\s*tv|dualsense|playstation|xbox|nintendo|dect|heimasími|heimasimi|borðsími|bordsimi|fjarfund|ip\s*sími|ip\s*phone|yealink|grandstream|fanvil|gigaset|profoon|alecto|backpack|bakpoki|taska|luggage|microscope|linsa|myndavélalinsa|photography\s*kit|rafhlaða|rafhlada|battery|skjár\s*fyrir|scooter|hlaupahjól|hlaupahjol|airfryer|steikingarpottur|ryksug|roborock|flosser|tannhreinsir|öryggismyndavél|oryggismyndavel|smart\s*camera|burðarpoki|burdarpoki|skiptidýna|skiptidyna|necklace|blazer|jakki|osprey|rfid|farsímahaldari|farsimahaldari|sound\s*kit|barcode\s*scanner|little\s*star|startpakkinn)/i;
 
 const isTruePhoneRegex =
-  /iphone|galaxy\s*(?:s\d|z\s*fold|z\s*flip|fold|flip|a\d|xcover|m\d)|pixel\s*\d|redmi\s*(?:note|\d|a\d)|xiaomi\s*1[2-9]|poco\s*[cfxm]\d|oneplus\s*(?:\d|nord|open)|ulefone\s*(?:armor|power|rugone|note)|rugone|xperia|motorola\s*(?:edge|moto|razr|defy|signature|g\d)|moto\s*(?:g\d|e\d|edge|razr|snjallsími|snjallsimi)|nokia\s*(?:\d|g\d|c\d|xr)|hmd\s*(?:\d|fusion|pulse|skyline|barbie|crest)|oppo\s*(?:find|reno|a\d)|honor\s*(?:magic|\d|x\d)|nothing\s*phone|balance\s*phone|light\s*phone|sonim|emporia|\b(?:3210|2660|105)\b|snjallsími|snjallsimi|farsími|farsimi|vinnusími|vinnusimi|samlokusími|samlokusimi|takkasími|takkasimi/i;
+  /iphone|galaxy\s*(?:s\d|z\s*fold|z\s*flip|fold|flip|a\d|xcover|m\d)|pixel\s*\d|redmi\s*(?:note|\d|a\d)|xiaomi\s*1[2-9]|poco\s*[cfxm]\d|oneplus\s*(?:\d|nord|open)|ulefone\s*(?:armor|power|rugone|note)|rugone|xperia|motorola\s*(?:edge|moto|razr|defy|signature|g\d)|moto\s*(?:g\d|e\d|edge|razr|snjallsími|snjallsimi)|nokia\s*(?:\d|g\d|c\d|xr)|hmd\s*(?:\d|fusion|pulse|skyline|barbie|crest)|oppo\s*(?:find|reno|a\d)|honor\s*(?:magic|\d|x\d)|nothing\s*phone|balance\s*phone|light\s*phone|sonim|emporia|doro|\b(?:3210|2660|105)\b|snjallsími|snjallsimi|farsími|farsimi|vinnusími|vinnusimi|samlokusími|samlokusimi|takkasími|takkasimi/i;
 
 function detectBrand(title: string): PhoneBrand {
   const t = title.toLowerCase();
@@ -295,10 +295,10 @@ function normalizeModelName(title: string, brand: PhoneBrand): string {
   s = s.replace(/\b\d+\s*(?:gb|tb)\b/gi, ' ');
   // Strip network & generic phone words
   s = s.replace(
-    /\b(?:5g|4g-volte|4g|lte\/4g|lte-4g|lte|volte|snjallsími|snjallsimi|farsími|farsimi|vinnusími|vinnusimi|samlokusími|samlokusimi|takkasími|takkasimi|smartphone|enterprise\s*edition|2nd\s*edition|leica)\b/gi,
+    /\b(?:5g|4g-volte|4g|lte\/4g|lte-4g|lte|volte|snjallsími|snjallsimi|farsími|farsimi|vinnusími|vinnusimi|samlokusími|samlokusimi|takkasími|takkasimi|smartphone|enterprise\s*edition|\bee\b|2nd\s*edition|3rd\s*gen|flokkur\s*[ab]|leica)\b/gi,
     ' '
   );
-  s = s.replace(/\(202\d\)/g, ' ');
+  s = s.replace(/\(202\d\)|\(uppgerður\)|\(uppgerdur\)/gi, ' ');
   // Strip trailing descriptions after dash " - "
   s = s.replace(/\s+-\s+.*$/, '');
   // Strip "með hitamyndavél", "m. aukaskjá", etc.
@@ -315,6 +315,7 @@ function normalizeModelName(title: string, brand: PhoneBrand): string {
 
   // Strip leading brand names (including repeated ones)
   s = s.replace(/^(?:(?:apple|samsung|xiaomi|google|redmi|poco|ulefone|motorola|moto|oppo|oneplus|nothing|nokia\/hmd|hmd\/nokia|nokia|hmd)\s+)+/i, '').trim();
+  s = s.replace(/\bdoro\s+doro\b/gi, 'Doro');
   s = s.replace(/\s+/g, ' ').replace(/^[\s\-–,/|]+|[\s\-–,/|]+$/g, '');
 
   let full = s;
@@ -524,6 +525,46 @@ export async function GET() {
       )
     ).then((pages) => pages.flatMap((p) => (Array.isArray(p) ? p : [])));
 
+    // Fetch ELKO Farsímar directly (all 4 pages = 82 phones with direct elko.is links & storage attributes)
+    const elkoPromise = Promise.all(
+      [1, 2, 3, 4].map((p) =>
+        fetch(`https://elko.is/voruflokkar/farsimar-135?page=${p}`, {
+          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
+          next: { revalidate: 900 },
+        })
+          .then((r) => (r.ok ? r.text() : ''))
+          .catch(() => '')
+      )
+    );
+
+    // Fetch Tölvulistinn Farsímar directly
+    const tlPromise = fetch('https://tl.is/farsimar/farsimar.html', {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
+      next: { revalidate: 900 },
+    })
+      .then((r) => (r.ok ? r.text() : ''))
+      .catch(() => '');
+
+    // Fetch Epli.is iPhone pages directly
+    const epliPromise = Promise.all(
+      [
+        'https://www.epli.is/iphone/iphone-18-pro/kaupa/',
+        'https://www.epli.is/iphone/iphone-17-pro/',
+        'https://www.epli.is/iphone/iphone-17/iphone-17/',
+        'https://www.epli.is/iphone/iphone-17e/iphone-17e/',
+        'https://www.epli.is/iphone/iphone-16e/iphone-16e/',
+        'https://www.epli.is/iphone/iphone-air/iphone-air/',
+        'https://www.epli.is/iphone/iphone-duo/iphone-duo/',
+      ].map((u) =>
+        fetch(u, {
+          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
+          next: { revalidate: 900 },
+        })
+          .then((r) => (r.ok ? r.text() : ''))
+          .catch(() => '')
+      )
+    );
+
     // Fetch Já pages in safe batches of 7 with small 40ms delay to prevent HTTP 429
     const allResponses: any[] = [];
     const batchSize = 7;
@@ -542,16 +583,29 @@ export async function GET() {
       }
     }
 
-    const [emobiProducts, siminnPages, novaHtml, lunePages, synHtml, maclandProducts, mibudinProducts] =
-      await Promise.all([
-        emobiPromise,
-        siminnPromise,
-        novaPromise,
-        lunePromise,
-        synPromise,
-        maclandPromise,
-        mibudinPromise,
-      ]);
+    const [
+      emobiProducts,
+      siminnPages,
+      novaHtml,
+      lunePages,
+      synHtml,
+      maclandProducts,
+      mibudinProducts,
+      elkoPages,
+      tlHtml,
+      epliPages,
+    ] = await Promise.all([
+      emobiPromise,
+      siminnPromise,
+      novaPromise,
+      lunePromise,
+      synPromise,
+      maclandPromise,
+      mibudinPromise,
+      elkoPromise,
+      tlPromise,
+      epliPromise,
+    ]);
     const validPages = allResponses.filter(Boolean);
 
     // Build dynamic company lookup from facets
@@ -893,6 +947,87 @@ export async function GET() {
       }
     }
 
+    // Process Direct ELKO Products (Pages 1-4 of farsimar-135)
+    for (const html of elkoPages) {
+      if (!html) continue;
+      const nextMatch = html.match(/<script id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/);
+      if (nextMatch) {
+        try {
+          const nd = JSON.parse(nextMatch[1]);
+          const ss = nd?.props?.pageProps?.serverState?.initialResults || {};
+          const hits = ss?.products?.results?.[0]?.hits || [];
+          for (const h of hits) {
+            const title = h.name ? String(h.name).trim() : '';
+            const webPriceObj = h.listings?.webshop?.price;
+            const price = Number(webPriceObj?.discountedPrice || webPriceObj?.price || 0);
+            const slug = h.product?.slug;
+            const sku = h.sku;
+            if (!title || !price) continue;
+            const href = slug && sku ? `https://elko.is/vorur/${slug}/${sku}` : 'https://elko.is';
+            const img = h.firstImage?.image?.webpL || h.firstImage?.image?.jpgL;
+            const capGb = h.attributes?.capacityGb ? extractStorage(String(h.attributes.capacityGb)) : undefined;
+            processItem(title, price, 'ELKO', href, img, undefined, capGb);
+          }
+        } catch {
+          // ignore parse error
+        }
+      }
+    }
+
+    // Process Direct Tölvulistinn Products (/farsimar/farsimar.html)
+    if (tlHtml) {
+      const bodyPart = tlHtml.split('</head>').pop() || '';
+      const cards = bodyPart.split('product-grid-card');
+      for (let i = 1; i < cards.length; i++) {
+        const card = cards[i];
+        const titleM = card.match(/<a class="plain hover-underline" href="([^"]+)">([^<]+)<\/a>/);
+        const priceM = card.match(/container-price[\s\S]{1,400}?>([\d\.\s\u00a0]+)\s*(?:kr|ISK|-)?<\/strong>/i);
+        const imgM = card.match(/alt="Image of (https:\/\/[^"]+)"/);
+        if (titleM && priceM) {
+          const href = `https://tl.is${titleM[1]}`;
+          const title = titleM[2].trim();
+          const priceDigits = priceM[1].replace(/\D/g, '');
+          const price = priceDigits ? parseInt(priceDigits, 10) : 0;
+          const img = imgM ? imgM[1] : undefined;
+          processItem(title, price, 'Tölvulistinn', href, img);
+        }
+      }
+    }
+
+    // Process Direct Epli.is Products
+    for (const html of epliPages) {
+      if (!html) continue;
+      let pageUrl = 'https://www.epli.is/iphone';
+      let pageImg: string | undefined = undefined;
+      const vpMatch = html.match(/"viewedProduct":(\{[\s\S]*?\})/);
+      if (vpMatch) {
+        try {
+          const vp = JSON.parse(vpMatch[1]);
+          if (vp.URL) pageUrl = String(vp.URL);
+          if (vp.ImageURL) {
+            pageImg = String(vp.ImageURL).startsWith('http')
+              ? String(vp.ImageURL)
+              : `https://www.epli.is${vp.ImageURL}`;
+          }
+          if (vp.ProductName && vp.Price) {
+            processItem(`Apple ${vp.ProductName}`, Math.round(Number(vp.Price)), 'Epli', pageUrl, pageImg);
+          }
+        } catch {
+          // ignore
+        }
+      }
+      // Also capture Pro / Pro Max radio cards on the same page
+      const radioRegex = /data-sku="(iPhone[^"]+)"[\s\S]{1,800}?categoryRadio-card__info-text-bold">([\d\.]+)\s*kr/g;
+      let rMatch: RegExpExecArray | null;
+      while ((rMatch = radioRegex.exec(html)) !== null) {
+        const skuTitle = `Apple ${rMatch[1].trim()}`;
+        const rPrice = parseInt(rMatch[2].replace(/\D/g, ''), 10);
+        if (rPrice > 0) {
+          processItem(skuTitle, rPrice, 'Epli', pageUrl, pageImg);
+        }
+      }
+    }
+
     // Process Direct Síminn Products (Pages 1-6)
     for (const html of siminnPages) {
       if (!html) continue;
@@ -1202,7 +1337,7 @@ export async function GET() {
       storeSummaries,
       allTimeLowsCount: models.filter((m) => m.priceChangePercent < 0).length,
       status: 'SUCCESS',
-      sourcesScanned: queryUrls.length + 18,
+      sourcesScanned: queryUrls.length + 30,
     };
 
     return NextResponse.json({
