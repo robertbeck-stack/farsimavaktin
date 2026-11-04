@@ -251,7 +251,10 @@ export default function Home() {
   useEffect(() => {
     try {
       const saved = localStorage.getItem('farsimar_run_logs');
-      if (saved) setLogs(JSON.parse(saved));
+      if (saved) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setLogs(JSON.parse(saved));
+      }
     } catch {
       // Ignore
     }
