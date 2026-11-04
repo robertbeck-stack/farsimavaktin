@@ -763,7 +763,7 @@ export async function GET() {
             const edges = Array.isArray(varConn?.edges) ? varConn.edges : [];
             for (const edge of edges) {
               const vRef = edge?.node?.__ref;
-              const vNode = vRef ? apollo[vRef] : edge?.node;
+              const vNode: any = vRef ? apollo[vRef] : edge?.node;
               if (!vNode) continue;
               const amount = parseFloat(vNode.priceV2?.amount || '0');
               const price = Math.round(amount);
@@ -794,7 +794,7 @@ export async function GET() {
     for (const html of lunePages) {
       if (!html) continue;
       const chunks: string[] = [];
-      const rscRegex = /self\.__next_f\.push\(\[1,(".*?")\]\)/gs;
+      const rscRegex = /self\.__next_f\.push\(\[1,("[\s\S]*?")\]\)/g;
       let match: RegExpExecArray | null;
       while ((match = rscRegex.exec(html)) !== null) {
         try {
