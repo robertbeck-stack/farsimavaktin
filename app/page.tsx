@@ -586,6 +586,7 @@ export default function Home() {
               setSelectedStore(st);
               setActiveView('list');
             }}
+            onSelectModel={handleSelectModel}
           />
         )}
 

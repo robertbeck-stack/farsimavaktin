@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   MetaData,
   PhoneModelGroup,
@@ -16,6 +16,90 @@ interface StoresViewProps {
   meta: MetaData | null;
   models: PhoneModelGroup[];
   onSelectStore: (store: string) => void;
+  onSelectModel?: (model: PhoneModelGroup, defaultStorage?: string) => void;
+}
+
+interface StoreProductItem {
+  model: PhoneModelGroup;
+  storage: string;
+  store: string;
+  price: number;
+  previousPrice?: number;
+  diff: number;
+  diffPercent: number;
+  isDrop: boolean;
+  isHike: boolean;
+  url: string;
+  history: PricePoint[];
+}
+
+function ProductSparkline({
+  history,
+  price,
+  previousPrice,
+  strokeColor,
+}: {
+  history: PricePoint[];
+  price: number;
+  previousPrice?: number;
+  strokeColor: string;
+}) {
+  const pts =
+    history && history.length >= 2
+      ? history
+      : [
+          { date: 'Fyrra verð', price: previousPrice || price },
+          { date: 'Í dag', price },
+        ];
+
+  const w = 180;
+  const h = 40;
+  const padX = 6;
+  const padY = 6;
+  const plotW = w - padX * 2;
+  const plotH = h - padY * 2;
+
+  const prices = pts.map((p) => p.price);
+  const minP = Math.min(...prices);
+  const maxP = Math.max(...prices);
+  const span = Math.max(500, maxP - minP);
+
+  const coords = pts.map((pt, idx) => {
+    const x = padX + (pts.length > 1 ? (idx / (pts.length - 1)) * plotW : plotW / 2);
+    const y = padY + (maxP === minP ? plotH / 2 : ((maxP - pt.price) / span) * plotH);
+    return { x, y, price: pt.price };
+  });
+
+  const polylineStr = coords.map((coord) => `${coord.x},${coord.y}`).join(' ');
+
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-10 overflow-visible">
+      {coords.length >= 2 && (
+        <polygon
+          points={`${coords[0].x},${h - 1} ${polylineStr} ${coords[coords.length - 1].x},${h - 1}`}
+          fill={strokeColor}
+          fillOpacity="0.12"
+        />
+      )}
+      <polyline
+        fill="none"
+        stroke={strokeColor}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        points={polylineStr}
+      />
+      {coords.map((coord, i) => (
+        <circle
+          key={i}
+          cx={coord.x}
+          cy={coord.y}
+          r={i === coords.length - 1 ? 3 : 1.8}
+          fill={strokeColor}
+        />
+      ))}
+    </svg>
+  );
 }
 
 const STORE_LINE_COLORS: Record<string, string> = {
@@ -71,11 +155,67 @@ function getFallbackStoreHistory(st: StoreDailySummary, models: PhoneModelGroup[
   });
 }
 
-export function StoresView({ meta, models, onSelectStore }: StoresViewProps) {
+export function StoresView({ meta, models, onSelectStore, onSelectModel }: StoresViewProps) {
   const summaries = meta?.storeSummaries || [];
   const [focusedStore, setFocusedStore] = useState<string>('ALL');
   const [chartMode, setChartMode] = useState<'pct' | 'isk'>('pct');
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
+  const [filterTab, setFilterTab] = useState<'all_changes' | 'drops' | 'hikes' | 'all'>('all_changes');
+
+  const storeProducts = useMemo(() => {
+    const list: StoreProductItem[] = [];
+    for (const m of models) {
+      for (const v of m.variants) {
+        for (const off of v.offers) {
+          if (focusedStore === 'ALL' || off.store === focusedStore) {
+            const prev = off.previousPrice;
+            const diff = prev ? off.price - prev : 0;
+            const diffPercent =
+              prev && prev > 0 ? Number((((off.price - prev) / prev) * 100).toFixed(1)) : 0;
+            const isDrop = diff < 0;
+            const isHike = diff > 0;
+            list.push({
+              model: m,
+              storage: v.storage,
+              store: off.store,
+              price: off.price,
+              previousPrice: prev,
+              diff,
+              diffPercent,
+              isDrop,
+              isHike,
+              url: off.url,
+              history: m.history && m.history.length > 0 ? m.history : [],
+            });
+          }
+        }
+      }
+    }
+    return list.sort((a, b) => {
+      if (a.isDrop && !b.isDrop) return -1;
+      if (!a.isDrop && b.isDrop) return 1;
+      if (a.isDrop && b.isDrop) return a.diff - b.diff;
+      if (a.isHike && !b.isHike) return -1;
+      if (!a.isHike && b.isHike) return 1;
+      if (a.isHike && b.isHike) return b.diff - a.diff;
+      return a.price - b.price;
+    });
+  }, [models, focusedStore]);
+
+  const focusedStoreDrops = storeProducts.filter((p) => p.isDrop);
+  const focusedStoreHikes = storeProducts.filter((p) => p.isHike);
+  const focusedStoreChanges = storeProducts.filter((p) => p.isDrop || p.isHike);
+
+  const displayedStoreProducts =
+    filterTab === 'drops'
+      ? focusedStoreDrops
+      : filterTab === 'hikes'
+      ? focusedStoreHikes
+      : filterTab === 'all_changes'
+      ? focusedStoreChanges.length > 0
+        ? focusedStoreChanges
+        : storeProducts
+      : storeProducts;
 
   const leader = summaries[0];
   const totalDrops = summaries.reduce((acc, s) => acc + s.dropsCount, 0);
@@ -758,12 +898,238 @@ export function StoresView({ meta, models, onSelectStore }: StoresViewProps) {
                 </span>
               </div>
               <span className="font-mono text-[10px]">
-                Smelltu á verslun í hnappastikunni til að einangra línurit hennar
+                Smelltu á verslun í hnappastikunni til að einangra línurit hennar og sjá allar vörur sem eru að lækka/hækka
               </span>
             </div>
           </div>
         </section>
       )}
+
+      {/* STORE SPECIFIC PRODUCTS & PRICE MOVEMENTS BREAKDOWN (LÆKKANIR / HÆKKANIR MEÐ LÍNURITI) */}
+      <section
+        id="store-products-breakdown"
+        aria-label="Verðbreytingar á vörum verslunar"
+        className="rounded-2xl bg-white dark:bg-zinc-900/75 border border-zinc-200/80 dark:border-white/[0.08] p-5 shadow-xs space-y-4 scroll-mt-6"
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[11px] font-medium px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200/80 dark:border-white/[0.08]">
+                {focusedStore === 'ALL' ? 'Allar verslanir' : focusedStore}
+              </span>
+              <h3 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-white">
+                {focusedStore === 'ALL'
+                  ? 'Vörur sem eru að lækka eða hækka á markaðnum'
+                  : `Verðbreytingar hjá ${focusedStore} — Línurit og tilboð`}
+              </h3>
+            </div>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+              {focusedStore === 'ALL'
+                ? 'Smelltu á hvaða verslun sem er hér að ofan eða skoðaðu vörurnar sem eru að hreyfast í verði með 7 daga línuriti.'
+                : `Hér eru allir símar hjá ${focusedStore} sem eru að hækka eða lækka í verði ásamt 7 daga línuriti fyrir hvern síma.`}
+            </p>
+          </div>
+
+          {/* Filter Tabs */}
+          <div className="flex items-center gap-1.5 bg-zinc-100 dark:bg-zinc-950/90 p-1 rounded-xl border border-zinc-200/80 dark:border-white/[0.08] self-start sm:self-auto flex-wrap">
+            <button
+              type="button"
+              onClick={() => setFilterTab('all_changes')}
+              className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
+                filterTab === 'all_changes'
+                  ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-2xs'
+                  : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
+              }`}
+            >
+              Allar breytingar ({focusedStoreChanges.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setFilterTab('drops')}
+              className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
+                filterTab === 'drops'
+                  ? 'bg-emerald-500 text-white shadow-2xs'
+                  : 'text-emerald-700 dark:text-emerald-400 hover:text-emerald-900 dark:hover:text-emerald-300'
+              }`}
+            >
+              ↓ Lækkanir ({focusedStoreDrops.length})
+            </button>
+            {focusedStoreHikes.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setFilterTab('hikes')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
+                  filterTab === 'hikes'
+                    ? 'bg-rose-500 text-white shadow-2xs'
+                    : 'text-rose-700 dark:text-rose-400 hover:text-rose-900 dark:hover:text-rose-300'
+                }`}
+              >
+                ↑ Hækkanir ({focusedStoreHikes.length})
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setFilterTab('all')}
+              className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
+                filterTab === 'all'
+                  ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-2xs'
+                  : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
+              }`}
+            >
+              Allir símar ({storeProducts.length})
+            </button>
+            {focusedStore !== 'ALL' && (
+              <button
+                type="button"
+                onClick={() => setFocusedStore('ALL')}
+                className="px-2 py-1 rounded-lg text-xs font-medium text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors"
+                title="Sýna allar búðir"
+              >
+                ✕ Allt
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Product Cards Grid with Sparkline Charts */}
+        {displayedStoreProducts.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {displayedStoreProducts.slice(0, 30).map((item) => {
+              const strokeColor = item.isDrop ? '#10b981' : item.isHike ? '#f43f5e' : '#0284c7';
+              return (
+                <article
+                  key={`${item.model.id}-${item.storage}-${item.store}`}
+                  className="rounded-xl bg-zinc-50/70 dark:bg-zinc-950/70 hover:bg-zinc-50 dark:hover:bg-zinc-900/90 border border-zinc-200/75 dark:border-white/[0.06] hover:border-zinc-300 dark:hover:border-white/[0.16] p-3.5 flex flex-col justify-between transition-colors duration-150 space-y-3"
+                >
+                  <div className="space-y-2.5">
+                    {/* Header Row: Thumbnail + Info + Badge */}
+                    <div className="flex items-start justify-between gap-2.5">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div
+                          onClick={() => onSelectModel?.(item.model, item.storage)}
+                          className="w-11 h-11 rounded-lg bg-white p-1.5 shrink-0 flex items-center justify-center outline-1 -outline-offset-1 outline-black/10 shadow-2xs cursor-pointer hover:scale-105 transition-transform"
+                        >
+                          {item.model.image ? (
+                            /* eslint-disable-next-line @next/next/no-img-element */
+                            <img
+                              src={item.model.image}
+                              alt={item.model.name}
+                              className="max-h-full max-w-full object-contain"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <span className="text-xs font-bold text-zinc-400">📱</span>
+                          )}
+                        </div>
+
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-[10px] font-mono text-zinc-500 dark:text-zinc-400">
+                              {item.model.brand}
+                            </span>
+                            {item.storage && item.storage !== 'Standard' && (
+                              <span className="text-[10px] font-mono font-semibold px-1.5 py-0.2 rounded bg-zinc-200/70 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
+                                {item.storage}
+                              </span>
+                            )}
+                            {focusedStore === 'ALL' && (
+                              <span className="text-[10px] font-semibold text-zinc-600 dark:text-zinc-400">
+                                · {item.store}
+                              </span>
+                            )}
+                          </div>
+                          <h4
+                            onClick={() => onSelectModel?.(item.model, item.storage)}
+                            className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white truncate cursor-pointer hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
+                          >
+                            {item.model.name}
+                          </h4>
+                        </div>
+                      </div>
+
+                      {/* Drop / Hike Pill */}
+                      {item.isDrop ? (
+                        <span className="text-[10px] font-bold font-mono px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30 tabular-nums shrink-0">
+                          ↓ {item.diffPercent}%
+                        </span>
+                      ) : item.isHike ? (
+                        <span className="text-[10px] font-bold font-mono px-2 py-0.5 rounded-full bg-rose-50 dark:bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-500/30 tabular-nums shrink-0">
+                          ↑ +{item.diffPercent}%
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-mono text-zinc-400 dark:text-zinc-500 shrink-0">
+                          Óbreytt
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Mini SVG Trend Line Chart Canvas */}
+                    <div className="p-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/[0.06] space-y-1">
+                      <div className="flex items-center justify-between text-[10px] text-zinc-500 dark:text-zinc-400 font-mono">
+                        <span>7 daga verðferill:</span>
+                        <span
+                          className={`font-bold ${
+                            item.isDrop
+                              ? 'text-emerald-600 dark:text-emerald-400'
+                              : item.isHike
+                              ? 'text-rose-600 dark:text-rose-400'
+                              : ''
+                          }`}
+                        >
+                          {item.isDrop
+                            ? `-${formatPrice(Math.abs(item.diff))}`
+                            : item.isHike
+                            ? `+${formatPrice(item.diff)}`
+                            : 'Stöðugt verð'}
+                        </span>
+                      </div>
+
+                      <ProductSparkline
+                        history={item.history}
+                        price={item.price}
+                        previousPrice={item.previousPrice}
+                        strokeColor={strokeColor}
+                      />
+
+                      <div className="flex items-center justify-between text-[10px] text-zinc-400 dark:text-zinc-500 font-mono pt-1 border-t border-zinc-100 dark:border-white/[0.04]">
+                        <span>{item.previousPrice ? `Var: ${formatPrice(item.previousPrice)}` : 'Fyrra verð'}</span>
+                        <span className="font-bold text-zinc-900 dark:text-white">
+                          Nú: {formatPrice(item.price)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Actions Row */}
+                  <div className="pt-2 border-t border-zinc-200/60 dark:border-white/[0.05] flex items-center justify-between gap-2">
+                    <button
+                      type="button"
+                      onClick={() => onSelectModel?.(item.model, item.storage)}
+                      className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:text-zinc-950 dark:hover:text-white transition-colors flex items-center gap-1"
+                    >
+                      <span>Skoða sögu</span>
+                      <span className="text-[10px]">→</span>
+                    </button>
+                    <a
+                      href={item.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-colors"
+                    >
+                      <span>{item.store}</span>
+                      <span className="text-[9px]">↗</span>
+                    </a>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="text-center py-8 text-xs text-zinc-500 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-950/50 rounded-xl border border-dashed border-zinc-200 dark:border-white/[0.08]">
+            Engar vörur fundust með þessari síu hjá {focusedStore}.
+          </div>
+        )}
+      </section>
 
       {/* CHARTS 2 & 3: TWO-COLUMN COMPARATIVE ANALYTICS (PRICE LEADERSHIP + MARKET DEVIATION & PRICE SPREAD) */}
       {enrichedSummaries.length > 0 && (
@@ -1218,13 +1584,28 @@ export function StoresView({ meta, models, onSelectStore }: StoresViewProps) {
               </div>
 
               {/* Footer Action */}
-              <button
-                onClick={() => onSelectStore(st.store)}
-                className="w-full text-xs font-semibold py-2.5 px-3 rounded-xl bg-zinc-100 dark:bg-zinc-800/90 hover:bg-zinc-900 dark:hover:bg-white text-zinc-800 dark:text-zinc-200 hover:text-white dark:hover:text-zinc-950 border border-zinc-200/80 dark:border-white/[0.08] transition-colors duration-150 motion-safe:enabled:active:scale-[0.98] flex items-center justify-between"
-              >
-                <span>Skoða alla síma hjá {st.store}</span>
-                <span className="font-mono text-[11px] opacity-80">{st.totalPhones} símar →</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFocusedStore(st.store);
+                    const el = document.getElementById('store-products-breakdown');
+                    if (el) el.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="flex-1 text-xs font-semibold py-2 px-3 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-colors duration-150 flex items-center justify-center gap-1 shadow-2xs"
+                >
+                  <span>Skoða línurit & tilboð</span>
+                  <span className="text-[10px]">↓</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onSelectStore(st.store)}
+                  title="Opna í vörulista"
+                  className="text-xs font-medium py-2 px-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-200/80 dark:border-white/[0.06] transition-colors shrink-0"
+                >
+                  Listi →
+                </button>
+              </div>
             </article>
           );
         })}
