@@ -2,8 +2,9 @@ name: Dagleg verðuppfærsla (Farsímavaktin)
 
 on:
   schedule:
-    # Keyrir sjálfkrafa á hverjum degi kl. 07:00 UTC (íslenskur tími)
-    - cron: '0 7 * * *'
+    # Keyrir sjálfkrafa tvisvar á dag á stökum mínútum til að forðast biðraðir á GitHub Actions:
+    # Kl. 06:18 og kl. 14:18 UTC (íslenskur tími)
+    - cron: '18 6,14 * * *'
   workflow_dispatch: # Leyfir einnig handvirka keyrslu úr GitHub Actions flipanum
 
 permissions:
@@ -27,7 +28,7 @@ jobs:
       - name: Setja upp pakka
         run: npm ci
 
-      - name: Keyra vefskafara á allar 14 verslanir og uppfæra price_history.json
+      - name: Keyra vefskafara á allar 15 verslanir og uppfæra price_history.json
         run: |
           npx tsx -e "import { GET } from './app/api/phones/route'; GET().then(r => r.json()).then(d => { if (!d.models || d.models.length === 0) { process.exit(1); } console.log('Uppfært:', d.meta.totalModels, 'símalíkön úr', d.meta.totalStores, 'verslunum'); });"
 
@@ -36,4 +37,4 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data/price_history.json
-          git diff --staged --quiet || (git commit -m "chore(data): dagleg verðuppfærsla $(date -u +'%Y-%m-%d')" && git push origin main)
+          git diff --staged --quiet || (git commit -m "chore(data): dagleg verðuppfærsla $(date -u +'%Y-%m-%d')" && git pull --rebase origin main && git push origin main)
