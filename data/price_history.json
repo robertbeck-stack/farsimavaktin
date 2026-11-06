@@ -1,8 +1,8 @@
 {
-  "lastUpdated": "2026-11-06T14:16:12.994Z",
+  "lastUpdated": "2026-11-06T20:28:33.080Z",
   "meta": {
-    "lastRun": "2026-11-06T14:16:12.994Z",
-    "durationMs": 13786,
+    "lastRun": "2026-11-06T20:28:33.080Z",
+    "durationMs": 12865,
     "totalModels": 191,
     "totalVariants": 234,
     "totalStores": 15,
@@ -87,6 +87,17 @@
         "expensiveStore": "Tölvulistinn"
       },
       {
+        "id": "samsung-galaxy-s25-ultra",
+        "name": "Samsung Galaxy S25 Ultra 1TB",
+        "brand": "Samsung",
+        "variantStorage": "1TB",
+        "lowestPrice": 126990,
+        "highestPrice": 279990,
+        "savings": 153000,
+        "cheapestStore": "IcePhone",
+        "expensiveStore": "Nova"
+      },
+      {
         "id": "samsung-galaxy-s25-plus",
         "name": "Samsung Galaxy S25 Plus 512GB",
         "brand": "Samsung",
@@ -96,17 +107,6 @@
         "savings": 116004,
         "cheapestStore": "IcePhone",
         "expensiveStore": "ELKO"
-      },
-      {
-        "id": "samsung-galaxy-s25-ultra",
-        "name": "Samsung Galaxy S25 Ultra 1TB",
-        "brand": "Samsung",
-        "variantStorage": "1TB",
-        "lowestPrice": 126990,
-        "highestPrice": 229990,
-        "savings": 103000,
-        "cheapestStore": "IcePhone",
-        "expensiveStore": "Nova"
       },
       {
         "id": "samsung-galaxy-s25-edge",
@@ -128,11 +128,11 @@
         "dropsCount": 21,
         "hikesCount": 2,
         "unchangedCount": 28,
-        "netChangeAmount": -680014,
-        "avgPrice": 84147,
+        "netChangeAmount": -683014,
+        "avgPrice": 84088,
         "minPrice": 36990,
         "maxPrice": 163990,
-        "vsMarketPercent": -17.6,
+        "vsMarketPercent": -18.1,
         "trend": "DOWN",
         "trendPercent": -13.7,
         "history": [
@@ -142,27 +142,27 @@
           },
           {
             "date": "2026-11-01",
-            "price": 93127
+            "price": 93098
           },
           {
             "date": "2026-11-02",
-            "price": 88519
+            "price": 88461
           },
           {
             "date": "2026-11-03",
-            "price": 84843
+            "price": 84784
           },
           {
             "date": "2026-11-04",
-            "price": 84245
+            "price": 84186
           },
           {
             "date": "2026-11-05",
-            "price": 84147
+            "price": 84088
           },
           {
             "date": "2026-11-06",
-            "price": 84147
+            "price": 84088
           }
         ],
         "biggestDrop": {
@@ -227,46 +227,46 @@
       },
       {
         "store": "Nova",
-        "totalPhones": 64,
+        "totalPhones": 63,
         "cheapestCount": 26,
         "dropsCount": 1,
-        "hikesCount": 2,
-        "unchangedCount": 89,
-        "netChangeAmount": 50000,
-        "avgPrice": 185099,
+        "hikesCount": 4,
+        "unchangedCount": 86,
+        "netChangeAmount": 110000,
+        "avgPrice": 186364,
         "minPrice": 7990,
         "maxPrice": 489990,
-        "vsMarketPercent": 3.8,
+        "vsMarketPercent": 3.7,
         "trend": "UP",
-        "trendPercent": 0.3,
+        "trendPercent": 0.7,
         "history": [
           {
             "date": "2026-10-31",
-            "price": 184555
+            "price": 185155
           },
           {
             "date": "2026-11-01",
-            "price": 184990
+            "price": 185979
           },
           {
             "date": "2026-11-02",
-            "price": 185207
+            "price": 186473
           },
           {
             "date": "2026-11-03",
-            "price": 185425
+            "price": 186693
           },
           {
             "date": "2026-11-04",
-            "price": 185262
+            "price": 186528
           },
           {
             "date": "2026-11-05",
-            "price": 185099
+            "price": 186364
           },
           {
             "date": "2026-11-06",
-            "price": 185099
+            "price": 186364
           }
         ],
         "biggestDrop": {
@@ -331,46 +331,46 @@
       },
       {
         "store": "Lune",
-        "totalPhones": 31,
+        "totalPhones": 32,
         "cheapestCount": 22,
         "dropsCount": 18,
         "hikesCount": 0,
-        "unchangedCount": 37,
+        "unchangedCount": 39,
         "netChangeAmount": -245268,
-        "avgPrice": 198810,
+        "avgPrice": 197273,
         "minPrice": 8990,
         "maxPrice": 579990,
-        "vsMarketPercent": -7,
+        "vsMarketPercent": -6.6,
         "trend": "DOWN",
-        "trendPercent": -2.2,
+        "trendPercent": -2.1,
         "history": [
           {
             "date": "2026-10-31",
-            "price": 203270
+            "price": 201576
           },
           {
             "date": "2026-11-01",
-            "price": 201010
+            "price": 199395
           },
           {
             "date": "2026-11-02",
-            "price": 200111
+            "price": 198527
           },
           {
             "date": "2026-11-03",
-            "price": 199430
+            "price": 197871
           },
           {
             "date": "2026-11-04",
-            "price": 199017
+            "price": 197472
           },
           {
             "date": "2026-11-05",
-            "price": 198810
+            "price": 197273
           },
           {
             "date": "2026-11-06",
-            "price": 198810
+            "price": 197273
           }
         ],
         "biggestDrop": {
@@ -444,7 +444,7 @@
         "avgPrice": 143688,
         "minPrice": 12990,
         "maxPrice": 379990,
-        "vsMarketPercent": 2.9,
+        "vsMarketPercent": 2.8,
         "trend": "DOWN",
         "trendPercent": -0.8,
         "history": [
@@ -2476,7 +2476,7 @@
       },
       {
         "date": "2026-11-06",
-        "price": 74990
+        "price": 71990
       }
     ],
     "apple-iphone-se-2020-endurnýjaður": [
@@ -6674,7 +6674,7 @@
       },
       {
         "date": "2026-11-06",
-        "price": 149990
+        "price": 159990
       }
     ],
     "samsung-galaxy-s25::128GB::Síminn": [
@@ -12618,7 +12618,7 @@
       },
       {
         "date": "2026-11-06",
-        "price": 229990
+        "price": 279990
       }
     ],
     "google-pixel-10-pro-xl::256GB::Nova": [
@@ -13314,7 +13314,7 @@
       },
       {
         "date": "2026-11-06",
-        "price": 74990
+        "price": 71990
       }
     ],
     "samsung-galaxy-a17::128GB::IcePhone": [
@@ -13794,41 +13794,92 @@
         "date": "2026-11-06",
         "price": 39990
       }
+    ],
+    "samsung-galaxy-s26-fe::128GB::Lune": [
+      {
+        "date": "2026-11-06",
+        "price": 144990
+      }
+    ],
+    "samsung-galaxy-s26-fe::256GB::Lune": [
+      {
+        "date": "2026-11-06",
+        "price": 164990
+      }
     ]
   },
   "savedCatalog": {
-    "xiaomi-redmi-note-15-pro": {
-      "id": "xiaomi-redmi-note-15-pro",
-      "name": "Xiaomi Redmi Note 15 Pro",
-      "brand": "Xiaomi",
-      "image": "https://products-media-cdn.aws-prod.ja.is/websites/mi-budin/300x300/12399787_1778403304_zheeejeh.png",
-      "lowestPrice": 63992,
-      "highestPrice": 67992,
-      "storesCount": 2,
-      "variantsCount": 1,
+    "samsung-galaxy-z-fold7": {
+      "id": "samsung-galaxy-z-fold7",
+      "name": "Samsung Galaxy Z Fold7",
+      "brand": "Samsung",
+      "image": "https://products-media-cdn.aws-prod.ja.is/websites/elko/300x300/11539531_1790262426_trsaznjr.jpg",
+      "lowestPrice": 148990,
+      "highestPrice": 349995,
+      "storesCount": 5,
+      "variantsCount": 2,
       "stores": [
-        "Mi búðin",
+        "ELKO",
+        "Sýn",
+        "IcePhone",
+        "Tölvulistinn",
         "Síminn"
       ],
       "variants": [
         {
           "storage": "256GB",
-          "lowestPrice": 63992,
-          "highestPrice": 67992,
+          "lowestPrice": 148990,
+          "highestPrice": 349995,
           "offers": [
             {
-              "store": "Síminn",
-              "price": 63992,
-              "previousPrice": 79990,
-              "url": "https://vefverslun.siminn.is/is/note-15pro-5g",
-              "priceChange": -15998
+              "store": "IcePhone",
+              "price": 148990,
+              "previousPrice": 249995,
+              "url": "https://vefverslun.icephone.is/product/galaxy-z-fold7-5g/",
+              "priceChange": -101005
             },
             {
-              "store": "Mi búðin",
-              "storeLogo": "https://products-media-cdn.aws-prod.ja.is/logos/300x200/Mi_Iceland.png",
-              "price": 67991,
-              "previousPrice": 67991,
-              "url": "https://ja.is/vara/redmi-note-15-pro-5g-8256gb-snjallsimi-black/12399787/?company=342",
+              "store": "ELKO",
+              "storeLogo": "https://products-media-cdn.aws-prod.ja.is/logos/300x200/elkologo_120x43_cilh6bp_65CrXBc.png",
+              "price": 249995,
+              "previousPrice": 249995,
+              "url": "https://ja.is/vara/samsung-galaxy-z-fold7-256-gb-svartur/11539531/?company=20",
+              "priceChange": 0
+            },
+            {
+              "store": "Sýn",
+              "price": 349990,
+              "previousPrice": 349990,
+              "url": "https://www.syn.is/vefverslun/um-voru/45320",
+              "priceChange": 0
+            },
+            {
+              "store": "Síminn",
+              "price": 349990,
+              "previousPrice": 349990,
+              "url": "https://vefverslun.siminn.is/is/galaxy-z-fold7",
+              "priceChange": 0
+            },
+            {
+              "store": "Tölvulistinn",
+              "price": 349995,
+              "previousPrice": 349995,
+              "url": "https://tl.is/samsung-galaxy-fold7-256gb-svartur.html",
+              "priceChange": 0
+            }
+          ]
+        },
+        {
+          "storage": "512GB",
+          "lowestPrice": 269994,
+          "highestPrice": 269995,
+          "offers": [
+            {
+              "store": "ELKO",
+              "storeLogo": "https://products-media-cdn.aws-prod.ja.is/logos/300x200/elkologo_120x43_cilh6bp_65CrXBc.png",
+              "price": 269994,
+              "previousPrice": 269994,
+              "url": "https://ja.is/vara/samsung-galaxy-z-fold7-512-gb-graenn/11539522/",
               "priceChange": 0
             }
           ]
@@ -13837,33 +13888,167 @@
       "history": [
         {
           "date": "2026-11-03",
-          "price": 63992
+          "price": 249995
         },
         {
           "date": "2026-11-04",
-          "price": 63992
+          "price": 249995
         },
         {
           "date": "2026-11-05",
-          "price": 63992
+          "price": 148990
         },
         {
           "date": "2026-11-06",
-          "price": 63992
+          "price": 148990
+        }
+      ],
+      "trend": "DOWN",
+      "priceChangePercent": -40,
+      "priceChangeAmount": -101005,
+      "maxSavings": 201005
+    },
+    "ulefone-armor-29-pro": {
+      "id": "ulefone-armor-29-pro",
+      "name": "Ulefone Armor 29 Pro",
+      "brand": "Ulefone",
+      "image": "https://products-media-cdn.aws-prod.ja.is/websites/mi-budin/300x300/12399789_1778403305_uixdbndk.png",
+      "lowestPrice": 99990,
+      "highestPrice": 129990,
+      "storesCount": 1,
+      "variantsCount": 1,
+      "stores": [
+        "Mi búðin"
+      ],
+      "variants": [
+        {
+          "storage": "512GB",
+          "lowestPrice": 99990,
+          "highestPrice": 129990,
+          "offers": [
+            {
+              "store": "Mi búðin",
+              "price": 99990,
+              "previousPrice": 99990,
+              "url": "https://mibudin.is/vara/ulefone-armor-29-pro-512gb-5g-vinnusimi/",
+              "priceChange": 0
+            }
+          ]
+        }
+      ],
+      "history": [
+        {
+          "date": "2026-11-03",
+          "price": 99990
+        },
+        {
+          "date": "2026-11-04",
+          "price": 99990
+        },
+        {
+          "date": "2026-11-05",
+          "price": 99990
+        },
+        {
+          "date": "2026-11-06",
+          "price": 99990
         }
       ],
       "trend": "SAME",
       "priceChangePercent": 0,
       "priceChangeAmount": 0,
-      "maxSavings": 4000
+      "maxSavings": 0
     },
-    "samsung-galaxy-z-fold8": {
-      "id": "samsung-galaxy-z-fold8",
-      "name": "Samsung Galaxy Z Fold8",
+    "xiaomi-17-ultra": {
+      "id": "xiaomi-17-ultra",
+      "name": "Xiaomi 17 Ultra",
+      "brand": "Xiaomi",
+      "image": "https://products-media-cdn.aws-prod.ja.is/websites/mi-budin/300x300/12399713_1778403291_ontdlrvg.png",
+      "lowestPrice": 259990,
+      "highestPrice": 259994,
+      "storesCount": 5,
+      "variantsCount": 1,
+      "stores": [
+        "Mi búðin",
+        "ELKO",
+        "Sýn",
+        "Nova",
+        "Síminn"
+      ],
+      "variants": [
+        {
+          "storage": "512GB",
+          "lowestPrice": 259990,
+          "highestPrice": 259994,
+          "offers": [
+            {
+              "store": "Mi búðin",
+              "price": 259990,
+              "previousPrice": 219990,
+              "url": "https://mibudin.is/vara/xiaomi-17-ultra-leica-snjallsimi/",
+              "priceChange": 40000
+            },
+            {
+              "store": "Sýn",
+              "price": 259990,
+              "previousPrice": 219990,
+              "url": "https://www.syn.is/vefverslun/um-voru/72990",
+              "priceChange": 40000
+            },
+            {
+              "store": "Nova",
+              "price": 259990,
+              "previousPrice": 219990,
+              "url": "https://www.nova.is/barinn/vara/xiaomi-17ultra",
+              "priceChange": 40000
+            },
+            {
+              "store": "Síminn",
+              "price": 259990,
+              "previousPrice": 219990,
+              "url": "https://vefverslun.siminn.is/is/xiaomi-17-ultra",
+              "priceChange": 40000
+            },
+            {
+              "store": "ELKO",
+              "price": 259994,
+              "previousPrice": 259994,
+              "url": "https://elko.is/vorur/xiaomi-17-ultra-snjallsimi-512gb-425634/XIA17ULT16512WHI",
+              "priceChange": 0
+            }
+          ]
+        }
+      ],
+      "history": [
+        {
+          "date": "2026-11-03",
+          "price": 219990
+        },
+        {
+          "date": "2026-11-04",
+          "price": 219990
+        },
+        {
+          "date": "2026-11-05",
+          "price": 219990
+        },
+        {
+          "date": "2026-11-06",
+          "price": 259990
+        }
+      ],
+      "trend": "UP",
+      "priceChangePercent": 18,
+      "priceChangeAmount": 40000,
+      "maxSavings": 4
+    },
+    "samsung-galaxy-s26-ultra": {
+      "id": "samsung-galaxy-s26-ultra",
+      "name": "Samsung Galaxy S26 Ultra",
       "brand": "Samsung",
-      "image": "https://products-media-cdn.aws-prod.ja.is/websites/elko/300x300/12759737_1793635646_adlzweuy.jpg",
-      "lowestPrice": 289990,
-      "highestPrice": 459995,
+      "image": "https://products-media-cdn.aws-prod.ja.is/websites/elko/300x300/12201620_1793635635_zczopgjd.jpg",
+      "lowestPrice": 214990,
+      "highestPrice": 329995,
       "storesCount": 7,
       "variantsCount": 3,
       "stores": [
@@ -13878,112 +14063,127 @@
       "variants": [
         {
           "storage": "256GB",
-          "lowestPrice": 289990,
-          "highestPrice": 349995,
+          "lowestPrice": 214990,
+          "highestPrice": 254995,
           "offers": [
             {
               "store": "Lune",
-              "price": 289990,
-              "previousPrice": 299900,
-              "url": "https://lune.is/vara/samsung-galaxy-z-fold8",
-              "priceChange": -9910
-            },
-            {
-              "store": "Emobi",
-              "price": 299900,
-              "previousPrice": 349900,
-              "url": "https://emobi.is/vorur/samsung-galaxy-z-fold8-256gb/",
-              "priceChange": -50000
+              "price": 214990,
+              "previousPrice": 254900,
+              "url": "https://lune.is/vara/samsung-galaxy-s26-ultra",
+              "priceChange": -39910
             },
             {
               "store": "Tölvulistinn",
-              "price": 299995,
-              "previousPrice": 299995,
-              "url": "https://tl.is/samsung-galaxy-z-fold8-256gb-grar-ee.html",
+              "price": 249995,
+              "previousPrice": 249995,
+              "url": "https://tl.is/samsung-galaxy-s26-ultra.html",
+              "priceChange": 0
+            },
+            {
+              "store": "Emobi",
+              "price": 254900,
+              "previousPrice": 254900,
+              "url": "https://emobi.is/vorur/samsung-galaxy-s26-ultra-256gb/",
               "priceChange": 0
             },
             {
               "store": "Nova",
-              "price": 339990,
-              "previousPrice": 339990,
-              "url": "https://www.nova.is/barinn/vara/galaxy-zfold8",
-              "priceChange": 0
-            },
-            {
-              "store": "Síminn",
-              "price": 339990,
-              "previousPrice": 339990,
-              "url": "https://vefverslun.siminn.is/is/galaxy-fold-8",
+              "price": 254990,
+              "previousPrice": 254990,
+              "url": "https://www.nova.is/barinn/vara/galaxy-s26-ultra",
               "priceChange": 0
             },
             {
               "store": "Sýn",
-              "price": 349990,
-              "previousPrice": 349990,
-              "url": "https://www.syn.is/vefverslun/um-voru/46002",
+              "price": 254990,
+              "previousPrice": 254990,
+              "url": "https://www.syn.is/vefverslun/um-voru/45683",
+              "priceChange": 0
+            },
+            {
+              "store": "Síminn",
+              "price": 254990,
+              "previousPrice": 254990,
+              "url": "https://vefverslun.siminn.is/is/galaxy-s26-ultra",
               "priceChange": 0
             },
             {
               "store": "ELKO",
-              "price": 349995,
-              "previousPrice": 349995,
-              "url": "https://elko.is/vorur/samsung-galaxy-z-fold8-5256b-439108/SMF971B256GRA",
+              "price": 254995,
+              "previousPrice": 254995,
+              "url": "https://elko.is/vorur/samsung-galaxy-s26-ultra-256gb-snjallsimi-422621/SMS948B256BLA",
               "priceChange": 0
             }
           ]
         },
         {
           "storage": "512GB",
-          "lowestPrice": 319990,
-          "highestPrice": 379995,
+          "lowestPrice": 234990,
+          "highestPrice": 279995,
           "offers": [
             {
               "store": "Lune",
-              "price": 319990,
-              "previousPrice": 319990,
-              "url": "https://lune.is/vara/samsung-galaxy-z-fold8",
+              "price": 234990,
+              "previousPrice": 234990,
+              "url": "https://lune.is/vara/samsung-galaxy-s26-ultra",
               "priceChange": 0
             },
             {
               "store": "Emobi",
-              "price": 324900,
-              "previousPrice": 374900,
-              "url": "https://emobi.is/vorur/samsung-galaxy-z-fold8-512gb/",
-              "priceChange": -50000
+              "price": 274900,
+              "previousPrice": 274900,
+              "url": "https://emobi.is/vorur/samsung-galaxy-s26-ultra-512gb/",
+              "priceChange": 0
             },
             {
               "store": "Nova",
-              "price": 379990,
-              "previousPrice": 379990,
-              "url": "https://www.nova.is/barinn/vara/galaxy-zfold8",
+              "price": 279990,
+              "previousPrice": 279990,
+              "url": "https://www.nova.is/barinn/vara/galaxy-s26-ultra",
               "priceChange": 0
             },
             {
               "store": "ELKO",
-              "price": 379995,
-              "previousPrice": 379995,
-              "url": "https://elko.is/vorur/samsung-galaxy-z-fold8-512gb-hvitur-439110/SMF971B512GRA",
+              "storeLogo": "https://products-media-cdn.aws-prod.ja.is/logos/300x200/elkologo_120x43_cilh6bp_65CrXBc.png",
+              "price": 279994,
+              "previousPrice": 279994,
+              "url": "https://ja.is/vara/samsung-galaxy-s26-ultra-512gb-cobalt-violet/12201620/?company=20",
               "priceChange": 0
             }
           ]
         },
         {
           "storage": "1TB",
-          "lowestPrice": 459990,
-          "highestPrice": 459995,
+          "lowestPrice": 279990,
+          "highestPrice": 329995,
           "offers": [
             {
+              "store": "Lune",
+              "price": 279990,
+              "previousPrice": 279990,
+              "url": "https://lune.is/vara/samsung-galaxy-s26-ultra",
+              "priceChange": 0
+            },
+            {
+              "store": "Emobi",
+              "price": 324900,
+              "previousPrice": 324900,
+              "url": "https://emobi.is/vorur/samsung-galaxy-s26-ultra-1tb/",
+              "priceChange": 0
+            },
+            {
               "store": "Nova",
-              "price": 459990,
-              "previousPrice": 459990,
-              "url": "https://www.nova.is/barinn/vara/galaxy-zfold8",
+              "price": 329990,
+              "previousPrice": 329990,
+              "url": "https://www.nova.is/barinn/vara/galaxy-s26-ultra",
               "priceChange": 0
             },
             {
               "store": "ELKO",
-              "price": 459995,
-              "previousPrice": 459995,
-              "url": "https://elko.is/vorur/samsung-galaxy-z-fold8-1tb-svartur-439118/SMF971B1TBGRA",
+              "price": 329995,
+              "previousPrice": 329995,
+              "url": "https://elko.is/vorur/samsung-galaxy-s26-ultra-1tb-422645/SMS948B1TBBLA",
               "priceChange": 0
             }
           ]
@@ -13992,31 +14192,31 @@
       "history": [
         {
           "date": "2026-11-03",
-          "price": 299900
+          "price": 254900
         },
         {
           "date": "2026-11-04",
-          "price": 289990
+          "price": 214990
         },
         {
           "date": "2026-11-05",
-          "price": 289990
+          "price": 214990
         },
         {
           "date": "2026-11-06",
-          "price": 289990
+          "price": 214990
         }
       ],
       "trend": "DOWN",
-      "priceChangePercent": -3,
-      "priceChangeAmount": -9910,
-      "maxSavings": 60005
+      "priceChangePercent": -16,
+      "priceChangeAmount": -39910,
+      "maxSavings": 50005
     },
     "samsung-galaxy-z-flip8": {
       "id": "samsung-galaxy-z-flip8",
       "name": "Samsung Galaxy Z Flip8",
       "brand": "Samsung",
-      "image": "https://products-media-cdn.aws-prod.ja.is/websites/elko/300x300/12621881_1793635632_umievxvr.jpg",
+      "image": "https://products-media-cdn.aws-prod.ja.is/websites/elko/300x300/12621880_1793635623_bheoxnjm.jpg",
       "lowestPrice": 174900,
       "highestPrice": 269995,
       "storesCount": 7,
@@ -14138,222 +14338,6 @@
       "priceChangePercent": 0,
       "priceChangeAmount": 0,
       "maxSavings": 55095
-    },
-    "xiaomi-17-alpine-pink": {
-      "id": "xiaomi-17-alpine-pink",
-      "name": "Xiaomi 17 Alpine Pink",
-      "brand": "Xiaomi",
-      "image": "https://products-media-cdn.aws-prod.ja.is/websites/mi-budin/300x300/12528711_1786552411_rgoywmag.png",
-      "lowestPrice": 189990,
-      "highestPrice": 189990,
-      "storesCount": 1,
-      "variantsCount": 1,
-      "stores": [
-        "Mi búðin"
-      ],
-      "variants": [
-        {
-          "storage": "512GB",
-          "lowestPrice": 189990,
-          "highestPrice": 189990,
-          "offers": [
-            {
-              "store": "Mi búðin",
-              "storeLogo": "https://products-media-cdn.aws-prod.ja.is/logos/300x200/Mi_Iceland.png",
-              "price": 189990,
-              "previousPrice": 189990,
-              "url": "https://ja.is/vara/xiaomi-17-12512gb-5g-leica-snjallsimi-alpine-pink/12528711/?company=342",
-              "priceChange": 0
-            }
-          ]
-        }
-      ],
-      "history": [
-        {
-          "date": "2026-11-05",
-          "price": 189990
-        },
-        {
-          "date": "2026-11-06",
-          "price": 189990
-        }
-      ],
-      "trend": "SAME",
-      "priceChangePercent": 0,
-      "priceChangeAmount": 0,
-      "maxSavings": 0
-    },
-    "samsung-galaxy-s26-plus": {
-      "id": "samsung-galaxy-s26-plus",
-      "name": "Samsung Galaxy S26 Plus",
-      "brand": "Samsung",
-      "image": "https://products-media-cdn.aws-prod.ja.is/websites/elko/300x300/12201637_1793635629_xdvbxosh.jpg",
-      "lowestPrice": 179990,
-      "highestPrice": 249990,
-      "storesCount": 6,
-      "variantsCount": 2,
-      "stores": [
-        "ELKO",
-        "Sýn",
-        "Nova",
-        "Lune",
-        "Emobi",
-        "Síminn"
-      ],
-      "variants": [
-        {
-          "storage": "256GB",
-          "lowestPrice": 179990,
-          "highestPrice": 214995,
-          "offers": [
-            {
-              "store": "Lune",
-              "price": 179990,
-              "previousPrice": 214900,
-              "url": "https://lune.is/vara/samsung-galaxy-s26-plus",
-              "priceChange": -34910
-            },
-            {
-              "store": "Emobi",
-              "price": 214900,
-              "previousPrice": 214900,
-              "url": "https://emobi.is/vorur/samsung-galaxy-s26-plus-256gb/",
-              "priceChange": 0
-            },
-            {
-              "store": "Nova",
-              "price": 214990,
-              "previousPrice": 214990,
-              "url": "https://www.nova.is/barinn/vara/galaxy-s26-plus",
-              "priceChange": 0
-            },
-            {
-              "store": "Sýn",
-              "price": 214990,
-              "previousPrice": 214990,
-              "url": "https://www.syn.is/vefverslun/um-voru/45666",
-              "priceChange": 0
-            },
-            {
-              "store": "Síminn",
-              "price": 214990,
-              "previousPrice": 214990,
-              "url": "https://vefverslun.siminn.is/is/galaxy-s26",
-              "priceChange": 0
-            },
-            {
-              "store": "ELKO",
-              "storeLogo": "https://products-media-cdn.aws-prod.ja.is/logos/300x200/elkologo_120x43_cilh6bp_65CrXBc.png",
-              "price": 214994,
-              "previousPrice": 214994,
-              "url": "https://ja.is/vara/samsung-galaxy-s26-256gb-pink-gold/12201616/",
-              "priceChange": 0
-            }
-          ]
-        },
-        {
-          "storage": "512GB",
-          "lowestPrice": 244900,
-          "highestPrice": 249990,
-          "offers": [
-            {
-              "store": "Emobi",
-              "price": 244900,
-              "previousPrice": 244900,
-              "url": "https://emobi.is/vorur/samsung-galaxy-s26-plus-512gb/",
-              "priceChange": 0
-            },
-            {
-              "store": "ELKO",
-              "storeLogo": "https://products-media-cdn.aws-prod.ja.is/logos/300x200/elkologo_120x43_cilh6bp_65CrXBc.png",
-              "price": 244994,
-              "previousPrice": 244994,
-              "url": "https://ja.is/vara/samsung-galaxy-s26-512gb-sky-blue/12201637/?company=20",
-              "priceChange": 0
-            },
-            {
-              "store": "Nova",
-              "price": 249990,
-              "previousPrice": 249990,
-              "url": "https://www.nova.is/barinn/vara/galaxy-s26-plus",
-              "priceChange": 0
-            }
-          ]
-        }
-      ],
-      "history": [
-        {
-          "date": "2026-11-03",
-          "price": 214900
-        },
-        {
-          "date": "2026-11-04",
-          "price": 179990
-        },
-        {
-          "date": "2026-11-05",
-          "price": 179990
-        },
-        {
-          "date": "2026-11-06",
-          "price": 179990
-        }
-      ],
-      "trend": "DOWN",
-      "priceChangePercent": -16,
-      "priceChangeAmount": -34910,
-      "maxSavings": 35005
-    },
-    "ulefone-armor-30-pro": {
-      "id": "ulefone-armor-30-pro",
-      "name": "Ulefone Armor 30 Pro",
-      "brand": "Ulefone",
-      "image": "https://products-media-cdn.aws-prod.ja.is/websites/mi-budin/300x300/11426499_1747416120_afexyehh.png",
-      "lowestPrice": 84990,
-      "highestPrice": 84990,
-      "storesCount": 1,
-      "variantsCount": 1,
-      "stores": [
-        "Mi búðin"
-      ],
-      "variants": [
-        {
-          "storage": "512GB",
-          "lowestPrice": 84990,
-          "highestPrice": 84990,
-          "offers": [
-            {
-              "store": "Mi búðin",
-              "price": 84990,
-              "previousPrice": 84990,
-              "url": "https://mibudin.is/vara/ulefone-armor-30-pro-512gb-5g-vinnusimi-med-tvofoldum-skja/",
-              "priceChange": 0
-            }
-          ]
-        }
-      ],
-      "history": [
-        {
-          "date": "2026-11-03",
-          "price": 84990
-        },
-        {
-          "date": "2026-11-04",
-          "price": 84990
-        },
-        {
-          "date": "2026-11-05",
-          "price": 84990
-        },
-        {
-          "date": "2026-11-06",
-          "price": 84990
-        }
-      ],
-      "trend": "SAME",
-      "priceChangePercent": 0,
-      "priceChangeAmount": 0,
-      "maxSavings": 0
     },
     "xiaomi-redmi-note-14-pro-plus": {
       "id": "xiaomi-redmi-note-14-pro-plus",
@@ -14586,141 +14570,6 @@
       "priceChangeAmount": 0,
       "maxSavings": 1995
     },
-    "samsung-galaxy-a57": {
-      "id": "samsung-galaxy-a57",
-      "name": "Samsung Galaxy A57",
-      "brand": "Samsung",
-      "image": "https://products-media-cdn.aws-prod.ja.is/websites/elko/300x300/12306041_1792097418_mmnxecxo.jpg",
-      "lowestPrice": 69990,
-      "highestPrice": 104995,
-      "storesCount": 7,
-      "variantsCount": 2,
-      "stores": [
-        "ELKO",
-        "Sýn",
-        "Nova",
-        "Lune",
-        "Emobi",
-        "Tölvulistinn",
-        "Síminn"
-      ],
-      "variants": [
-        {
-          "storage": "128GB",
-          "lowestPrice": 69990,
-          "highestPrice": 84995,
-          "offers": [
-            {
-              "store": "Lune",
-              "price": 69990,
-              "previousPrice": 79900,
-              "url": "https://lune.is/vara/samsung-galaxy-a57",
-              "priceChange": -9910
-            },
-            {
-              "store": "Emobi",
-              "price": 79900,
-              "previousPrice": 79900,
-              "url": "https://emobi.is/vorur/samsung-galaxy-a57-5g-128gb/",
-              "priceChange": 0
-            },
-            {
-              "store": "Tölvulistinn",
-              "price": 79995,
-              "previousPrice": 79995,
-              "url": "https://tl.is/samsung-galaxy-a57.html",
-              "priceChange": 0
-            },
-            {
-              "store": "Nova",
-              "price": 84990,
-              "previousPrice": 84990,
-              "url": "https://www.nova.is/barinn/vara/galaxy-a57-5g",
-              "priceChange": 0
-            },
-            {
-              "store": "Sýn",
-              "price": 84990,
-              "previousPrice": 84990,
-              "url": "https://www.syn.is/vefverslun/um-voru/45828",
-              "priceChange": 0
-            },
-            {
-              "store": "Síminn",
-              "price": 84990,
-              "previousPrice": 84990,
-              "url": "https://vefverslun.siminn.is/is/galaxy-a57",
-              "priceChange": 0
-            },
-            {
-              "store": "ELKO",
-              "price": 84995,
-              "previousPrice": 84995,
-              "url": "https://elko.is/vorur/samsung-galaxy-a57-5g-snjallsimi-427943/SMA576B128GRA",
-              "priceChange": 0
-            }
-          ]
-        },
-        {
-          "storage": "256GB",
-          "lowestPrice": 84990,
-          "highestPrice": 104995,
-          "offers": [
-            {
-              "store": "Lune",
-              "price": 84990,
-              "previousPrice": 84990,
-              "url": "https://lune.is/vara/samsung-galaxy-a57",
-              "priceChange": 0
-            },
-            {
-              "store": "Emobi",
-              "price": 99900,
-              "previousPrice": 99900,
-              "url": "https://emobi.is/vorur/samsung-galaxy-a57-5g-256gb/",
-              "priceChange": 0
-            },
-            {
-              "store": "Nova",
-              "price": 104990,
-              "previousPrice": 104990,
-              "url": "https://www.nova.is/barinn/vara/galaxy-a57-5g",
-              "priceChange": 0
-            },
-            {
-              "store": "ELKO",
-              "storeLogo": "https://products-media-cdn.aws-prod.ja.is/logos/300x200/elkologo_120x43_cilh6bp_65CrXBc.png",
-              "price": 104995,
-              "previousPrice": 104995,
-              "url": "https://ja.is/vara/samsung-galaxy-a57-5g-256gb-snjallsimi-fjolublar/12306045/",
-              "priceChange": 0
-            }
-          ]
-        }
-      ],
-      "history": [
-        {
-          "date": "2026-11-03",
-          "price": 79900
-        },
-        {
-          "date": "2026-11-04",
-          "price": 69990
-        },
-        {
-          "date": "2026-11-05",
-          "price": 69990
-        },
-        {
-          "date": "2026-11-06",
-          "price": 69990
-        }
-      ],
-      "trend": "DOWN",
-      "priceChangePercent": -12,
-      "priceChangeAmount": -9910,
-      "maxSavings": 20005
-    },
     "oppo-a6x": {
       "id": "oppo-a6x",
       "name": "OPPO A6x",
@@ -14855,575 +14704,61 @@
       "priceChangeAmount": -9000,
       "maxSavings": 24000
     },
-    "apple-iphone-13-endurnýjaður": {
-      "id": "apple-iphone-13-endurnýjaður",
-      "name": "Apple iPhone 13 (Endurnýjaður)",
-      "brand": "Apple",
-      "image": "https://products-media-cdn.aws-prod.ja.is/websites/elko/300x300/11623601_1785243107_zdvkxciy.jpg",
-      "lowestPrice": 55999,
-      "highestPrice": 69995,
-      "storesCount": 3,
-      "variantsCount": 1,
-      "stores": [
-        "ELKO",
-        "Coolshop",
-        "Nova"
-      ],
-      "variants": [
-        {
-          "storage": "128GB",
-          "lowestPrice": 55999,
-          "highestPrice": 69995,
-          "offers": [
-            {
-              "store": "Coolshop",
-              "price": 55999,
-              "previousPrice": 55999,
-              "url": "https://ja.is/vara/t1a-iphone-13-midnight-blue-128gb-very-good-condit/12601639/",
-              "priceChange": 0
-            },
-            {
-              "store": "Nova",
-              "price": 59990,
-              "previousPrice": 59990,
-              "url": "https://www.nova.is/barinn/vara/iphone-13-graen-graeja-refurbished",
-              "priceChange": 0
-            },
-            {
-              "store": "ELKO",
-              "price": 69994,
-              "previousPrice": 69994,
-              "url": "https://elko.is/vorur/uppgerdur-apple-iphone-13-128gb-svartur-premium-einkunn-396459/REFIPH13128MID",
-              "priceChange": 0
-            }
-          ]
-        }
-      ],
-      "history": [
-        {
-          "date": "2026-11-03",
-          "price": 55999
-        },
-        {
-          "date": "2026-11-04",
-          "price": 55999
-        },
-        {
-          "date": "2026-11-05",
-          "price": 55999
-        },
-        {
-          "date": "2026-11-06",
-          "price": 55999
-        }
-      ],
-      "trend": "SAME",
-      "priceChangePercent": 0,
-      "priceChangeAmount": 0,
-      "maxSavings": 13996
-    },
-    "emporia-joy": {
-      "id": "emporia-joy",
-      "name": "Emporia Joy",
-      "brand": "Aðrir",
-      "image": "https://products-media-cdn.aws-prod.ja.is/websites/elko/300x300/11546118_1752311057_rwvacuzl.jpg",
-      "lowestPrice": 19900,
-      "highestPrice": 21995,
-      "storesCount": 2,
-      "variantsCount": 1,
-      "stores": [
-        "ELKO",
-        "Emobi"
-      ],
-      "variants": [
-        {
-          "storage": "Standard",
-          "lowestPrice": 19900,
-          "highestPrice": 21995,
-          "offers": [
-            {
-              "store": "Emobi",
-              "price": 19900,
-              "previousPrice": 19900,
-              "url": "https://emobi.is/vorur/emporia-joy-lte-4g/",
-              "priceChange": 0
-            },
-            {
-              "store": "ELKO",
-              "price": 21995,
-              "previousPrice": 21995,
-              "url": "https://elko.is/vorur/emporia-joy-lte-samlokusimi-397459/EMPJOYLTERED",
-              "priceChange": 0
-            }
-          ]
-        }
-      ],
-      "history": [
-        {
-          "date": "2026-11-03",
-          "price": 19900
-        },
-        {
-          "date": "2026-11-04",
-          "price": 19900
-        },
-        {
-          "date": "2026-11-05",
-          "price": 19900
-        },
-        {
-          "date": "2026-11-06",
-          "price": 19900
-        }
-      ],
-      "trend": "SAME",
-      "priceChangePercent": 0,
-      "priceChangeAmount": 0,
-      "maxSavings": 2095
-    },
-    "samsung-galaxy-s26-ultra": {
-      "id": "samsung-galaxy-s26-ultra",
-      "name": "Samsung Galaxy S26 Ultra",
-      "brand": "Samsung",
-      "image": "https://products-media-cdn.aws-prod.ja.is/websites/elko/300x300/12201626_1793635626_borxgkmq.jpg",
-      "lowestPrice": 214990,
-      "highestPrice": 329995,
-      "storesCount": 7,
-      "variantsCount": 3,
-      "stores": [
-        "ELKO",
-        "Sýn",
-        "Nova",
-        "Lune",
-        "Emobi",
-        "Tölvulistinn",
-        "Síminn"
-      ],
-      "variants": [
-        {
-          "storage": "256GB",
-          "lowestPrice": 214990,
-          "highestPrice": 254995,
-          "offers": [
-            {
-              "store": "Lune",
-              "price": 214990,
-              "previousPrice": 254900,
-              "url": "https://lune.is/vara/samsung-galaxy-s26-ultra",
-              "priceChange": -39910
-            },
-            {
-              "store": "Tölvulistinn",
-              "price": 249995,
-              "previousPrice": 249995,
-              "url": "https://tl.is/samsung-galaxy-s26-ultra.html",
-              "priceChange": 0
-            },
-            {
-              "store": "Emobi",
-              "price": 254900,
-              "previousPrice": 254900,
-              "url": "https://emobi.is/vorur/samsung-galaxy-s26-ultra-256gb/",
-              "priceChange": 0
-            },
-            {
-              "store": "Nova",
-              "price": 254990,
-              "previousPrice": 254990,
-              "url": "https://www.nova.is/barinn/vara/galaxy-s26-ultra",
-              "priceChange": 0
-            },
-            {
-              "store": "Sýn",
-              "price": 254990,
-              "previousPrice": 254990,
-              "url": "https://www.syn.is/vefverslun/um-voru/45683",
-              "priceChange": 0
-            },
-            {
-              "store": "Síminn",
-              "price": 254990,
-              "previousPrice": 254990,
-              "url": "https://vefverslun.siminn.is/is/galaxy-s26-ultra",
-              "priceChange": 0
-            },
-            {
-              "store": "ELKO",
-              "price": 254995,
-              "previousPrice": 254995,
-              "url": "https://elko.is/vorur/samsung-galaxy-s26-ultra-256gb-snjallsimi-422621/SMS948B256BLA",
-              "priceChange": 0
-            }
-          ]
-        },
-        {
-          "storage": "512GB",
-          "lowestPrice": 234990,
-          "highestPrice": 279995,
-          "offers": [
-            {
-              "store": "Lune",
-              "price": 234990,
-              "previousPrice": 234990,
-              "url": "https://lune.is/vara/samsung-galaxy-s26-ultra",
-              "priceChange": 0
-            },
-            {
-              "store": "Emobi",
-              "price": 274900,
-              "previousPrice": 274900,
-              "url": "https://emobi.is/vorur/samsung-galaxy-s26-ultra-512gb/",
-              "priceChange": 0
-            },
-            {
-              "store": "Nova",
-              "price": 279990,
-              "previousPrice": 279990,
-              "url": "https://www.nova.is/barinn/vara/galaxy-s26-ultra",
-              "priceChange": 0
-            },
-            {
-              "store": "ELKO",
-              "storeLogo": "https://products-media-cdn.aws-prod.ja.is/logos/300x200/elkologo_120x43_cilh6bp_65CrXBc.png",
-              "price": 279994,
-              "previousPrice": 279994,
-              "url": "https://ja.is/vara/samsung-galaxy-s26-ultra-512gb-white/12201627/",
-              "priceChange": 0
-            }
-          ]
-        },
-        {
-          "storage": "1TB",
-          "lowestPrice": 279990,
-          "highestPrice": 329995,
-          "offers": [
-            {
-              "store": "Lune",
-              "price": 279990,
-              "previousPrice": 279990,
-              "url": "https://lune.is/vara/samsung-galaxy-s26-ultra",
-              "priceChange": 0
-            },
-            {
-              "store": "Emobi",
-              "price": 324900,
-              "previousPrice": 324900,
-              "url": "https://emobi.is/vorur/samsung-galaxy-s26-ultra-1tb/",
-              "priceChange": 0
-            },
-            {
-              "store": "Nova",
-              "price": 329990,
-              "previousPrice": 329990,
-              "url": "https://www.nova.is/barinn/vara/galaxy-s26-ultra",
-              "priceChange": 0
-            },
-            {
-              "store": "ELKO",
-              "price": 329995,
-              "previousPrice": 329995,
-              "url": "https://elko.is/vorur/samsung-galaxy-s26-ultra-1tb-422645/SMS948B1TBBLA",
-              "priceChange": 0
-            }
-          ]
-        }
-      ],
-      "history": [
-        {
-          "date": "2026-11-03",
-          "price": 254900
-        },
-        {
-          "date": "2026-11-04",
-          "price": 214990
-        },
-        {
-          "date": "2026-11-05",
-          "price": 214990
-        },
-        {
-          "date": "2026-11-06",
-          "price": 214990
-        }
-      ],
-      "trend": "DOWN",
-      "priceChangePercent": -16,
-      "priceChangeAmount": -39910,
-      "maxSavings": 50005
-    },
-    "samsung-galaxy-s25-plus": {
-      "id": "samsung-galaxy-s25-plus",
-      "name": "Samsung Galaxy S25 Plus",
-      "brand": "Samsung",
-      "image": "https://products-media-cdn.aws-prod.ja.is/websites/elko/300x300/11113774_1756887747_npunarnk.jpg",
-      "lowestPrice": 93990,
-      "highestPrice": 209994,
-      "storesCount": 3,
-      "variantsCount": 1,
-      "stores": [
-        "ELKO",
-        "Nova",
-        "IcePhone"
-      ],
-      "variants": [
-        {
-          "storage": "512GB",
-          "lowestPrice": 93990,
-          "highestPrice": 209994,
-          "offers": [
-            {
-              "store": "IcePhone",
-              "price": 93990,
-              "previousPrice": 209990,
-              "url": "https://vefverslun.icephone.is/product/galaxy-s25-plus-5g/",
-              "priceChange": -116000
-            },
-            {
-              "store": "Nova",
-              "price": 209990,
-              "previousPrice": 209990,
-              "url": "https://www.nova.is/barinn/vara/galaxy-s25plus",
-              "priceChange": 0
-            },
-            {
-              "store": "ELKO",
-              "price": 209994,
-              "previousPrice": 209994,
-              "url": "https://elko.is/vorur/samsung-galaxy-s25-snjallsimi-379670/SMS936512SIL",
-              "priceChange": 0
-            }
-          ]
-        }
-      ],
-      "history": [
-        {
-          "date": "2026-11-03",
-          "price": 209990
-        },
-        {
-          "date": "2026-11-04",
-          "price": 209990
-        },
-        {
-          "date": "2026-11-05",
-          "price": 93990
-        },
-        {
-          "date": "2026-11-06",
-          "price": 93990
-        }
-      ],
-      "trend": "DOWN",
-      "priceChangePercent": -55,
-      "priceChangeAmount": -116000,
-      "maxSavings": 116004
-    },
-    "apple-iphone-17-pro-max": {
-      "id": "apple-iphone-17-pro-max",
-      "name": "Apple iPhone 17 Pro Max",
-      "brand": "Apple",
-      "image": "https://products-media-cdn.aws-prod.ja.is/websites/elko/300x300/11723046_1758270652_vdymvwni.jpg",
-      "lowestPrice": 206991,
-      "highestPrice": 269990,
-      "storesCount": 8,
-      "variantsCount": 2,
-      "stores": [
-        "ELKO",
-        "Sýn",
-        "Nova",
-        "Lune",
-        "Emobi",
-        "Tölvulistinn",
-        "Epli",
-        "Síminn"
-      ],
-      "variants": [
-        {
-          "storage": "256GB",
-          "lowestPrice": 206991,
-          "highestPrice": 229995,
-          "offers": [
-            {
-              "store": "Lune",
-              "price": 206991,
-              "previousPrice": 209291,
-              "url": "https://lune.is/vara/iphone-17-pro-max",
-              "priceChange": -2300
-            },
-            {
-              "store": "Síminn",
-              "price": 209291,
-              "previousPrice": 229990,
-              "url": "https://vefverslun.siminn.is/is/iphone-17-pro-max",
-              "priceChange": -20699
-            },
-            {
-              "store": "Epli",
-              "price": 209990,
-              "previousPrice": 209990,
-              "url": "https://www.epli.is/iphone/iphone-17-pro/",
-              "priceChange": 0
-            },
-            {
-              "store": "ELKO",
-              "price": 209995,
-              "previousPrice": 209995,
-              "url": "https://elko.is/vorur/apple-iphone-17-pro-max-405421/MFYP4",
-              "priceChange": 0
-            },
-            {
-              "store": "Emobi",
-              "price": 229900,
-              "previousPrice": 229900,
-              "url": "https://emobi.is/vorur/iphone-17-pro-max-256gb/",
-              "priceChange": 0
-            },
-            {
-              "store": "Nova",
-              "price": 229990,
-              "previousPrice": 229990,
-              "url": "https://www.nova.is/barinn/vara/iphone-17-pro-max",
-              "priceChange": 0
-            },
-            {
-              "store": "Sýn",
-              "price": 229990,
-              "previousPrice": 229990,
-              "url": "https://www.syn.is/vefverslun/um-voru/MFYM4QN%2FA",
-              "priceChange": 0
-            },
-            {
-              "store": "Tölvulistinn",
-              "price": 229995,
-              "previousPrice": 229995,
-              "url": "https://tl.is/apple-iphone-17-pro-max-256gb-silfur.html",
-              "priceChange": 0
-            }
-          ]
-        },
-        {
-          "storage": "512GB",
-          "lowestPrice": 249990,
-          "highestPrice": 269990,
-          "offers": [
-            {
-              "store": "Lune",
-              "price": 249990,
-              "previousPrice": 249990,
-              "url": "https://lune.is/vara/iphone-17-pro-max",
-              "priceChange": 0
-            },
-            {
-              "store": "Emobi",
-              "price": 269900,
-              "previousPrice": 269900,
-              "url": "https://emobi.is/vorur/iphone-17-pro-max-512gb/",
-              "priceChange": 0
-            },
-            {
-              "store": "Nova",
-              "price": 269990,
-              "previousPrice": 269990,
-              "url": "https://www.nova.is/barinn/vara/iphone-17-pro-max",
-              "priceChange": 0
-            }
-          ]
-        }
-      ],
-      "history": [
-        {
-          "date": "2026-11-03",
-          "price": 209291
-        },
-        {
-          "date": "2026-11-04",
-          "price": 206991
-        },
-        {
-          "date": "2026-11-05",
-          "price": 206991
-        },
-        {
-          "date": "2026-11-06",
-          "price": 206991
-        }
-      ],
-      "trend": "DOWN",
-      "priceChangePercent": -1,
-      "priceChangeAmount": -2300,
-      "maxSavings": 23004
-    },
-    "samsung-galaxy-s25": {
-      "id": "samsung-galaxy-s25",
-      "name": "Samsung Galaxy S25",
-      "brand": "Samsung",
-      "image": "https://products-media-cdn.aws-prod.ja.is/websites/elko/300x300/11609207_1792097416_lqfstupn.jpg",
-      "lowestPrice": 95990,
-      "highestPrice": 159995,
+    "xiaomi-17": {
+      "id": "xiaomi-17",
+      "name": "Xiaomi 17",
+      "brand": "Xiaomi",
+      "image": "https://products-media-cdn.aws-prod.ja.is/websites/mi-budin/300x300/12399644_1781619575_rwflnqoi.png",
+      "lowestPrice": 189990,
+      "highestPrice": 189994,
       "storesCount": 5,
-      "variantsCount": 2,
+      "variantsCount": 1,
       "stores": [
+        "Mi búðin",
+        "Sýn",
         "ELKO",
         "Nova",
-        "Lune",
-        "IcePhone",
         "Síminn"
       ],
       "variants": [
         {
-          "storage": "128GB",
-          "lowestPrice": 95990,
-          "highestPrice": 159990,
+          "storage": "512GB",
+          "lowestPrice": 189990,
+          "highestPrice": 189994,
           "offers": [
             {
-              "store": "IcePhone",
-              "price": 95990,
-              "previousPrice": 149990,
-              "url": "https://vefverslun.icephone.is/product/galaxy-s25-5g/",
-              "priceChange": -54000
+              "store": "Mi búðin",
+              "price": 189990,
+              "previousPrice": 189990,
+              "url": "https://mibudin.is/vara/xiaomi-17-leica-snjallsimi/",
+              "priceChange": 0
             },
             {
-              "store": "Lune",
-              "price": 119990,
-              "previousPrice": 119990,
-              "url": "https://lune.is/vara/samsung-galaxy-s25",
+              "store": "Sýn",
+              "price": 189990,
+              "previousPrice": 189990,
+              "url": "https://www.syn.is/vefverslun/um-voru/72971",
               "priceChange": 0
             },
             {
               "store": "Nova",
-              "price": 149990,
-              "previousPrice": 149990,
-              "url": "https://ja.is/vara/galaxy-s25/11113794/",
-              "priceChange": 0
-            },
-            {
-              "store": "ELKO",
-              "storeLogo": "https://products-media-cdn.aws-prod.ja.is/logos/300x200/elkologo_120x43_cilh6bp_65CrXBc.png",
-              "price": 149994,
-              "previousPrice": 149994,
-              "url": "https://ja.is/vara/samsung-galaxy-s25-128gb-snjallsimi-dokkblar/11224638/",
+              "price": 189990,
+              "previousPrice": 189990,
+              "url": "https://www.nova.is/barinn/vara/xiaomi-17",
               "priceChange": 0
             },
             {
               "store": "Síminn",
-              "price": 159990,
-              "previousPrice": 159990,
-              "url": "https://vefverslun.siminn.is/is/galaxy-s25",
+              "price": 189990,
+              "previousPrice": 189990,
+              "url": "https://vefverslun.siminn.is/is/xiaomi-17",
               "priceChange": 0
-            }
-          ]
-        },
-        {
-          "storage": "256GB",
-          "lowestPrice": 159995,
-          "highestPrice": 159995,
-          "offers": [
+            },
             {
               "store": "ELKO",
-              "storeLogo": "https://products-media-cdn.aws-prod.ja.is/logos/300x200/elkologo_120x43_cilh6bp_65CrXBc.png",
-              "price": 159995,
-              "previousPrice": 159995,
-              "url": "https://ja.is/vara/samsung-galaxy-s25-256gb-snjallsimi-svartur/11605574/",
+              "price": 189994,
+              "previousPrice": 189994,
+              "url": "https://elko.is/vorur/xiaomi-17-snjallsimi-512gb-425628/XIA1712512BLU",
               "priceChange": 0
             }
           ]
@@ -15432,25 +14767,25 @@
       "history": [
         {
           "date": "2026-11-03",
-          "price": 149990
+          "price": 189990
         },
         {
           "date": "2026-11-04",
-          "price": 119990
+          "price": 189990
         },
         {
           "date": "2026-11-05",
-          "price": 95990
+          "price": 189990
         },
         {
           "date": "2026-11-06",
-          "price": 95990
+          "price": 189990
         }
       ],
-      "trend": "DOWN",
-      "priceChangePercent": -36,
-      "priceChangeAmount": -54000,
-      "maxSavings": 64000
+      "trend": "SAME",
+      "priceChangePercent": 0,
+      "priceChangeAmount": 0,
+      "maxSavings": 4
     },
     "apple-iphone-17": {
       "id": "apple-iphone-17",
@@ -15654,6 +14989,723 @@
       "priceChangePercent": 0,
       "priceChangeAmount": 0,
       "maxSavings": 5
+    },
+    "samsung-galaxy-a57": {
+      "id": "samsung-galaxy-a57",
+      "name": "Samsung Galaxy A57",
+      "brand": "Samsung",
+      "image": "https://products-media-cdn.aws-prod.ja.is/websites/elko/300x300/12306041_1792097418_mmnxecxo.jpg",
+      "lowestPrice": 69990,
+      "highestPrice": 104995,
+      "storesCount": 7,
+      "variantsCount": 2,
+      "stores": [
+        "ELKO",
+        "Sýn",
+        "Nova",
+        "Lune",
+        "Emobi",
+        "Tölvulistinn",
+        "Síminn"
+      ],
+      "variants": [
+        {
+          "storage": "128GB",
+          "lowestPrice": 69990,
+          "highestPrice": 84995,
+          "offers": [
+            {
+              "store": "Lune",
+              "price": 69990,
+              "previousPrice": 79900,
+              "url": "https://lune.is/vara/samsung-galaxy-a57",
+              "priceChange": -9910
+            },
+            {
+              "store": "Emobi",
+              "price": 79900,
+              "previousPrice": 79900,
+              "url": "https://emobi.is/vorur/samsung-galaxy-a57-5g-128gb/",
+              "priceChange": 0
+            },
+            {
+              "store": "Tölvulistinn",
+              "price": 79995,
+              "previousPrice": 79995,
+              "url": "https://tl.is/samsung-galaxy-a57.html",
+              "priceChange": 0
+            },
+            {
+              "store": "Nova",
+              "price": 84990,
+              "previousPrice": 84990,
+              "url": "https://www.nova.is/barinn/vara/galaxy-a57-5g",
+              "priceChange": 0
+            },
+            {
+              "store": "Sýn",
+              "price": 84990,
+              "previousPrice": 84990,
+              "url": "https://www.syn.is/vefverslun/um-voru/45828",
+              "priceChange": 0
+            },
+            {
+              "store": "Síminn",
+              "price": 84990,
+              "previousPrice": 84990,
+              "url": "https://vefverslun.siminn.is/is/galaxy-a57",
+              "priceChange": 0
+            },
+            {
+              "store": "ELKO",
+              "price": 84995,
+              "previousPrice": 84995,
+              "url": "https://elko.is/vorur/samsung-galaxy-a57-5g-snjallsimi-427943/SMA576B128GRA",
+              "priceChange": 0
+            }
+          ]
+        },
+        {
+          "storage": "256GB",
+          "lowestPrice": 84990,
+          "highestPrice": 104995,
+          "offers": [
+            {
+              "store": "Lune",
+              "price": 84990,
+              "previousPrice": 84990,
+              "url": "https://lune.is/vara/samsung-galaxy-a57",
+              "priceChange": 0
+            },
+            {
+              "store": "Emobi",
+              "price": 99900,
+              "previousPrice": 99900,
+              "url": "https://emobi.is/vorur/samsung-galaxy-a57-5g-256gb/",
+              "priceChange": 0
+            },
+            {
+              "store": "Nova",
+              "price": 104990,
+              "previousPrice": 104990,
+              "url": "https://www.nova.is/barinn/vara/galaxy-a57-5g",
+              "priceChange": 0
+            },
+            {
+              "store": "ELKO",
+              "storeLogo": "https://products-media-cdn.aws-prod.ja.is/logos/300x200/elkologo_120x43_cilh6bp_65CrXBc.png",
+              "price": 104995,
+              "previousPrice": 104995,
+              "url": "https://ja.is/vara/samsung-galaxy-a57-5g-256gb-snjallsimi-fjolublar/12306045/",
+              "priceChange": 0
+            }
+          ]
+        }
+      ],
+      "history": [
+        {
+          "date": "2026-11-03",
+          "price": 79900
+        },
+        {
+          "date": "2026-11-04",
+          "price": 69990
+        },
+        {
+          "date": "2026-11-05",
+          "price": 69990
+        },
+        {
+          "date": "2026-11-06",
+          "price": 69990
+        }
+      ],
+      "trend": "DOWN",
+      "priceChangePercent": -12,
+      "priceChangeAmount": -9910,
+      "maxSavings": 20005
+    },
+    "apple-iphone-13-endurnýjaður": {
+      "id": "apple-iphone-13-endurnýjaður",
+      "name": "Apple iPhone 13 (Endurnýjaður)",
+      "brand": "Apple",
+      "image": "https://products-media-cdn.aws-prod.ja.is/websites/elko/300x300/11623601_1785243107_zdvkxciy.jpg",
+      "lowestPrice": 55999,
+      "highestPrice": 69995,
+      "storesCount": 3,
+      "variantsCount": 1,
+      "stores": [
+        "ELKO",
+        "Coolshop",
+        "Nova"
+      ],
+      "variants": [
+        {
+          "storage": "128GB",
+          "lowestPrice": 55999,
+          "highestPrice": 69995,
+          "offers": [
+            {
+              "store": "Coolshop",
+              "price": 55999,
+              "previousPrice": 55999,
+              "url": "https://ja.is/vara/t1a-iphone-13-midnight-blue-128gb-very-good-condit/12601639/",
+              "priceChange": 0
+            },
+            {
+              "store": "Nova",
+              "price": 59990,
+              "previousPrice": 59990,
+              "url": "https://www.nova.is/barinn/vara/iphone-13-graen-graeja-refurbished",
+              "priceChange": 0
+            },
+            {
+              "store": "ELKO",
+              "price": 69994,
+              "previousPrice": 69994,
+              "url": "https://elko.is/vorur/uppgerdur-apple-iphone-13-128gb-svartur-premium-einkunn-396459/REFIPH13128MID",
+              "priceChange": 0
+            }
+          ]
+        }
+      ],
+      "history": [
+        {
+          "date": "2026-11-03",
+          "price": 55999
+        },
+        {
+          "date": "2026-11-04",
+          "price": 55999
+        },
+        {
+          "date": "2026-11-05",
+          "price": 55999
+        },
+        {
+          "date": "2026-11-06",
+          "price": 55999
+        }
+      ],
+      "trend": "SAME",
+      "priceChangePercent": 0,
+      "priceChangeAmount": 0,
+      "maxSavings": 13996
+    },
+    "emporia-joy": {
+      "id": "emporia-joy",
+      "name": "Emporia Joy",
+      "brand": "Aðrir",
+      "image": "https://products-media-cdn.aws-prod.ja.is/websites/elko/300x300/11546118_1752311057_rwvacuzl.jpg",
+      "lowestPrice": 19900,
+      "highestPrice": 21995,
+      "storesCount": 2,
+      "variantsCount": 1,
+      "stores": [
+        "ELKO",
+        "Emobi"
+      ],
+      "variants": [
+        {
+          "storage": "Standard",
+          "lowestPrice": 19900,
+          "highestPrice": 21995,
+          "offers": [
+            {
+              "store": "Emobi",
+              "price": 19900,
+              "previousPrice": 19900,
+              "url": "https://emobi.is/vorur/emporia-joy-lte-4g/",
+              "priceChange": 0
+            },
+            {
+              "store": "ELKO",
+              "price": 21995,
+              "previousPrice": 21995,
+              "url": "https://elko.is/vorur/emporia-joy-lte-samlokusimi-397459/EMPJOYLTERED",
+              "priceChange": 0
+            }
+          ]
+        }
+      ],
+      "history": [
+        {
+          "date": "2026-11-03",
+          "price": 19900
+        },
+        {
+          "date": "2026-11-04",
+          "price": 19900
+        },
+        {
+          "date": "2026-11-05",
+          "price": 19900
+        },
+        {
+          "date": "2026-11-06",
+          "price": 19900
+        }
+      ],
+      "trend": "SAME",
+      "priceChangePercent": 0,
+      "priceChangeAmount": 0,
+      "maxSavings": 2095
+    },
+    "samsung-galaxy-s25-plus": {
+      "id": "samsung-galaxy-s25-plus",
+      "name": "Samsung Galaxy S25 Plus",
+      "brand": "Samsung",
+      "image": "https://products-media-cdn.aws-prod.ja.is/websites/elko/300x300/11113774_1756887747_npunarnk.jpg",
+      "lowestPrice": 93990,
+      "highestPrice": 209994,
+      "storesCount": 3,
+      "variantsCount": 1,
+      "stores": [
+        "ELKO",
+        "Nova",
+        "IcePhone"
+      ],
+      "variants": [
+        {
+          "storage": "512GB",
+          "lowestPrice": 93990,
+          "highestPrice": 209994,
+          "offers": [
+            {
+              "store": "IcePhone",
+              "price": 93990,
+              "previousPrice": 209990,
+              "url": "https://vefverslun.icephone.is/product/galaxy-s25-plus-5g/",
+              "priceChange": -116000
+            },
+            {
+              "store": "Nova",
+              "price": 209990,
+              "previousPrice": 209990,
+              "url": "https://www.nova.is/barinn/vara/galaxy-s25plus",
+              "priceChange": 0
+            },
+            {
+              "store": "ELKO",
+              "price": 209994,
+              "previousPrice": 209994,
+              "url": "https://elko.is/vorur/samsung-galaxy-s25-snjallsimi-379670/SMS936512SIL",
+              "priceChange": 0
+            }
+          ]
+        }
+      ],
+      "history": [
+        {
+          "date": "2026-11-03",
+          "price": 209990
+        },
+        {
+          "date": "2026-11-04",
+          "price": 209990
+        },
+        {
+          "date": "2026-11-05",
+          "price": 93990
+        },
+        {
+          "date": "2026-11-06",
+          "price": 93990
+        }
+      ],
+      "trend": "DOWN",
+      "priceChangePercent": -55,
+      "priceChangeAmount": -116000,
+      "maxSavings": 116004
+    },
+    "samsung-galaxy-z-fold8": {
+      "id": "samsung-galaxy-z-fold8",
+      "name": "Samsung Galaxy Z Fold8",
+      "brand": "Samsung",
+      "image": "https://products-media-cdn.aws-prod.ja.is/websites/elko/300x300/12759747_1793635631_glrpojvq.jpg",
+      "lowestPrice": 289990,
+      "highestPrice": 459995,
+      "storesCount": 7,
+      "variantsCount": 3,
+      "stores": [
+        "ELKO",
+        "Sýn",
+        "Nova",
+        "Lune",
+        "Emobi",
+        "Tölvulistinn",
+        "Síminn"
+      ],
+      "variants": [
+        {
+          "storage": "256GB",
+          "lowestPrice": 289990,
+          "highestPrice": 349995,
+          "offers": [
+            {
+              "store": "Lune",
+              "price": 289990,
+              "previousPrice": 299900,
+              "url": "https://lune.is/vara/samsung-galaxy-z-fold8",
+              "priceChange": -9910
+            },
+            {
+              "store": "Emobi",
+              "price": 299900,
+              "previousPrice": 349900,
+              "url": "https://emobi.is/vorur/samsung-galaxy-z-fold8-256gb/",
+              "priceChange": -50000
+            },
+            {
+              "store": "Tölvulistinn",
+              "price": 299995,
+              "previousPrice": 299995,
+              "url": "https://tl.is/samsung-galaxy-z-fold8-256gb-grar-ee.html",
+              "priceChange": 0
+            },
+            {
+              "store": "Nova",
+              "price": 339990,
+              "previousPrice": 339990,
+              "url": "https://www.nova.is/barinn/vara/galaxy-zfold8",
+              "priceChange": 0
+            },
+            {
+              "store": "Síminn",
+              "price": 339990,
+              "previousPrice": 339990,
+              "url": "https://vefverslun.siminn.is/is/galaxy-fold-8",
+              "priceChange": 0
+            },
+            {
+              "store": "Sýn",
+              "price": 349990,
+              "previousPrice": 349990,
+              "url": "https://www.syn.is/vefverslun/um-voru/46002",
+              "priceChange": 0
+            },
+            {
+              "store": "ELKO",
+              "price": 349995,
+              "previousPrice": 349995,
+              "url": "https://elko.is/vorur/samsung-galaxy-z-fold8-5256b-439108/SMF971B256GRA",
+              "priceChange": 0
+            }
+          ]
+        },
+        {
+          "storage": "512GB",
+          "lowestPrice": 319990,
+          "highestPrice": 379995,
+          "offers": [
+            {
+              "store": "Lune",
+              "price": 319990,
+              "previousPrice": 319990,
+              "url": "https://lune.is/vara/samsung-galaxy-z-fold8",
+              "priceChange": 0
+            },
+            {
+              "store": "Emobi",
+              "price": 324900,
+              "previousPrice": 374900,
+              "url": "https://emobi.is/vorur/samsung-galaxy-z-fold8-512gb/",
+              "priceChange": -50000
+            },
+            {
+              "store": "Nova",
+              "price": 379990,
+              "previousPrice": 379990,
+              "url": "https://www.nova.is/barinn/vara/galaxy-zfold8",
+              "priceChange": 0
+            },
+            {
+              "store": "ELKO",
+              "price": 379995,
+              "previousPrice": 379995,
+              "url": "https://elko.is/vorur/samsung-galaxy-z-fold8-512gb-hvitur-439110/SMF971B512GRA",
+              "priceChange": 0
+            }
+          ]
+        },
+        {
+          "storage": "1TB",
+          "lowestPrice": 459990,
+          "highestPrice": 459995,
+          "offers": [
+            {
+              "store": "Nova",
+              "price": 459990,
+              "previousPrice": 459990,
+              "url": "https://www.nova.is/barinn/vara/galaxy-zfold8",
+              "priceChange": 0
+            },
+            {
+              "store": "ELKO",
+              "price": 459995,
+              "previousPrice": 459995,
+              "url": "https://elko.is/vorur/samsung-galaxy-z-fold8-1tb-svartur-439118/SMF971B1TBGRA",
+              "priceChange": 0
+            }
+          ]
+        }
+      ],
+      "history": [
+        {
+          "date": "2026-11-03",
+          "price": 299900
+        },
+        {
+          "date": "2026-11-04",
+          "price": 289990
+        },
+        {
+          "date": "2026-11-05",
+          "price": 289990
+        },
+        {
+          "date": "2026-11-06",
+          "price": 289990
+        }
+      ],
+      "trend": "DOWN",
+      "priceChangePercent": -3,
+      "priceChangeAmount": -9910,
+      "maxSavings": 60005
+    },
+    "apple-iphone-17-pro-max": {
+      "id": "apple-iphone-17-pro-max",
+      "name": "Apple iPhone 17 Pro Max",
+      "brand": "Apple",
+      "image": "https://products-media-cdn.aws-prod.ja.is/websites/elko/300x300/11723046_1758270652_vdymvwni.jpg",
+      "lowestPrice": 206991,
+      "highestPrice": 269990,
+      "storesCount": 8,
+      "variantsCount": 2,
+      "stores": [
+        "ELKO",
+        "Sýn",
+        "Nova",
+        "Lune",
+        "Emobi",
+        "Tölvulistinn",
+        "Epli",
+        "Síminn"
+      ],
+      "variants": [
+        {
+          "storage": "256GB",
+          "lowestPrice": 206991,
+          "highestPrice": 229995,
+          "offers": [
+            {
+              "store": "Lune",
+              "price": 206991,
+              "previousPrice": 209291,
+              "url": "https://lune.is/vara/iphone-17-pro-max",
+              "priceChange": -2300
+            },
+            {
+              "store": "Síminn",
+              "price": 209291,
+              "previousPrice": 229990,
+              "url": "https://vefverslun.siminn.is/is/iphone-17-pro-max",
+              "priceChange": -20699
+            },
+            {
+              "store": "Epli",
+              "price": 209990,
+              "previousPrice": 209990,
+              "url": "https://www.epli.is/iphone/iphone-17-pro/",
+              "priceChange": 0
+            },
+            {
+              "store": "ELKO",
+              "price": 209995,
+              "previousPrice": 209995,
+              "url": "https://elko.is/vorur/apple-iphone-17-pro-max-405421/MFYP4",
+              "priceChange": 0
+            },
+            {
+              "store": "Emobi",
+              "price": 229900,
+              "previousPrice": 229900,
+              "url": "https://emobi.is/vorur/iphone-17-pro-max-256gb/",
+              "priceChange": 0
+            },
+            {
+              "store": "Nova",
+              "price": 229990,
+              "previousPrice": 229990,
+              "url": "https://www.nova.is/barinn/vara/iphone-17-pro-max",
+              "priceChange": 0
+            },
+            {
+              "store": "Sýn",
+              "price": 229990,
+              "previousPrice": 229990,
+              "url": "https://www.syn.is/vefverslun/um-voru/MFYM4QN%2FA",
+              "priceChange": 0
+            },
+            {
+              "store": "Tölvulistinn",
+              "price": 229995,
+              "previousPrice": 229995,
+              "url": "https://tl.is/apple-iphone-17-pro-max-256gb-silfur.html",
+              "priceChange": 0
+            }
+          ]
+        },
+        {
+          "storage": "512GB",
+          "lowestPrice": 249990,
+          "highestPrice": 269990,
+          "offers": [
+            {
+              "store": "Lune",
+              "price": 249990,
+              "previousPrice": 249990,
+              "url": "https://lune.is/vara/iphone-17-pro-max",
+              "priceChange": 0
+            },
+            {
+              "store": "Emobi",
+              "price": 269900,
+              "previousPrice": 269900,
+              "url": "https://emobi.is/vorur/iphone-17-pro-max-512gb/",
+              "priceChange": 0
+            },
+            {
+              "store": "Nova",
+              "price": 269990,
+              "previousPrice": 269990,
+              "url": "https://www.nova.is/barinn/vara/iphone-17-pro-max",
+              "priceChange": 0
+            }
+          ]
+        }
+      ],
+      "history": [
+        {
+          "date": "2026-11-03",
+          "price": 209291
+        },
+        {
+          "date": "2026-11-04",
+          "price": 206991
+        },
+        {
+          "date": "2026-11-05",
+          "price": 206991
+        },
+        {
+          "date": "2026-11-06",
+          "price": 206991
+        }
+      ],
+      "trend": "DOWN",
+      "priceChangePercent": -1,
+      "priceChangeAmount": -2300,
+      "maxSavings": 23004
+    },
+    "samsung-galaxy-s25": {
+      "id": "samsung-galaxy-s25",
+      "name": "Samsung Galaxy S25",
+      "brand": "Samsung",
+      "image": "https://products-media-cdn.aws-prod.ja.is/websites/elko/300x300/11609207_1792097416_lqfstupn.jpg",
+      "lowestPrice": 95990,
+      "highestPrice": 159995,
+      "storesCount": 5,
+      "variantsCount": 2,
+      "stores": [
+        "ELKO",
+        "Nova",
+        "Lune",
+        "IcePhone",
+        "Síminn"
+      ],
+      "variants": [
+        {
+          "storage": "128GB",
+          "lowestPrice": 95990,
+          "highestPrice": 159990,
+          "offers": [
+            {
+              "store": "IcePhone",
+              "price": 95990,
+              "previousPrice": 149990,
+              "url": "https://vefverslun.icephone.is/product/galaxy-s25-5g/",
+              "priceChange": -54000
+            },
+            {
+              "store": "Lune",
+              "price": 119990,
+              "previousPrice": 119990,
+              "url": "https://lune.is/vara/samsung-galaxy-s25",
+              "priceChange": 0
+            },
+            {
+              "store": "ELKO",
+              "storeLogo": "https://products-media-cdn.aws-prod.ja.is/logos/300x200/elkologo_120x43_cilh6bp_65CrXBc.png",
+              "price": 149994,
+              "previousPrice": 149994,
+              "url": "https://ja.is/vara/samsung-galaxy-s25-128gb-snjallsimi-dokkblar/11224638/",
+              "priceChange": 0
+            },
+            {
+              "store": "Nova",
+              "price": 159990,
+              "previousPrice": 149990,
+              "url": "https://ja.is/vara/galaxy-s25/13119492/",
+              "priceChange": 10000
+            },
+            {
+              "store": "Síminn",
+              "price": 159990,
+              "previousPrice": 159990,
+              "url": "https://vefverslun.siminn.is/is/galaxy-s25",
+              "priceChange": 0
+            }
+          ]
+        },
+        {
+          "storage": "256GB",
+          "lowestPrice": 159995,
+          "highestPrice": 159995,
+          "offers": [
+            {
+              "store": "ELKO",
+              "storeLogo": "https://products-media-cdn.aws-prod.ja.is/logos/300x200/elkologo_120x43_cilh6bp_65CrXBc.png",
+              "price": 159995,
+              "previousPrice": 159995,
+              "url": "https://ja.is/vara/samsung-galaxy-s25-256gb-snjallsimi-svartur/11605574/",
+              "priceChange": 0
+            }
+          ]
+        }
+      ],
+      "history": [
+        {
+          "date": "2026-11-03",
+          "price": 149990
+        },
+        {
+          "date": "2026-11-04",
+          "price": 119990
+        },
+        {
+          "date": "2026-11-05",
+          "price": 95990
+        },
+        {
+          "date": "2026-11-06",
+          "price": 95990
+        }
+      ],
+      "trend": "DOWN",
+      "priceChangePercent": -36,
+      "priceChangeAmount": -54000,
+      "maxSavings": 64000
     },
     "xiaomi-17t-pro": {
       "id": "xiaomi-17t-pro",
@@ -16406,89 +16458,6 @@
       "priceChangeAmount": -44910,
       "maxSavings": 70005
     },
-    "xiaomi-17-ultra": {
-      "id": "xiaomi-17-ultra",
-      "name": "Xiaomi 17 Ultra",
-      "brand": "Xiaomi",
-      "image": "https://products-media-cdn.aws-prod.ja.is/websites/elko/300x300/12250578_1776083428_ezlimqnf.jpg",
-      "lowestPrice": 259990,
-      "highestPrice": 259994,
-      "storesCount": 5,
-      "variantsCount": 1,
-      "stores": [
-        "ELKO",
-        "Sýn",
-        "Mi búðin",
-        "Nova",
-        "Síminn"
-      ],
-      "variants": [
-        {
-          "storage": "512GB",
-          "lowestPrice": 259990,
-          "highestPrice": 259994,
-          "offers": [
-            {
-              "store": "Sýn",
-              "price": 259990,
-              "previousPrice": 219990,
-              "url": "https://www.syn.is/vefverslun/um-voru/72990",
-              "priceChange": 40000
-            },
-            {
-              "store": "Mi búðin",
-              "price": 259990,
-              "previousPrice": 219990,
-              "url": "https://mibudin.is/vara/xiaomi-17-ultra-leica-snjallsimi/",
-              "priceChange": 40000
-            },
-            {
-              "store": "Nova",
-              "price": 259990,
-              "previousPrice": 219990,
-              "url": "https://www.nova.is/barinn/vara/xiaomi-17ultra",
-              "priceChange": 40000
-            },
-            {
-              "store": "Síminn",
-              "price": 259990,
-              "previousPrice": 219990,
-              "url": "https://vefverslun.siminn.is/is/xiaomi-17-ultra",
-              "priceChange": 40000
-            },
-            {
-              "store": "ELKO",
-              "price": 259994,
-              "previousPrice": 259994,
-              "url": "https://elko.is/vorur/xiaomi-17-ultra-snjallsimi-512gb-425634/XIA17ULT16512WHI",
-              "priceChange": 0
-            }
-          ]
-        }
-      ],
-      "history": [
-        {
-          "date": "2026-11-03",
-          "price": 219990
-        },
-        {
-          "date": "2026-11-04",
-          "price": 219990
-        },
-        {
-          "date": "2026-11-05",
-          "price": 219990
-        },
-        {
-          "date": "2026-11-06",
-          "price": 259990
-        }
-      ],
-      "trend": "UP",
-      "priceChangePercent": 18,
-      "priceChangeAmount": 40000,
-      "maxSavings": 4
-    },
     "oppo-find-x10": {
       "id": "oppo-find-x10",
       "name": "OPPO Find X10",
@@ -16622,105 +16591,6 @@
       "priceChangePercent": -15,
       "priceChangeAmount": -2248,
       "maxSavings": 2253
-    },
-    "samsung-galaxy-z-fold7": {
-      "id": "samsung-galaxy-z-fold7",
-      "name": "Samsung Galaxy Z Fold7",
-      "brand": "Samsung",
-      "image": "https://products-media-cdn.aws-prod.ja.is/websites/elko/300x300/11539521_1790262429_gzyidscy.jpg",
-      "lowestPrice": 148990,
-      "highestPrice": 349995,
-      "storesCount": 5,
-      "variantsCount": 2,
-      "stores": [
-        "ELKO",
-        "Sýn",
-        "IcePhone",
-        "Tölvulistinn",
-        "Síminn"
-      ],
-      "variants": [
-        {
-          "storage": "256GB",
-          "lowestPrice": 148990,
-          "highestPrice": 349995,
-          "offers": [
-            {
-              "store": "IcePhone",
-              "price": 148990,
-              "previousPrice": 249995,
-              "url": "https://vefverslun.icephone.is/product/galaxy-z-fold7-5g/",
-              "priceChange": -101005
-            },
-            {
-              "store": "ELKO",
-              "storeLogo": "https://products-media-cdn.aws-prod.ja.is/logos/300x200/elkologo_120x43_cilh6bp_65CrXBc.png",
-              "price": 249995,
-              "previousPrice": 249995,
-              "url": "https://ja.is/vara/samsung-galaxy-z-fold7-256-gb-blar/11539538/",
-              "priceChange": 0
-            },
-            {
-              "store": "Sýn",
-              "price": 349990,
-              "previousPrice": 349990,
-              "url": "https://www.syn.is/vefverslun/um-voru/45320",
-              "priceChange": 0
-            },
-            {
-              "store": "Síminn",
-              "price": 349990,
-              "previousPrice": 349990,
-              "url": "https://vefverslun.siminn.is/is/galaxy-z-fold7",
-              "priceChange": 0
-            },
-            {
-              "store": "Tölvulistinn",
-              "price": 349995,
-              "previousPrice": 349995,
-              "url": "https://tl.is/samsung-galaxy-fold7-256gb-svartur.html",
-              "priceChange": 0
-            }
-          ]
-        },
-        {
-          "storage": "512GB",
-          "lowestPrice": 269994,
-          "highestPrice": 269995,
-          "offers": [
-            {
-              "store": "ELKO",
-              "storeLogo": "https://products-media-cdn.aws-prod.ja.is/logos/300x200/elkologo_120x43_cilh6bp_65CrXBc.png",
-              "price": 269994,
-              "previousPrice": 269994,
-              "url": "https://ja.is/vara/samsung-galaxy-z-fold7-512-gb-graenn/11539522/",
-              "priceChange": 0
-            }
-          ]
-        }
-      ],
-      "history": [
-        {
-          "date": "2026-11-03",
-          "price": 249995
-        },
-        {
-          "date": "2026-11-04",
-          "price": 249995
-        },
-        {
-          "date": "2026-11-05",
-          "price": 148990
-        },
-        {
-          "date": "2026-11-06",
-          "price": 148990
-        }
-      ],
-      "trend": "DOWN",
-      "priceChangePercent": -40,
-      "priceChangeAmount": -101005,
-      "maxSavings": 201005
     },
     "xiaomi-redmi-a7-pro": {
       "id": "xiaomi-redmi-a7-pro",
@@ -16893,6 +16763,127 @@
       "priceChangePercent": 0,
       "priceChangeAmount": 0,
       "maxSavings": 19996
+    },
+    "samsung-galaxy-s26-plus": {
+      "id": "samsung-galaxy-s26-plus",
+      "name": "Samsung Galaxy S26 Plus",
+      "brand": "Samsung",
+      "image": "https://products-media-cdn.aws-prod.ja.is/websites/elko/300x300/12201622_1793635629_qcvjgscl.jpg",
+      "lowestPrice": 179990,
+      "highestPrice": 249990,
+      "storesCount": 6,
+      "variantsCount": 2,
+      "stores": [
+        "ELKO",
+        "Sýn",
+        "Nova",
+        "Lune",
+        "Emobi",
+        "Síminn"
+      ],
+      "variants": [
+        {
+          "storage": "256GB",
+          "lowestPrice": 179990,
+          "highestPrice": 214995,
+          "offers": [
+            {
+              "store": "Lune",
+              "price": 179990,
+              "previousPrice": 214900,
+              "url": "https://lune.is/vara/samsung-galaxy-s26-plus",
+              "priceChange": -34910
+            },
+            {
+              "store": "Emobi",
+              "price": 214900,
+              "previousPrice": 214900,
+              "url": "https://emobi.is/vorur/samsung-galaxy-s26-plus-256gb/",
+              "priceChange": 0
+            },
+            {
+              "store": "Nova",
+              "price": 214990,
+              "previousPrice": 214990,
+              "url": "https://www.nova.is/barinn/vara/galaxy-s26-plus",
+              "priceChange": 0
+            },
+            {
+              "store": "Sýn",
+              "price": 214990,
+              "previousPrice": 214990,
+              "url": "https://www.syn.is/vefverslun/um-voru/45666",
+              "priceChange": 0
+            },
+            {
+              "store": "Síminn",
+              "price": 214990,
+              "previousPrice": 214990,
+              "url": "https://vefverslun.siminn.is/is/galaxy-s26",
+              "priceChange": 0
+            },
+            {
+              "store": "ELKO",
+              "storeLogo": "https://products-media-cdn.aws-prod.ja.is/logos/300x200/elkologo_120x43_cilh6bp_65CrXBc.png",
+              "price": 214994,
+              "previousPrice": 214994,
+              "url": "https://ja.is/vara/samsung-galaxy-s26-256gb-pink-gold/12201616/",
+              "priceChange": 0
+            }
+          ]
+        },
+        {
+          "storage": "512GB",
+          "lowestPrice": 244900,
+          "highestPrice": 249990,
+          "offers": [
+            {
+              "store": "Emobi",
+              "price": 244900,
+              "previousPrice": 244900,
+              "url": "https://emobi.is/vorur/samsung-galaxy-s26-plus-512gb/",
+              "priceChange": 0
+            },
+            {
+              "store": "ELKO",
+              "storeLogo": "https://products-media-cdn.aws-prod.ja.is/logos/300x200/elkologo_120x43_cilh6bp_65CrXBc.png",
+              "price": 244994,
+              "previousPrice": 244994,
+              "url": "https://ja.is/vara/samsung-galaxy-s26-512gb-sky-blue/12201637/",
+              "priceChange": 0
+            },
+            {
+              "store": "Nova",
+              "price": 249990,
+              "previousPrice": 249990,
+              "url": "https://www.nova.is/barinn/vara/galaxy-s26-plus",
+              "priceChange": 0
+            }
+          ]
+        }
+      ],
+      "history": [
+        {
+          "date": "2026-11-03",
+          "price": 214900
+        },
+        {
+          "date": "2026-11-04",
+          "price": 179990
+        },
+        {
+          "date": "2026-11-05",
+          "price": 179990
+        },
+        {
+          "date": "2026-11-06",
+          "price": 179990
+        }
+      ],
+      "trend": "DOWN",
+      "priceChangePercent": -16,
+      "priceChangeAmount": -34910,
+      "maxSavings": 35005
     },
     "apple-iphone-duo": {
       "id": "apple-iphone-duo",
@@ -17855,12 +17846,13 @@
       "image": "https://products-media-cdn.aws-prod.ja.is/websites/syn/300x300/12891291_1793629690_gggxqbfw.png",
       "lowestPrice": 114900,
       "highestPrice": 169995,
-      "storesCount": 5,
+      "storesCount": 6,
       "variantsCount": 2,
       "stores": [
         "Sýn",
         "ELKO",
         "Nova",
+        "Lune",
         "Emobi",
         "Síminn"
       ],
@@ -17876,6 +17868,13 @@
               "previousPrice": 144900,
               "url": "https://emobi.is/vorur/samsung-galaxy-s26-fe-128gb/",
               "priceChange": -30000
+            },
+            {
+              "store": "Lune",
+              "price": 144990,
+              "previousPrice": 144990,
+              "url": "https://lune.is/vara/samsung-galaxy-s26-fe-e9c73ced",
+              "priceChange": 0
             },
             {
               "store": "Sýn",
@@ -17918,6 +17917,13 @@
               "previousPrice": 164900,
               "url": "https://emobi.is/vorur/samsung-galaxy-s26-fe-256gb/",
               "priceChange": -30000
+            },
+            {
+              "store": "Lune",
+              "price": 164990,
+              "previousPrice": 164990,
+              "url": "https://lune.is/vara/samsung-galaxy-s26-fe-e9c73ced",
+              "priceChange": 0
             },
             {
               "store": "Nova",
@@ -18672,61 +18678,29 @@
       "priceChangeAmount": 0,
       "maxSavings": 0
     },
-    "xiaomi-17": {
-      "id": "xiaomi-17",
-      "name": "Xiaomi 17",
-      "brand": "Xiaomi",
-      "image": "https://products-media-cdn.aws-prod.ja.is/websites/syn/300x300/12269615_1777593523_zoysnfye.png",
-      "lowestPrice": 189990,
-      "highestPrice": 189994,
-      "storesCount": 5,
+    "ulefone-armor-30-pro": {
+      "id": "ulefone-armor-30-pro",
+      "name": "Ulefone Armor 30 Pro",
+      "brand": "Ulefone",
+      "image": "https://products-media-cdn.aws-prod.ja.is/websites/mi-budin/300x300/11426499_1747416120_afexyehh.png",
+      "lowestPrice": 84990,
+      "highestPrice": 84990,
+      "storesCount": 1,
       "variantsCount": 1,
       "stores": [
-        "Sýn",
-        "ELKO",
-        "Nova",
-        "Mi búðin",
-        "Síminn"
+        "Mi búðin"
       ],
       "variants": [
         {
           "storage": "512GB",
-          "lowestPrice": 189990,
-          "highestPrice": 189994,
+          "lowestPrice": 84990,
+          "highestPrice": 84990,
           "offers": [
             {
-              "store": "Sýn",
-              "price": 189990,
-              "previousPrice": 189990,
-              "url": "https://www.syn.is/vefverslun/um-voru/72971",
-              "priceChange": 0
-            },
-            {
-              "store": "Nova",
-              "price": 189990,
-              "previousPrice": 189990,
-              "url": "https://www.nova.is/barinn/vara/xiaomi-17",
-              "priceChange": 0
-            },
-            {
               "store": "Mi búðin",
-              "price": 189990,
-              "previousPrice": 189990,
-              "url": "https://mibudin.is/vara/xiaomi-17-leica-snjallsimi/",
-              "priceChange": 0
-            },
-            {
-              "store": "Síminn",
-              "price": 189990,
-              "previousPrice": 189990,
-              "url": "https://vefverslun.siminn.is/is/xiaomi-17",
-              "priceChange": 0
-            },
-            {
-              "store": "ELKO",
-              "price": 189994,
-              "previousPrice": 189994,
-              "url": "https://elko.is/vorur/xiaomi-17-snjallsimi-512gb-425628/XIA1712512BLU",
+              "price": 84990,
+              "previousPrice": 84990,
+              "url": "https://mibudin.is/vara/ulefone-armor-30-pro-512gb-5g-vinnusimi-med-tvofoldum-skja/",
               "priceChange": 0
             }
           ]
@@ -18735,25 +18709,85 @@
       "history": [
         {
           "date": "2026-11-03",
-          "price": 189990
+          "price": 84990
         },
         {
           "date": "2026-11-04",
-          "price": 189990
+          "price": 84990
         },
         {
           "date": "2026-11-05",
-          "price": 189990
+          "price": 84990
         },
         {
           "date": "2026-11-06",
-          "price": 189990
+          "price": 84990
         }
       ],
       "trend": "SAME",
       "priceChangePercent": 0,
       "priceChangeAmount": 0,
-      "maxSavings": 4
+      "maxSavings": 0
+    },
+    "xiaomi-redmi-note-15-pro": {
+      "id": "xiaomi-redmi-note-15-pro",
+      "name": "Xiaomi Redmi Note 15 Pro",
+      "brand": "Xiaomi",
+      "image": "https://products-media-cdn.aws-prod.ja.is/websites/mi-budin/300x300/12399687_1778403288_nymwjyru.png",
+      "lowestPrice": 63992,
+      "highestPrice": 67992,
+      "storesCount": 2,
+      "variantsCount": 1,
+      "stores": [
+        "Mi búðin",
+        "Síminn"
+      ],
+      "variants": [
+        {
+          "storage": "256GB",
+          "lowestPrice": 63992,
+          "highestPrice": 67992,
+          "offers": [
+            {
+              "store": "Síminn",
+              "price": 63992,
+              "previousPrice": 79990,
+              "url": "https://vefverslun.siminn.is/is/note-15pro-5g",
+              "priceChange": -15998
+            },
+            {
+              "store": "Mi búðin",
+              "storeLogo": "https://products-media-cdn.aws-prod.ja.is/logos/300x200/Mi_Iceland.png",
+              "price": 67991,
+              "previousPrice": 67991,
+              "url": "https://ja.is/vara/redmi-note-15-pro-5g-8256gb-snjallsimi-glacier-blu/12399687/",
+              "priceChange": 0
+            }
+          ]
+        }
+      ],
+      "history": [
+        {
+          "date": "2026-11-03",
+          "price": 63992
+        },
+        {
+          "date": "2026-11-04",
+          "price": 63992
+        },
+        {
+          "date": "2026-11-05",
+          "price": 63992
+        },
+        {
+          "date": "2026-11-06",
+          "price": 63992
+        }
+      ],
+      "trend": "SAME",
+      "priceChangePercent": 0,
+      "priceChangeAmount": 0,
+      "maxSavings": 4000
     },
     "samsung-galaxy-xcover-7": {
       "id": "samsung-galaxy-xcover-7",
@@ -19089,7 +19123,7 @@
       "name": "Samsung Galaxy A56",
       "brand": "Samsung",
       "image": "https://products-media-cdn.aws-prod.ja.is/websites/elko/300x300/11927501_1763741434_mzrrycdh.jpg",
-      "lowestPrice": 74990,
+      "lowestPrice": 71990,
       "highestPrice": 84995,
       "storesCount": 5,
       "variantsCount": 1,
@@ -19103,15 +19137,15 @@
       "variants": [
         {
           "storage": "128GB",
-          "lowestPrice": 74990,
+          "lowestPrice": 71990,
           "highestPrice": 84995,
           "offers": [
             {
               "store": "IcePhone",
-              "price": 74990,
+              "price": 71990,
               "previousPrice": 84990,
               "url": "https://vefverslun.icephone.is/product/galaxy-a56-5g/",
-              "priceChange": -10000
+              "priceChange": -13000
             },
             {
               "store": "Nova",
@@ -19159,13 +19193,13 @@
         },
         {
           "date": "2026-11-06",
-          "price": 74990
+          "price": 71990
         }
       ],
       "trend": "DOWN",
-      "priceChangePercent": -9,
-      "priceChangeAmount": -7000,
-      "maxSavings": 10005
+      "priceChangePercent": -12,
+      "priceChangeAmount": -10000,
+      "maxSavings": 13005
     },
     "ulefone-armor-x31": {
       "id": "ulefone-armor-x31",
@@ -19216,57 +19250,6 @@
       "trend": "SAME",
       "priceChangePercent": 0,
       "priceChangeAmount": 0,
-      "maxSavings": 0
-    },
-    "nokia-fusion-x1": {
-      "id": "nokia-fusion-x1",
-      "name": "Nokia Fusion X1",
-      "brand": "Nokia",
-      "image": "https://products-media-cdn.aws-prod.ja.is/websites/elko/300x300/11517230_1751006719_ycakisjq.jpg",
-      "lowestPrice": 44994,
-      "highestPrice": 44994,
-      "storesCount": 1,
-      "variantsCount": 1,
-      "stores": [
-        "ELKO"
-      ],
-      "variants": [
-        {
-          "storage": "128GB",
-          "lowestPrice": 44994,
-          "highestPrice": 44994,
-          "offers": [
-            {
-              "store": "ELKO",
-              "price": 44994,
-              "previousPrice": 31496,
-              "url": "https://elko.is/vorur/hmd-fusion-x1-snjallsimi-128-gb-396079/HMDFUSIONX1",
-              "priceChange": 13498
-            }
-          ]
-        }
-      ],
-      "history": [
-        {
-          "date": "2026-11-03",
-          "price": 31496
-        },
-        {
-          "date": "2026-11-04",
-          "price": 31496
-        },
-        {
-          "date": "2026-11-05",
-          "price": 31496
-        },
-        {
-          "date": "2026-11-06",
-          "price": 44994
-        }
-      ],
-      "trend": "UP",
-      "priceChangePercent": 43,
-      "priceChangeAmount": 13498,
       "maxSavings": 0
     },
     "nokia-3210": {
@@ -19351,6 +19334,57 @@
       "priceChangePercent": -10,
       "priceChangeAmount": -1299,
       "maxSavings": 3299
+    },
+    "nokia-fusion-x1": {
+      "id": "nokia-fusion-x1",
+      "name": "Nokia Fusion X1",
+      "brand": "Nokia",
+      "image": "https://products-media-cdn.aws-prod.ja.is/websites/elko/300x300/11517230_1751006719_ycakisjq.jpg",
+      "lowestPrice": 44994,
+      "highestPrice": 44994,
+      "storesCount": 1,
+      "variantsCount": 1,
+      "stores": [
+        "ELKO"
+      ],
+      "variants": [
+        {
+          "storage": "128GB",
+          "lowestPrice": 44994,
+          "highestPrice": 44994,
+          "offers": [
+            {
+              "store": "ELKO",
+              "price": 44994,
+              "previousPrice": 31496,
+              "url": "https://elko.is/vorur/hmd-fusion-x1-snjallsimi-128-gb-396079/HMDFUSIONX1",
+              "priceChange": 13498
+            }
+          ]
+        }
+      ],
+      "history": [
+        {
+          "date": "2026-11-03",
+          "price": 31496
+        },
+        {
+          "date": "2026-11-04",
+          "price": 31496
+        },
+        {
+          "date": "2026-11-05",
+          "price": 31496
+        },
+        {
+          "date": "2026-11-06",
+          "price": 44994
+        }
+      ],
+      "trend": "UP",
+      "priceChangePercent": 43,
+      "priceChangeAmount": 13498,
+      "maxSavings": 0
     },
     "xiaomi-redmi-a7-pro-palm-green": {
       "id": "xiaomi-redmi-a7-pro-palm-green",
@@ -19794,57 +19828,6 @@
       "priceChangeAmount": 0,
       "maxSavings": 0
     },
-    "ulefone-armor-29-pro": {
-      "id": "ulefone-armor-29-pro",
-      "name": "Ulefone Armor 29 Pro",
-      "brand": "Ulefone",
-      "image": "https://products-media-cdn.aws-prod.ja.is/websites/mi-budin/300x300/12399813_1778403309_xebowuta.png",
-      "lowestPrice": 99990,
-      "highestPrice": 129990,
-      "storesCount": 1,
-      "variantsCount": 1,
-      "stores": [
-        "Mi búðin"
-      ],
-      "variants": [
-        {
-          "storage": "512GB",
-          "lowestPrice": 99990,
-          "highestPrice": 129990,
-          "offers": [
-            {
-              "store": "Mi búðin",
-              "price": 99990,
-              "previousPrice": 99990,
-              "url": "https://mibudin.is/vara/ulefone-armor-29-pro-512gb-5g-vinnusimi/",
-              "priceChange": 0
-            }
-          ]
-        }
-      ],
-      "history": [
-        {
-          "date": "2026-11-03",
-          "price": 99990
-        },
-        {
-          "date": "2026-11-04",
-          "price": 99990
-        },
-        {
-          "date": "2026-11-05",
-          "price": 99990
-        },
-        {
-          "date": "2026-11-06",
-          "price": 99990
-        }
-      ],
-      "trend": "SAME",
-      "priceChangePercent": 0,
-      "priceChangeAmount": 0,
-      "maxSavings": 0
-    },
     "nokia-105": {
       "id": "nokia-105",
       "name": "Nokia 105",
@@ -20038,132 +20021,6 @@
       "priceChangeAmount": 0,
       "maxSavings": 0
     },
-    "ulefone-armor-mini-20-pro": {
-      "id": "ulefone-armor-mini-20-pro",
-      "name": "Ulefone Armor Mini 20 Pro",
-      "brand": "Ulefone",
-      "image": "https://products-media-cdn.aws-prod.ja.is/websites/Mi%20budin/300x300/11250795_1741643022_eicueave.png",
-      "lowestPrice": 64990,
-      "highestPrice": 64990,
-      "storesCount": 1,
-      "variantsCount": 1,
-      "stores": [
-        "Mi búðin"
-      ],
-      "variants": [
-        {
-          "storage": "256GB",
-          "lowestPrice": 64990,
-          "highestPrice": 64990,
-          "offers": [
-            {
-              "store": "Mi búðin",
-              "price": 64990,
-              "previousPrice": 64990,
-              "url": "https://mibudin.is/vara/ulefone-armor-mini-20-pro-256gb-5g-vinnusimi/",
-              "priceChange": 0
-            }
-          ]
-        }
-      ],
-      "history": [
-        {
-          "date": "2026-11-03",
-          "price": 64990
-        },
-        {
-          "date": "2026-11-04",
-          "price": 64990
-        },
-        {
-          "date": "2026-11-05",
-          "price": 64990
-        },
-        {
-          "date": "2026-11-06",
-          "price": 64990
-        }
-      ],
-      "trend": "SAME",
-      "priceChangePercent": 0,
-      "priceChangeAmount": 0,
-      "maxSavings": 0
-    },
-    "samsung-galaxy-s25-fe": {
-      "id": "samsung-galaxy-s25-fe",
-      "name": "Samsung Galaxy S25 FE",
-      "brand": "Samsung",
-      "image": "https://products-media-cdn.aws-prod.ja.is/websites/elko/300x300/11688743_1763999419_ctxnelcy.jpg",
-      "lowestPrice": 87990,
-      "highestPrice": 134990,
-      "storesCount": 4,
-      "variantsCount": 1,
-      "stores": [
-        "ELKO",
-        "Lune",
-        "IcePhone",
-        "Síminn"
-      ],
-      "variants": [
-        {
-          "storage": "128GB",
-          "lowestPrice": 87990,
-          "highestPrice": 134990,
-          "offers": [
-            {
-              "store": "IcePhone",
-              "price": 87990,
-              "previousPrice": 129990,
-              "url": "https://vefverslun.icephone.is/product/galaxy-s25-fe-5g/",
-              "priceChange": -42000
-            },
-            {
-              "store": "Lune",
-              "price": 104990,
-              "previousPrice": 104990,
-              "url": "https://lune.is/vara/samsung-galaxy-s25-fe-128gb-8gb-white-49d3a84f",
-              "priceChange": 0
-            },
-            {
-              "store": "ELKO",
-              "price": 129995,
-              "previousPrice": 129995,
-              "url": "https://elko.is/vorur/samsung-galaxy-s25-fe-snjallsimi-404167/SMS731B128BLA",
-              "priceChange": 0
-            },
-            {
-              "store": "Síminn",
-              "price": 134990,
-              "previousPrice": 134990,
-              "url": "https://vefverslun.siminn.is/is/galaxy-s25-fe",
-              "priceChange": 0
-            }
-          ]
-        }
-      ],
-      "history": [
-        {
-          "date": "2026-11-03",
-          "price": 129990
-        },
-        {
-          "date": "2026-11-04",
-          "price": 104990
-        },
-        {
-          "date": "2026-11-05",
-          "price": 87990
-        },
-        {
-          "date": "2026-11-06",
-          "price": 87990
-        }
-      ],
-      "trend": "DOWN",
-      "priceChangePercent": -32,
-      "priceChangeAmount": -42000,
-      "maxSavings": 47000
-    },
     "apple-iphone-17-pro": {
       "id": "apple-iphone-17-pro",
       "name": "Apple iPhone 17 Pro",
@@ -20305,6 +20162,132 @@
       "priceChangePercent": -1,
       "priceChangeAmount": -1004,
       "maxSavings": 24999
+    },
+    "ulefone-armor-mini-20-pro": {
+      "id": "ulefone-armor-mini-20-pro",
+      "name": "Ulefone Armor Mini 20 Pro",
+      "brand": "Ulefone",
+      "image": "https://products-media-cdn.aws-prod.ja.is/websites/Mi%20budin/300x300/11250795_1741643022_eicueave.png",
+      "lowestPrice": 64990,
+      "highestPrice": 64990,
+      "storesCount": 1,
+      "variantsCount": 1,
+      "stores": [
+        "Mi búðin"
+      ],
+      "variants": [
+        {
+          "storage": "256GB",
+          "lowestPrice": 64990,
+          "highestPrice": 64990,
+          "offers": [
+            {
+              "store": "Mi búðin",
+              "price": 64990,
+              "previousPrice": 64990,
+              "url": "https://mibudin.is/vara/ulefone-armor-mini-20-pro-256gb-5g-vinnusimi/",
+              "priceChange": 0
+            }
+          ]
+        }
+      ],
+      "history": [
+        {
+          "date": "2026-11-03",
+          "price": 64990
+        },
+        {
+          "date": "2026-11-04",
+          "price": 64990
+        },
+        {
+          "date": "2026-11-05",
+          "price": 64990
+        },
+        {
+          "date": "2026-11-06",
+          "price": 64990
+        }
+      ],
+      "trend": "SAME",
+      "priceChangePercent": 0,
+      "priceChangeAmount": 0,
+      "maxSavings": 0
+    },
+    "samsung-galaxy-s25-fe": {
+      "id": "samsung-galaxy-s25-fe",
+      "name": "Samsung Galaxy S25 FE",
+      "brand": "Samsung",
+      "image": "https://products-media-cdn.aws-prod.ja.is/websites/elko/300x300/11688743_1763999419_ctxnelcy.jpg",
+      "lowestPrice": 87990,
+      "highestPrice": 134990,
+      "storesCount": 4,
+      "variantsCount": 1,
+      "stores": [
+        "ELKO",
+        "Lune",
+        "IcePhone",
+        "Síminn"
+      ],
+      "variants": [
+        {
+          "storage": "128GB",
+          "lowestPrice": 87990,
+          "highestPrice": 134990,
+          "offers": [
+            {
+              "store": "IcePhone",
+              "price": 87990,
+              "previousPrice": 129990,
+              "url": "https://vefverslun.icephone.is/product/galaxy-s25-fe-5g/",
+              "priceChange": -42000
+            },
+            {
+              "store": "Lune",
+              "price": 104990,
+              "previousPrice": 104990,
+              "url": "https://lune.is/vara/samsung-galaxy-s25-fe-128gb-8gb-white-49d3a84f",
+              "priceChange": 0
+            },
+            {
+              "store": "ELKO",
+              "price": 129995,
+              "previousPrice": 129995,
+              "url": "https://elko.is/vorur/samsung-galaxy-s25-fe-snjallsimi-404167/SMS731B128BLA",
+              "priceChange": 0
+            },
+            {
+              "store": "Síminn",
+              "price": 134990,
+              "previousPrice": 134990,
+              "url": "https://vefverslun.siminn.is/is/galaxy-s25-fe",
+              "priceChange": 0
+            }
+          ]
+        }
+      ],
+      "history": [
+        {
+          "date": "2026-11-03",
+          "price": 129990
+        },
+        {
+          "date": "2026-11-04",
+          "price": 104990
+        },
+        {
+          "date": "2026-11-05",
+          "price": 87990
+        },
+        {
+          "date": "2026-11-06",
+          "price": 87990
+        }
+      ],
+      "trend": "DOWN",
+      "priceChangePercent": -32,
+      "priceChangeAmount": -42000,
+      "maxSavings": 47000
     },
     "samsung-galaxy-s25-edge": {
       "id": "samsung-galaxy-s25-edge",
@@ -21184,57 +21167,6 @@
       "priceChangeAmount": -13909,
       "maxSavings": 18999
     },
-    "samsung-galaxy-a05s": {
-      "id": "samsung-galaxy-a05s",
-      "name": "Samsung Galaxy A05s",
-      "brand": "Samsung",
-      "image": "https://products-media-cdn.aws-prod.ja.is/websites/nova/300x300/10199417_1771430335_kcwgdinc.png",
-      "lowestPrice": 26990,
-      "highestPrice": 26990,
-      "storesCount": 1,
-      "variantsCount": 1,
-      "stores": [
-        "Nova"
-      ],
-      "variants": [
-        {
-          "storage": "Standard",
-          "lowestPrice": 26990,
-          "highestPrice": 26990,
-          "offers": [
-            {
-              "store": "Nova",
-              "price": 26990,
-              "previousPrice": 26990,
-              "url": "https://ja.is/vara/galaxy-a05s/10199417/",
-              "priceChange": 0
-            }
-          ]
-        }
-      ],
-      "history": [
-        {
-          "date": "2026-11-03",
-          "price": 26990
-        },
-        {
-          "date": "2026-11-04",
-          "price": 26990
-        },
-        {
-          "date": "2026-11-05",
-          "price": 26990
-        },
-        {
-          "date": "2026-11-06",
-          "price": 26990
-        }
-      ],
-      "trend": "SAME",
-      "priceChangePercent": 0,
-      "priceChangeAmount": 0,
-      "maxSavings": 0
-    },
     "google-pixel-10": {
       "id": "google-pixel-10",
       "name": "Google Pixel 10",
@@ -21710,57 +21642,6 @@
       "priceChangeAmount": 0,
       "maxSavings": 0
     },
-    "google-pixel-10-pro-fold": {
-      "id": "google-pixel-10-pro-fold",
-      "name": "Google Pixel 10 Pro Fold",
-      "brand": "Google",
-      "image": "https://products-media-cdn.aws-prod.ja.is/websites/nova/300x300/12579721_1787189367_qyoiimfb.png",
-      "lowestPrice": 259989,
-      "highestPrice": 259989,
-      "storesCount": 1,
-      "variantsCount": 1,
-      "stores": [
-        "Nova"
-      ],
-      "variants": [
-        {
-          "storage": "Standard",
-          "lowestPrice": 259989,
-          "highestPrice": 259989,
-          "offers": [
-            {
-              "store": "Nova",
-              "price": 259989,
-              "previousPrice": 289989,
-              "url": "https://ja.is/vara/pixel-10-pro-fold/12579721/",
-              "priceChange": -30000
-            }
-          ]
-        }
-      ],
-      "history": [
-        {
-          "date": "2026-11-03",
-          "price": 289989
-        },
-        {
-          "date": "2026-11-04",
-          "price": 259989
-        },
-        {
-          "date": "2026-11-05",
-          "price": 259989
-        },
-        {
-          "date": "2026-11-06",
-          "price": 259989
-        }
-      ],
-      "trend": "DOWN",
-      "priceChangePercent": -10,
-      "priceChangeAmount": -30000,
-      "maxSavings": 0
-    },
     "google-pixel-11": {
       "id": "google-pixel-11",
       "name": "Google Pixel 11",
@@ -21967,57 +21848,6 @@
       "priceChangeAmount": -17409,
       "maxSavings": 24499
     },
-    "nokia-hmd-barbie-phone": {
-      "id": "nokia-hmd-barbie-phone",
-      "name": "Nokia HMD Barbie Phone",
-      "brand": "Nokia",
-      "image": "https://products-media-cdn.aws-prod.ja.is/websites/nova/300x300/10955168_1771430346_cdhgcmhu.png",
-      "lowestPrice": 19990,
-      "highestPrice": 19990,
-      "storesCount": 1,
-      "variantsCount": 1,
-      "stores": [
-        "Nova"
-      ],
-      "variants": [
-        {
-          "storage": "Standard",
-          "lowestPrice": 19990,
-          "highestPrice": 19990,
-          "offers": [
-            {
-              "store": "Nova",
-              "price": 19990,
-              "previousPrice": 19990,
-              "url": "https://ja.is/vara/barbie-samlokusimi/10955168/",
-              "priceChange": 0
-            }
-          ]
-        }
-      ],
-      "history": [
-        {
-          "date": "2026-11-03",
-          "price": 19990
-        },
-        {
-          "date": "2026-11-04",
-          "price": 19990
-        },
-        {
-          "date": "2026-11-05",
-          "price": 19990
-        },
-        {
-          "date": "2026-11-06",
-          "price": 19990
-        }
-      ],
-      "trend": "SAME",
-      "priceChangePercent": 0,
-      "priceChangeAmount": 0,
-      "maxSavings": 0
-    },
     "apple-iphone-16-pro-max-endurnýjaður": {
       "id": "apple-iphone-16-pro-max-endurnýjaður",
       "name": "Apple iPhone 16 Pro Max (Endurnýjaður)",
@@ -22069,65 +21899,6 @@
       "priceChangeAmount": 0,
       "maxSavings": 0
     },
-    "samsung-galaxy-s25-ultra": {
-      "id": "samsung-galaxy-s25-ultra",
-      "name": "Samsung Galaxy S25 Ultra",
-      "brand": "Samsung",
-      "image": "https://products-media-cdn.aws-prod.ja.is/websites/nova/300x300/12112193_1769772606_rcorfsie.png",
-      "lowestPrice": 126990,
-      "highestPrice": 279990,
-      "storesCount": 2,
-      "variantsCount": 1,
-      "stores": [
-        "Nova",
-        "IcePhone"
-      ],
-      "variants": [
-        {
-          "storage": "1TB",
-          "lowestPrice": 126990,
-          "highestPrice": 279990,
-          "offers": [
-            {
-              "store": "IcePhone",
-              "price": 126990,
-              "previousPrice": 229990,
-              "url": "https://vefverslun.icephone.is/product/galaxy-s25-ultra-5g/",
-              "priceChange": -103000
-            },
-            {
-              "store": "Nova",
-              "price": 229990,
-              "previousPrice": 229990,
-              "url": "https://ja.is/vara/galaxy-s25-ultra/13119491/",
-              "priceChange": 0
-            }
-          ]
-        }
-      ],
-      "history": [
-        {
-          "date": "2026-11-03",
-          "price": 229990
-        },
-        {
-          "date": "2026-11-04",
-          "price": 229990
-        },
-        {
-          "date": "2026-11-05",
-          "price": 126990
-        },
-        {
-          "date": "2026-11-06",
-          "price": 126990
-        }
-      ],
-      "trend": "DOWN",
-      "priceChangePercent": -45,
-      "priceChangeAmount": -103000,
-      "maxSavings": 153000
-    },
     "xiaomi-15-ultra": {
       "id": "xiaomi-15-ultra",
       "name": "Xiaomi 15 Ultra",
@@ -22178,65 +21949,6 @@
       "priceChangePercent": 0,
       "priceChangeAmount": 0,
       "maxSavings": 0
-    },
-    "samsung-galaxy-s24": {
-      "id": "samsung-galaxy-s24",
-      "name": "Samsung Galaxy S24",
-      "brand": "Samsung",
-      "image": "https://products-media-cdn.aws-prod.ja.is/websites/nova/300x300/9674430_1771430319_bzmstjml.png",
-      "lowestPrice": 79990,
-      "highestPrice": 129990,
-      "storesCount": 2,
-      "variantsCount": 1,
-      "stores": [
-        "Nova",
-        "IcePhone"
-      ],
-      "variants": [
-        {
-          "storage": "Standard",
-          "lowestPrice": 79990,
-          "highestPrice": 129990,
-          "offers": [
-            {
-              "store": "IcePhone",
-              "price": 79990,
-              "previousPrice": 129990,
-              "url": "https://vefverslun.icephone.is/product/galaxy-s24-5g/",
-              "priceChange": -50000
-            },
-            {
-              "store": "Nova",
-              "price": 129990,
-              "previousPrice": 129990,
-              "url": "https://ja.is/vara/galaxy-s24/9674430/",
-              "priceChange": 0
-            }
-          ]
-        }
-      ],
-      "history": [
-        {
-          "date": "2026-11-03",
-          "price": 129990
-        },
-        {
-          "date": "2026-11-04",
-          "price": 129990
-        },
-        {
-          "date": "2026-11-05",
-          "price": 79990
-        },
-        {
-          "date": "2026-11-06",
-          "price": 79990
-        }
-      ],
-      "trend": "DOWN",
-      "priceChangePercent": -38,
-      "priceChangeAmount": -50000,
-      "maxSavings": 50000
     },
     "google-pixel-11-pro-fold": {
       "id": "google-pixel-11-pro-fold",
@@ -23188,6 +22900,65 @@
       "priceChangeAmount": 0,
       "maxSavings": 0
     },
+    "samsung-galaxy-s25-ultra": {
+      "id": "samsung-galaxy-s25-ultra",
+      "name": "Samsung Galaxy S25 Ultra",
+      "brand": "Samsung",
+      "image": "https://cdn.shopify.com/s/files/1/1956/9041/files/S25ultra_front_titaniumwhitesilver_6193e452-cc30-47f2-ab3d-1d48c928f5f0.png?v=1769771035",
+      "lowestPrice": 126990,
+      "highestPrice": 279990,
+      "storesCount": 2,
+      "variantsCount": 1,
+      "stores": [
+        "Nova",
+        "IcePhone"
+      ],
+      "variants": [
+        {
+          "storage": "1TB",
+          "lowestPrice": 126990,
+          "highestPrice": 279990,
+          "offers": [
+            {
+              "store": "IcePhone",
+              "price": 126990,
+              "previousPrice": 229990,
+              "url": "https://vefverslun.icephone.is/product/galaxy-s25-ultra-5g/",
+              "priceChange": -103000
+            },
+            {
+              "store": "Nova",
+              "price": 279990,
+              "previousPrice": 229990,
+              "url": "https://www.nova.is/barinn/vara/galaxy-s25-ultra",
+              "priceChange": 50000
+            }
+          ]
+        }
+      ],
+      "history": [
+        {
+          "date": "2026-11-03",
+          "price": 229990
+        },
+        {
+          "date": "2026-11-04",
+          "price": 229990
+        },
+        {
+          "date": "2026-11-05",
+          "price": 126990
+        },
+        {
+          "date": "2026-11-06",
+          "price": 126990
+        }
+      ],
+      "trend": "DOWN",
+      "priceChangePercent": -45,
+      "priceChangeAmount": -103000,
+      "maxSavings": 153000
+    },
     "nokia-200": {
       "id": "nokia-200",
       "name": "Nokia 200",
@@ -24127,6 +23898,57 @@
       "trend": "SAME",
       "priceChangePercent": 0,
       "priceChangeAmount": 0,
+      "maxSavings": 0
+    },
+    "samsung-galaxy-s24": {
+      "id": "samsung-galaxy-s24",
+      "name": "Samsung Galaxy S24",
+      "brand": "Samsung",
+      "image": "https://vefverslun.icephone.is/wp-content/uploads/2025/11/galaxy-s24.png",
+      "lowestPrice": 79990,
+      "highestPrice": 79990,
+      "storesCount": 1,
+      "variantsCount": 1,
+      "stores": [
+        "IcePhone"
+      ],
+      "variants": [
+        {
+          "storage": "Standard",
+          "lowestPrice": 79990,
+          "highestPrice": 79990,
+          "offers": [
+            {
+              "store": "IcePhone",
+              "price": 79990,
+              "previousPrice": 129990,
+              "url": "https://vefverslun.icephone.is/product/galaxy-s24-5g/",
+              "priceChange": -50000
+            }
+          ]
+        }
+      ],
+      "history": [
+        {
+          "date": "2026-11-03",
+          "price": 129990
+        },
+        {
+          "date": "2026-11-04",
+          "price": 129990
+        },
+        {
+          "date": "2026-11-05",
+          "price": 79990
+        },
+        {
+          "date": "2026-11-06",
+          "price": 79990
+        }
+      ],
+      "trend": "DOWN",
+      "priceChangePercent": -38,
+      "priceChangeAmount": -50000,
       "maxSavings": 0
     },
     "samsung-galaxy-s23-fe": {
@@ -25682,6 +25504,203 @@
         {
           "date": "2026-11-06",
           "price": 39995
+        }
+      ],
+      "trend": "SAME",
+      "priceChangePercent": 0,
+      "priceChangeAmount": 0,
+      "maxSavings": 0
+    },
+    "xiaomi-17-alpine-pink": {
+      "id": "xiaomi-17-alpine-pink",
+      "name": "Xiaomi 17 Alpine Pink",
+      "brand": "Xiaomi",
+      "image": "https://products-media-cdn.aws-prod.ja.is/websites/mi-budin/300x300/12528711_1786552411_rgoywmag.png",
+      "lowestPrice": 189990,
+      "highestPrice": 189990,
+      "storesCount": 1,
+      "variantsCount": 1,
+      "stores": [
+        "Mi búðin"
+      ],
+      "variants": [
+        {
+          "storage": "512GB",
+          "lowestPrice": 189990,
+          "highestPrice": 189990,
+          "offers": [
+            {
+              "store": "Mi búðin",
+              "storeLogo": "https://products-media-cdn.aws-prod.ja.is/logos/300x200/Mi_Iceland.png",
+              "price": 189990,
+              "previousPrice": 189990,
+              "url": "https://ja.is/vara/xiaomi-17-12512gb-5g-leica-snjallsimi-alpine-pink/12528711/?company=342",
+              "priceChange": 0
+            }
+          ]
+        }
+      ],
+      "history": [
+        {
+          "date": "2026-11-05",
+          "price": 189990
+        },
+        {
+          "date": "2026-11-06",
+          "price": 189990
+        }
+      ],
+      "trend": "SAME",
+      "priceChangePercent": 0,
+      "priceChangeAmount": 0,
+      "maxSavings": 0
+    },
+    "samsung-galaxy-a05s": {
+      "id": "samsung-galaxy-a05s",
+      "name": "Samsung Galaxy A05s",
+      "brand": "Samsung",
+      "image": "https://products-media-cdn.aws-prod.ja.is/websites/nova/300x300/10199417_1771430335_kcwgdinc.png",
+      "lowestPrice": 26990,
+      "highestPrice": 26990,
+      "storesCount": 1,
+      "variantsCount": 1,
+      "stores": [
+        "Nova"
+      ],
+      "variants": [
+        {
+          "storage": "Standard",
+          "lowestPrice": 26990,
+          "highestPrice": 26990,
+          "offers": [
+            {
+              "store": "Nova",
+              "price": 26990,
+              "previousPrice": 26990,
+              "url": "https://ja.is/vara/galaxy-a05s/10199417/",
+              "priceChange": 0
+            }
+          ]
+        }
+      ],
+      "history": [
+        {
+          "date": "2026-11-03",
+          "price": 26990
+        },
+        {
+          "date": "2026-11-04",
+          "price": 26990
+        },
+        {
+          "date": "2026-11-05",
+          "price": 26990
+        },
+        {
+          "date": "2026-11-06",
+          "price": 26990
+        }
+      ],
+      "trend": "SAME",
+      "priceChangePercent": 0,
+      "priceChangeAmount": 0,
+      "maxSavings": 0
+    },
+    "google-pixel-10-pro-fold": {
+      "id": "google-pixel-10-pro-fold",
+      "name": "Google Pixel 10 Pro Fold",
+      "brand": "Google",
+      "image": "https://products-media-cdn.aws-prod.ja.is/websites/nova/300x300/12579721_1787189367_qyoiimfb.png",
+      "lowestPrice": 259989,
+      "highestPrice": 259989,
+      "storesCount": 1,
+      "variantsCount": 1,
+      "stores": [
+        "Nova"
+      ],
+      "variants": [
+        {
+          "storage": "Standard",
+          "lowestPrice": 259989,
+          "highestPrice": 259989,
+          "offers": [
+            {
+              "store": "Nova",
+              "price": 259989,
+              "previousPrice": 289989,
+              "url": "https://ja.is/vara/pixel-10-pro-fold/12579721/",
+              "priceChange": -30000
+            }
+          ]
+        }
+      ],
+      "history": [
+        {
+          "date": "2026-11-03",
+          "price": 289989
+        },
+        {
+          "date": "2026-11-04",
+          "price": 259989
+        },
+        {
+          "date": "2026-11-05",
+          "price": 259989
+        },
+        {
+          "date": "2026-11-06",
+          "price": 259989
+        }
+      ],
+      "trend": "DOWN",
+      "priceChangePercent": -10,
+      "priceChangeAmount": -30000,
+      "maxSavings": 0
+    },
+    "nokia-hmd-barbie-phone": {
+      "id": "nokia-hmd-barbie-phone",
+      "name": "Nokia HMD Barbie Phone",
+      "brand": "Nokia",
+      "image": "https://products-media-cdn.aws-prod.ja.is/websites/nova/300x300/10955168_1771430346_cdhgcmhu.png",
+      "lowestPrice": 19990,
+      "highestPrice": 19990,
+      "storesCount": 1,
+      "variantsCount": 1,
+      "stores": [
+        "Nova"
+      ],
+      "variants": [
+        {
+          "storage": "Standard",
+          "lowestPrice": 19990,
+          "highestPrice": 19990,
+          "offers": [
+            {
+              "store": "Nova",
+              "price": 19990,
+              "previousPrice": 19990,
+              "url": "https://ja.is/vara/barbie-samlokusimi/10955168/",
+              "priceChange": 0
+            }
+          ]
+        }
+      ],
+      "history": [
+        {
+          "date": "2026-11-03",
+          "price": 19990
+        },
+        {
+          "date": "2026-11-04",
+          "price": 19990
+        },
+        {
+          "date": "2026-11-05",
+          "price": 19990
+        },
+        {
+          "date": "2026-11-06",
+          "price": 19990
         }
       ],
       "trend": "SAME",
