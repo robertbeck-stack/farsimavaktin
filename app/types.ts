@@ -5,6 +5,7 @@ export interface StoreOffer {
   previousPrice?: number;
   priceChange?: number;
   url: string;
+  history?: PricePoint[];
 }
 
 export interface StoreDailySummary {

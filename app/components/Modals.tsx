@@ -1,10 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   PhoneModelGroup,
   PhoneVariant,
-  PricePoint,
   MetaData,
   StoreDailySummary,
   formatPrice,
@@ -22,6 +21,31 @@ interface PhoneModalProps {
   onClose: () => void;
 }
 
+
+const STORE_LINE_COLORS: Record<string, string> = {
+  ELKO: '#3b82f6',
+  Nova: '#10b981',
+  'Síminn': '#0ea5e9',
+  'Sýn': '#f43f5e',
+  Emobi: '#14b8a6',
+  Lune: '#8b5cf6',
+  Macland: '#6366f1',
+  'Mi búðin': '#f97316',
+  'Tölvulistinn': '#06b6d4',
+  'Tölvutek': '#f59e0b',
+  Epli: '#a855f7',
+  Coolshop: '#ec4899',
+  'Ófar': '#84cc16',
+  Tunglskin: '#eab308',
+  IcePhone: '#06b6d4',
+};
+
+function getStoreColor(store: string, idx = 0): string {
+  if (STORE_LINE_COLORS[store]) return STORE_LINE_COLORS[store];
+  const palette = ['#10b981', '#3b82f6', '#8b5cf6', '#f97316', '#06b6d4', '#f43f5e', '#eab308'];
+  return palette[idx % palette.length];
+}
+
 export function PhoneComparisonModal({
   selectedModel,
   selectedStorage,
@@ -31,116 +55,216 @@ export function PhoneComparisonModal({
   onClose,
 }: PhoneModalProps) {
   const [hoverTrendIdx, setHoverTrendIdx] = useState<number | null>(null);
+  const [selectedStoreFilter, setSelectedStoreFilter] = useState<string>('ALL');
 
   const historyPrices = (selectedModel.history || []).map((p) => p.price);
   const allTimeLowest =
     historyPrices.length > 0 ? Math.min(...historyPrices) : selectedModel.lowestPrice;
 
-  const renderTrendSvg = (points: PricePoint[], width = 520, height = 105) => {
-    if (!points || points.length === 0) return null;
+  const offers = useMemo(() => currentVariant?.offers || [], [currentVariant?.offers]);
+  const isFilterValid = selectedStoreFilter === 'ALL' || offers.some((o) => o.store === selectedStoreFilter);
+  const effectiveStoreFilter = isFilterValid ? selectedStoreFilter : 'ALL';
 
-    if (points.length === 1) {
-      const p = points[0];
-      const y = height / 2;
-      return (
-        <div className="relative py-2">
-          <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-24 overflow-visible">
-            <line
-              x1={20}
-              y1={y}
-              x2={width - 20}
-              y2={y}
-              stroke="#10b981"
-              strokeWidth="2"
-              strokeDasharray="4 4"
-            />
-            <circle cx={width / 2} cy={y} r={5} fill="#10b981" stroke="#064e3b" strokeWidth="2" />
-          </svg>
-          <div className="flex justify-between items-center text-[11px] text-zinc-500 dark:text-zinc-400 mt-1 px-1 tabular-nums">
-            <span>Fyrsta skráning: {p.date}</span>
-            <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-              Lægsta verð: {formatPrice(p.price)}
-            </span>
-          </div>
-        </div>
-      );
+  // Compute all unique sorted dates across the model history and all store offers
+  const allDates = useMemo(() => {
+    const set = new Set<string>();
+    if (selectedModel.history) {
+      for (const p of selectedModel.history) set.add(p.date);
     }
+    for (const o of offers) {
+      if (o.history) {
+        for (const p of o.history) set.add(p.date);
+      }
+    }
+    const arr = Array.from(set).sort();
+    return arr.length > 0 ? arr : [new Date().toISOString().slice(0, 10)];
+  }, [selectedModel.history, offers]);
 
-    const prices = points.map((p) => p.price);
-    const min = Math.min(...prices);
-    const max = Math.max(...prices);
-    const range = max - min || 1;
-    const padding = 24;
-
-    const coords = points.map((p, i) => {
-      const x = padding + (i / (points.length - 1)) * (width - padding * 2);
-      const y =
-        max === min
-          ? height / 2
-          : height - padding - ((p.price - min) / range) * (height - padding * 2);
-      return { x, y, price: p.price, date: p.date };
+  // Compute store series with normalized coordinate mappings
+  const storeSeries = useMemo(() => {
+    if (offers.length === 0) {
+      return [
+        {
+          store: 'Markaðslægsta',
+          color: '#10b981',
+          points: selectedModel.history || [],
+          currentPrice: selectedModel.lowestPrice,
+          storeLogo: undefined,
+        },
+      ];
+    }
+    return offers.map((o, idx) => {
+      const color = getStoreColor(o.store, idx);
+      const points =
+        o.history && o.history.length > 0
+          ? o.history
+          : o.previousPrice && o.previousPrice !== o.price
+          ? [
+              { date: allDates[Math.max(0, allDates.length - 2)] || 'Fyrri', price: o.previousPrice },
+              { date: allDates[allDates.length - 1] || 'Í dag', price: o.price },
+            ]
+          : [{ date: allDates[allDates.length - 1] || 'Í dag', price: o.price }];
+      return {
+        store: o.store,
+        color,
+        points,
+        currentPrice: o.price,
+        storeLogo: o.storeLogo,
+      };
     });
+  }, [offers, allDates, selectedModel]);
 
-    const pathD = coords.reduce((acc, c, i) => {
-      return i === 0 ? `M ${c.x} ${c.y}` : `${acc} L ${c.x} ${c.y}`;
-    }, '');
+  const visibleSeries =
+    effectiveStoreFilter === 'ALL'
+      ? storeSeries
+      : storeSeries.filter((s) => s.store === effectiveStoreFilter);
 
-    const areaD = `${pathD} L ${coords[coords.length - 1].x} ${height - padding} L ${coords[0].x} ${height - padding} Z`;
+  const allVisiblePrices = visibleSeries.flatMap((s) => s.points.map((p) => p.price));
+  const minPrice = allVisiblePrices.length > 0 ? Math.min(...allVisiblePrices) : selectedModel.lowestPrice;
+  const maxPrice = allVisiblePrices.length > 0 ? Math.max(...allVisiblePrices) : selectedModel.lowestPrice;
+  const priceSpan = maxPrice - minPrice;
+  const yPadding = priceSpan > 0 ? priceSpan * 0.14 : Math.max(1000, minPrice * 0.08);
+  const yMin = Math.max(0, minPrice - yPadding);
+  const yMax = maxPrice + yPadding;
+  const yRange = Math.max(1, yMax - yMin);
 
-    const isDrop = points[points.length - 1].price < points[0].price;
-    const isUp = points[points.length - 1].price > points[0].price;
-    const strokeColor = isDrop ? '#10b981' : isUp ? '#f43f5e' : '#3b82f6';
-    const lowestIdx = prices.indexOf(min);
+  const width = 540;
+  const height = 135;
+  const padX = 36;
+  const padY = 22;
+
+  const getX = (dateStr: string) => {
+    const idx = allDates.indexOf(dateStr);
+    if (idx === -1) return padX;
+    return padX + (idx / Math.max(1, allDates.length - 1)) * (width - padX * 2);
+  };
+
+  const getY = (price: number) => {
+    return height - padY - ((price - yMin) / yRange) * (height - padY * 2);
+  };
+
+  const storesOnHoverDate = useMemo(() => {
+    if (hoverTrendIdx === null || hoverTrendIdx >= allDates.length) return [];
+    const targetDate = allDates[hoverTrendIdx];
+    const results: Array<{ store: string; price: number; color: string; fav?: string }> = [];
+    for (let idx = 0; idx < offers.length; idx++) {
+      const o = offers[idx];
+      const hist = o.history || [];
+      const match = hist.find((p) => p.date === targetDate);
+      const price = match ? match.price : hist.length === 1 && hist[0].date === targetDate ? hist[0].price : null;
+      if (price !== null) {
+        results.push({
+          store: o.store,
+          price,
+          color: getStoreColor(o.store, idx),
+          fav: getStoreFavicon(o.store) || o.storeLogo,
+        });
+      }
+    }
+    return results.sort((a, b) => a.price - b.price);
+  }, [hoverTrendIdx, allDates, offers]);
+
+  const renderMultiStoreTrendSvg = () => {
+    const isSingleSeries = visibleSeries.length === 1;
+    const singleSeries = visibleSeries[0];
 
     return (
       <div className="relative">
-        {/* Floating Hover Tooltip */}
-        {hoverTrendIdx !== null && coords[hoverTrendIdx] && (
-          <div className="absolute top-1 left-1/2 -translate-x-1/2 bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 text-xs font-mono font-semibold px-2.5 py-1 rounded-lg shadow-lg pointer-events-none z-20 flex items-center gap-2">
-            <span>{coords[hoverTrendIdx].date}:</span>
-            <span className="font-bold">{formatPrice(coords[hoverTrendIdx].price)}</span>
-            {coords[hoverTrendIdx].price === min && min < max && (
-              <span className="text-emerald-400 dark:text-emerald-600 font-bold">(Lægst!)</span>
-            )}
+        {/* Floating Multi-Store Hover Tooltip */}
+        {hoverTrendIdx !== null && storesOnHoverDate.length > 0 && (
+          <div className="absolute top-1 left-1/2 -translate-x-1/2 bg-zinc-950/95 dark:bg-zinc-900/95 text-white text-xs rounded-xl shadow-2xl border border-white/10 px-3 py-2 pointer-events-none z-30 backdrop-blur-md min-w-[210px] max-w-[280px]">
+            <div className="flex items-center justify-between border-b border-white/10 pb-1 mb-1.5">
+              <span className="font-mono font-bold text-zinc-300">
+                {allDates[hoverTrendIdx]} {hoverTrendIdx === allDates.length - 1 ? '(Í dag)' : ''}
+              </span>
+              <span className="text-[10px] text-zinc-400">Verðsamanburður</span>
+            </div>
+            <div className="space-y-1">
+              {storesOnHoverDate.map((st, i) => (
+                <div key={st.store} className="flex items-center justify-between text-[11px] gap-2">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: st.color }} />
+                    <span className="truncate">{st.store}:</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0 font-mono">
+                    <span className="font-bold">{formatPrice(st.price)}</span>
+                    {i === 0 && storesOnHoverDate.length > 1 && (
+                      <span className="text-[9px] bg-emerald-500/20 text-emerald-400 font-bold px-1 rounded">Lægst</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
         <svg
           viewBox={`0 0 ${width} ${height}`}
-          className="w-full h-28 overflow-visible select-none cursor-crosshair"
+          className="w-full h-32 sm:h-36 overflow-visible select-none cursor-crosshair"
           onPointerMove={(e) => {
             const rect = e.currentTarget.getBoundingClientRect();
             if (!rect.width) return;
             const svgX = ((e.clientX - rect.left) / rect.width) * width;
-            const relX = Math.max(0, Math.min(width - padding * 2, svgX - padding));
-            const rawIdx = Math.round((relX / (width - padding * 2)) * (points.length - 1));
-            setHoverTrendIdx(Math.max(0, Math.min(points.length - 1, rawIdx)));
+            const relX = Math.max(0, Math.min(width - padX * 2, svgX - padX));
+            const rawIdx = Math.round((relX / (width - padX * 2)) * (allDates.length - 1));
+            setHoverTrendIdx(Math.max(0, Math.min(allDates.length - 1, rawIdx)));
           }}
           onPointerLeave={() => setHoverTrendIdx(null)}
         >
           <defs>
-            <linearGradient id="grad-area" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={strokeColor} stopOpacity="0.25" />
-              <stop offset="100%" stopColor={strokeColor} stopOpacity="0.0" />
+            <linearGradient id="single-grad-area" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={singleSeries?.color || '#10b981'} stopOpacity="0.22" />
+              <stop offset="100%" stopColor={singleSeries?.color || '#10b981'} stopOpacity="0.0" />
             </linearGradient>
           </defs>
-          <path d={areaD} fill="url(#grad-area)" />
-          <path
-            d={pathD}
-            fill="none"
-            stroke={strokeColor}
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
+
+          {/* Reference price grid lines */}
+          <line
+            x1={padX}
+            y1={padY}
+            x2={width - padX}
+            y2={padY}
+            stroke="currentColor"
+            className="text-zinc-200 dark:text-zinc-800"
+            strokeDasharray="2 3"
+            strokeWidth="1"
+          />
+          <line
+            x1={padX}
+            y1={height - padY}
+            x2={width - padX}
+            y2={height - padY}
+            stroke="currentColor"
+            className="text-zinc-200 dark:text-zinc-800"
+            strokeDasharray="2 3"
+            strokeWidth="1"
           />
 
+          {/* Y axis price labels */}
+          <text
+            x={padX - 4}
+            y={padY + 3}
+            textAnchor="end"
+            className="fill-zinc-400 dark:fill-zinc-500 text-[9px] font-mono select-none"
+          >
+            {formatPrice(maxPrice)}
+          </text>
+          <text
+            x={padX - 4}
+            y={height - padY + 3}
+            textAnchor="end"
+            className="fill-zinc-400 dark:fill-zinc-500 text-[9px] font-mono select-none"
+          >
+            {formatPrice(minPrice)}
+          </text>
+
           {/* Interactive vertical crosshair on hover */}
-          {hoverTrendIdx !== null && coords[hoverTrendIdx] && (
+          {hoverTrendIdx !== null && (
             <line
-              x1={coords[hoverTrendIdx].x}
-              y1={padding - 6}
-              x2={coords[hoverTrendIdx].x}
-              y2={height - padding + 6}
+              x1={getX(allDates[hoverTrendIdx])}
+              y1={padY - 4}
+              x2={getX(allDates[hoverTrendIdx])}
+              y2={height - padY + 4}
               stroke="currentColor"
               className="text-zinc-400 dark:text-zinc-500 pointer-events-none"
               strokeWidth="1.5"
@@ -148,47 +272,99 @@ export function PhoneComparisonModal({
             />
           )}
 
-          {/* Static label on lowest price point if there's a dip */}
-          {min < max && lowestIdx > 0 && lowestIdx < coords.length - 1 && (
-            <g className="pointer-events-none">
-              <text
-                x={coords[lowestIdx].x}
-                y={Math.min(height - 4, coords[lowestIdx].y + 14)}
-                textAnchor="middle"
-                className="fill-emerald-600 dark:fill-emerald-400 text-[10px] font-mono font-bold"
-              >
-                Lægst: {formatPrice(min)}
-              </text>
-            </g>
-          )}
+          {/* Render lines for all visible store series */}
+          {visibleSeries.map((s) => {
+            const coords = s.points
+              .map((p) => ({
+                x: getX(p.date),
+                y: getY(p.price),
+                date: p.date,
+                price: p.price,
+              }))
+              .filter((c) => !isNaN(c.x) && !isNaN(c.y));
 
-          {coords.map((c, i) => (
-            <circle
-              key={i}
-              cx={c.x}
-              cy={c.y}
-              r={i === hoverTrendIdx ? 5.5 : i === 0 || i === coords.length - 1 ? 4.5 : 3}
-              fill={i === hoverTrendIdx ? strokeColor : i === coords.length - 1 ? strokeColor : isDark ? '#09090b' : '#ffffff'}
-              stroke={strokeColor}
-              strokeWidth="2"
-              className="transition-all"
-            />
-          ))}
+            if (coords.length === 0) return null;
+
+            const pathD = coords.reduce((acc, c, i) => (i === 0 ? `M ${c.x} ${c.y}` : `${acc} L ${c.x} ${c.y}`), '');
+            const areaD = `${pathD} L ${coords[coords.length - 1].x} ${height - padY} L ${coords[0].x} ${height - padY} Z`;
+            const isDimmed = effectiveStoreFilter !== 'ALL' && effectiveStoreFilter !== s.store;
+            const lastCoord = coords[coords.length - 1];
+
+            return (
+              <g key={s.store} opacity={isDimmed ? 0.15 : 1} className="transition-opacity">
+                {isSingleSeries && coords.length > 1 && (
+                  <path d={areaD} fill="url(#single-grad-area)" />
+                )}
+
+                {coords.length > 1 && (
+                  <path
+                    d={pathD}
+                    fill="none"
+                    stroke={s.color}
+                    strokeWidth={effectiveStoreFilter === s.store ? 3.5 : 2.5}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                )}
+
+                {/* Point circles */}
+                {coords.map((c) => {
+                  const dateIdx = allDates.indexOf(c.date);
+                  const isHovered = hoverTrendIdx === dateIdx;
+                  return (
+                    <circle
+                      key={`${s.store}-${c.date}`}
+                      cx={c.x}
+                      cy={c.y}
+                      r={isHovered ? 5.5 : coords.length === 1 ? 5 : 3.5}
+                      fill={isHovered ? s.color : isDark ? '#09090b' : '#ffffff'}
+                      stroke={s.color}
+                      strokeWidth={isHovered ? 2.5 : 2}
+                      className="transition-all"
+                    />
+                  );
+                })}
+
+                {/* End line store label in multi-store mode */}
+                {visibleSeries.length > 1 && lastCoord && (
+                  <text
+                    x={Math.min(width - 6, lastCoord.x + 5)}
+                    y={Math.max(padY + 4, Math.min(height - padY - 3, lastCoord.y + 3))}
+                    fill={s.color}
+                    fontSize="9.5"
+                    fontWeight="700"
+                    fontFamily="monospace"
+                    className="select-none pointer-events-none"
+                  >
+                    {s.store}
+                  </text>
+                )}
+              </g>
+            );
+          })}
         </svg>
 
-        <div className="flex justify-between text-[11px] text-zinc-500 dark:text-zinc-400 mt-1 px-1 tabular-nums">
-          <span>Upphaf ({points[0].date}): {formatPrice(points[0].price)}</span>
-          <span
-            className={`font-semibold ${
-              isDrop
-                ? 'text-emerald-600 dark:text-emerald-400'
-                : isUp
-                ? 'text-rose-600 dark:text-rose-400'
-                : 'text-zinc-700 dark:text-zinc-300'
-            }`}
-          >
-            Nú ({points[points.length - 1].date}): {formatPrice(points[points.length - 1].price)}
-          </span>
+        {/* X Axis Date Labels */}
+        <div className="flex justify-between items-center text-[11px] font-mono text-zinc-500 dark:text-zinc-400 mt-1 px-3 tabular-nums border-t border-zinc-100 dark:border-white/[0.06] pt-1.5">
+          {allDates.map((d, i) => {
+            const parts = d.split('-');
+            const label = parts.length === 3 ? `${parts[2]}.${parts[1]}` : d;
+            const isToday = i === allDates.length - 1;
+            return (
+              <span
+                key={d}
+                className={
+                  hoverTrendIdx === i
+                    ? 'text-zinc-950 dark:text-white font-bold underline decoration-zinc-400'
+                    : isToday
+                    ? 'font-semibold text-zinc-700 dark:text-zinc-300'
+                    : ''
+                }
+              >
+                {isToday ? `Í dag (${label})` : label}
+              </span>
+            );
+          })}
         </div>
       </div>
     );
@@ -371,11 +547,19 @@ export function PhoneComparisonModal({
         )}
 
         {/* 3. Historical Price Trend Chart */}
-        <div className="bg-zinc-50 dark:bg-zinc-950/80 border border-zinc-200 dark:border-white/[0.07] rounded-xl p-4 space-y-2">
+        <div className="bg-zinc-50 dark:bg-zinc-950/80 border border-zinc-200 dark:border-white/[0.07] rounded-xl p-4 space-y-3">
           <div className="flex flex-wrap items-center justify-between text-xs gap-2">
-            <span className="font-semibold text-zinc-800 dark:text-zinc-200">
-              Verðþróun yfir tíma
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-zinc-800 dark:text-zinc-200">
+                Verðþróun yfir tíma
+              </span>
+              {offers.length > 1 && (
+                <span className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                  ({offers.length} verslanir)
+                </span>
+              )}
+            </div>
+
             <div className="flex items-center gap-3 text-[11px] tabular-nums">
               {allTimeLowest < selectedModel.lowestPrice && (
                 <span className="text-zinc-500 dark:text-zinc-400">
@@ -394,7 +578,56 @@ export function PhoneComparisonModal({
             </div>
           </div>
 
-          {renderTrendSvg(selectedModel.history, 520, 105)}
+          {/* Store Filter Pills when multiple stores sell this variant */}
+          {offers.length > 1 && (
+            <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+              <button
+                type="button"
+                onClick={() => setSelectedStoreFilter('ALL')}
+                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 ${
+                  effectiveStoreFilter === 'ALL'
+                    ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 shadow-2xs'
+                    : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
+                }`}
+              >
+                <span>Allar verslanir ({offers.length})</span>
+              </button>
+              {offers.map((o, idx) => {
+                const isSelected = effectiveStoreFilter === o.store;
+                const color = getStoreColor(o.store, idx);
+                const fav = getStoreFavicon(o.store) || o.storeLogo;
+                return (
+                  <button
+                    key={o.store}
+                    type="button"
+                    onClick={() => setSelectedStoreFilter(isSelected ? 'ALL' : o.store)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 tabular-nums ${
+                      isSelected
+                        ? 'bg-white dark:bg-zinc-800 text-zinc-950 dark:text-white ring-2 shadow-2xs'
+                        : 'bg-zinc-100 dark:bg-zinc-800/70 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700'
+                    }`}
+                    style={isSelected ? { outlineColor: color, borderColor: color } : undefined}
+                  >
+                    <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
+                    {fav && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={fav} alt={o.store} className="w-3.5 h-3.5 rounded-xs object-contain" />
+                    )}
+                    <span>{o.store}</span>
+                    <span className="text-[11px] font-normal opacity-75">{formatPrice(o.price)}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {renderMultiStoreTrendSvg()}
+
+          {offers.length > 1 && (
+            <p className="text-[10px] text-zinc-400 dark:text-zinc-500 italic">
+              Hver lína sýnir verðþróun hjá sinni verslun. Smelltu á verslunarhnapp til að einangra eða renndu yfir línuritið til að bera saman verð hvers dags.
+            </p>
+          )}
         </div>
       </div>
     </div>

@@ -114,6 +114,7 @@ export interface StoreOffer {
   previousPrice?: number;
   priceChange?: number;
   url: string;
+  history?: PricePoint[];
 }
 
 export interface StoreDailySummary {
@@ -435,9 +436,24 @@ export async function GET(request?: Request) {
         const raw = fs.readFileSync(historyFile, 'utf-8');
         const parsed = JSON.parse(raw);
         if (parsed.savedCatalog && parsed.meta) {
-          const cachedModels = (Object.values(parsed.savedCatalog) as PhoneModelGroup[]).sort((a, b) =>
-            a.name.localeCompare(b.name, 'is')
-          );
+          const storeOffersStore: Record<string, PricePoint[]> = parsed.storeOffers || {};
+          const today = new Date().toISOString().slice(0, 10);
+          const cachedModels = (Object.values(parsed.savedCatalog) as PhoneModelGroup[])
+            .map((m) => ({
+              ...m,
+              variants: m.variants.map((v) => ({
+                ...v,
+                offers: v.offers.map((o) => {
+                  const key = `${m.id}::${v.storage}::${o.store}`;
+                  const hist =
+                    (o.history && o.history.length > 0 ? o.history : null) ||
+                    storeOffersStore[key] ||
+                    [{ date: today, price: o.price }];
+                  return { ...o, history: hist };
+                }),
+              })),
+            }))
+            .sort((a, b) => a.name.localeCompare(b.name, 'is'));
           if (cachedModels.length > 0) {
             return NextResponse.json({
               models: cachedModels,
@@ -1267,7 +1283,13 @@ export async function GET(request?: Request) {
           priceChangeAmount: hist.changeAmount,
           variants: m.variants.map((v) => ({
             ...v,
-            offers: [...v.offers].sort((a, b) => a.price - b.price),
+            offers: [...v.offers]
+              .map((o) => {
+                const storeKey = `${m.id}::${v.storage}::${o.store}`;
+                const hist = storeOffersStore[storeKey] || o.history || [{ date: today, price: o.price }];
+                return { ...o, history: hist };
+              })
+              .sort((a, b) => a.price - b.price),
           })),
         };
         cleanSavedCatalog[m.id] = updatedModel;
