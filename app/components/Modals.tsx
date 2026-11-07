@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import {
   PhoneModelGroup,
   PhoneVariant,
@@ -29,6 +30,12 @@ export function PhoneComparisonModal({
   isDark,
   onClose,
 }: PhoneModalProps) {
+  const [hoverTrendIdx, setHoverTrendIdx] = useState<number | null>(null);
+
+  const historyPrices = (selectedModel.history || []).map((p) => p.price);
+  const allTimeLowest =
+    historyPrices.length > 0 ? Math.min(...historyPrices) : selectedModel.lowestPrice;
+
   const renderTrendSvg = (points: PricePoint[], width = 520, height = 105) => {
     if (!points || points.length === 0) return null;
 
@@ -63,11 +70,14 @@ export function PhoneComparisonModal({
     const min = Math.min(...prices);
     const max = Math.max(...prices);
     const range = max - min || 1;
-    const padding = 20;
+    const padding = 24;
 
     const coords = points.map((p, i) => {
       const x = padding + (i / (points.length - 1)) * (width - padding * 2);
-      const y = height - padding - ((p.price - min) / range) * (height - padding * 2);
+      const y =
+        max === min
+          ? height / 2
+          : height - padding - ((p.price - min) / range) * (height - padding * 2);
       return { x, y, price: p.price, date: p.date };
     });
 
@@ -80,13 +90,37 @@ export function PhoneComparisonModal({
     const isDrop = points[points.length - 1].price < points[0].price;
     const isUp = points[points.length - 1].price > points[0].price;
     const strokeColor = isDrop ? '#10b981' : isUp ? '#f43f5e' : '#3b82f6';
+    const lowestIdx = prices.indexOf(min);
 
     return (
       <div className="relative">
-        <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-28 overflow-visible">
+        {/* Floating Hover Tooltip */}
+        {hoverTrendIdx !== null && coords[hoverTrendIdx] && (
+          <div className="absolute top-1 left-1/2 -translate-x-1/2 bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 text-xs font-mono font-semibold px-2.5 py-1 rounded-lg shadow-lg pointer-events-none z-20 flex items-center gap-2">
+            <span>{coords[hoverTrendIdx].date}:</span>
+            <span className="font-bold">{formatPrice(coords[hoverTrendIdx].price)}</span>
+            {coords[hoverTrendIdx].price === min && min < max && (
+              <span className="text-emerald-400 dark:text-emerald-600 font-bold">(Lægst!)</span>
+            )}
+          </div>
+        )}
+
+        <svg
+          viewBox={`0 0 ${width} ${height}`}
+          className="w-full h-28 overflow-visible select-none cursor-crosshair"
+          onPointerMove={(e) => {
+            const rect = e.currentTarget.getBoundingClientRect();
+            if (!rect.width) return;
+            const svgX = ((e.clientX - rect.left) / rect.width) * width;
+            const relX = Math.max(0, Math.min(width - padding * 2, svgX - padding));
+            const rawIdx = Math.round((relX / (width - padding * 2)) * (points.length - 1));
+            setHoverTrendIdx(Math.max(0, Math.min(points.length - 1, rawIdx)));
+          }}
+          onPointerLeave={() => setHoverTrendIdx(null)}
+        >
           <defs>
             <linearGradient id="grad-area" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={strokeColor} stopOpacity="0.28" />
+              <stop offset="0%" stopColor={strokeColor} stopOpacity="0.25" />
               <stop offset="100%" stopColor={strokeColor} stopOpacity="0.0" />
             </linearGradient>
           </defs>
@@ -99,18 +133,49 @@ export function PhoneComparisonModal({
             strokeLinecap="round"
             strokeLinejoin="round"
           />
+
+          {/* Interactive vertical crosshair on hover */}
+          {hoverTrendIdx !== null && coords[hoverTrendIdx] && (
+            <line
+              x1={coords[hoverTrendIdx].x}
+              y1={padding - 6}
+              x2={coords[hoverTrendIdx].x}
+              y2={height - padding + 6}
+              stroke="currentColor"
+              className="text-zinc-400 dark:text-zinc-500 pointer-events-none"
+              strokeWidth="1.5"
+              strokeDasharray="3 3"
+            />
+          )}
+
+          {/* Static label on lowest price point if there's a dip */}
+          {min < max && lowestIdx > 0 && lowestIdx < coords.length - 1 && (
+            <g className="pointer-events-none">
+              <text
+                x={coords[lowestIdx].x}
+                y={Math.min(height - 4, coords[lowestIdx].y + 14)}
+                textAnchor="middle"
+                className="fill-emerald-600 dark:fill-emerald-400 text-[10px] font-mono font-bold"
+              >
+                Lægst: {formatPrice(min)}
+              </text>
+            </g>
+          )}
+
           {coords.map((c, i) => (
             <circle
               key={i}
               cx={c.x}
               cy={c.y}
-              r={i === 0 || i === coords.length - 1 ? 4.5 : 3}
-              fill={i === coords.length - 1 ? strokeColor : isDark ? '#09090b' : '#ffffff'}
+              r={i === hoverTrendIdx ? 5.5 : i === 0 || i === coords.length - 1 ? 4.5 : 3}
+              fill={i === hoverTrendIdx ? strokeColor : i === coords.length - 1 ? strokeColor : isDark ? '#09090b' : '#ffffff'}
               stroke={strokeColor}
               strokeWidth="2"
+              className="transition-all"
             />
           ))}
         </svg>
+
         <div className="flex justify-between text-[11px] text-zinc-500 dark:text-zinc-400 mt-1 px-1 tabular-nums">
           <span>Upphaf ({points[0].date}): {formatPrice(points[0].price)}</span>
           <span
@@ -119,7 +184,7 @@ export function PhoneComparisonModal({
                 ? 'text-emerald-600 dark:text-emerald-400'
                 : isUp
                 ? 'text-rose-600 dark:text-rose-400'
-                : 'text-blue-600 dark:text-blue-400'
+                : 'text-zinc-700 dark:text-zinc-300'
             }`}
           >
             Nú ({points[points.length - 1].date}): {formatPrice(points[points.length - 1].price)}
@@ -307,16 +372,26 @@ export function PhoneComparisonModal({
 
         {/* 3. Historical Price Trend Chart */}
         <div className="bg-zinc-50 dark:bg-zinc-950/80 border border-zinc-200 dark:border-white/[0.07] rounded-xl p-4 space-y-2">
-          <div className="flex items-center justify-between text-xs">
+          <div className="flex flex-wrap items-center justify-between text-xs gap-2">
             <span className="font-semibold text-zinc-800 dark:text-zinc-200">
               Verðþróun yfir tíma
             </span>
-            <span className="text-zinc-500 dark:text-zinc-400 text-[11px] tabular-nums">
-              Lægsta skráða verð:{' '}
-              <strong className="text-emerald-600 dark:text-emerald-400">
-                {formatPrice(selectedModel.lowestPrice)}
-              </strong>
-            </span>
+            <div className="flex items-center gap-3 text-[11px] tabular-nums">
+              {allTimeLowest < selectedModel.lowestPrice && (
+                <span className="text-zinc-500 dark:text-zinc-400">
+                  Lægsta verð í sögu:{' '}
+                  <strong className="text-emerald-600 dark:text-emerald-400 font-bold">
+                    {formatPrice(allTimeLowest)}
+                  </strong>
+                </span>
+              )}
+              <span className="text-zinc-500 dark:text-zinc-400">
+                Verð núna:{' '}
+                <strong className="text-zinc-900 dark:text-white font-semibold">
+                  {formatPrice(selectedModel.lowestPrice)}
+                </strong>
+              </span>
+            </div>
           </div>
 
           {renderTrendSvg(selectedModel.history, 520, 105)}
