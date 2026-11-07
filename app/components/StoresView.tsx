@@ -33,6 +33,20 @@ interface StoreProductItem {
   history: PricePoint[];
 }
 
+interface DayChangeItem {
+  model: PhoneModelGroup;
+  storage?: string;
+  store: string;
+  prevPrice: number;
+  newPrice: number;
+  diff: number;
+  diffPercent: number;
+  isDrop: boolean;
+  isHike: boolean;
+  history: PricePoint[];
+  url: string;
+}
+
 function ProductSparkline({
   history,
   price,
@@ -161,6 +175,10 @@ export function StoresView({ meta, models, onSelectStore, onSelectModel }: Store
   const [chartMode, setChartMode] = useState<'pct' | 'isk'>('pct');
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
   const [filterTab, setFilterTab] = useState<'all_changes' | 'drops' | 'hikes' | 'all'>('all_changes');
+  const [storeViewMode, setStoreViewMode] = useState<'trends' | 'daily'>('trends');
+  const [selectedDay, setSelectedDay] = useState<string>('2026-11-07');
+  const [dayFilterTab, setDayFilterTab] = useState<'all' | 'drops' | 'hikes'>('all');
+  const [dayStoreFilter, setDayStoreFilter] = useState<string>('ALL');
 
   const storeProducts = useMemo(() => {
     const list: StoreProductItem[] = [];
@@ -206,6 +224,91 @@ export function StoresView({ meta, models, onSelectStore, onSelectModel }: Store
   const focusedStoreHikes = storeProducts.filter((p) => p.isHike);
   const focusedStoreChanges = storeProducts.filter((p) => p.isDrop || p.isHike);
 
+  // Extract all available historical dates in chronological order
+  const allHistoryDates = useMemo(() => {
+    const set = new Set<string>();
+    for (const m of models) {
+      for (const pt of m.history || []) {
+        if (pt.date) set.add(pt.date);
+      }
+    }
+    const dates = Array.from(set).sort();
+    return dates.length > 0 ? dates : ['2026-11-03', '2026-11-04', '2026-11-05', '2026-11-06', '2026-11-07'];
+  }, [models]);
+
+  // Compute exact day-to-day changes for the selected day compared to previous day
+  const dayChanges = useMemo(() => {
+    const dayIdx = allHistoryDates.indexOf(selectedDay);
+    if (dayIdx <= 0) return [];
+    const prevDate = allHistoryDates[dayIdx - 1];
+
+    const list: DayChangeItem[] = [];
+    for (const m of models) {
+      const hMap = new Map((m.history || []).map((p) => [p.date, p.price]));
+      const pPrev = hMap.get(prevDate);
+      const pCurr = hMap.get(selectedDay);
+
+      if (pPrev !== undefined && pCurr !== undefined && pPrev !== pCurr) {
+        let store = m.stores[0] || 'Óþekkt';
+        let url = '';
+        let storage = '';
+
+        for (const v of m.variants) {
+          for (const o of v.offers) {
+            if (o.price === pCurr) {
+              store = o.store;
+              url = o.url;
+              storage = v.storage;
+              break;
+            }
+          }
+          if (url) break;
+        }
+
+        const diff = pCurr - pPrev;
+        const diffPercent = pPrev > 0 ? Number((((pCurr - pPrev) / pPrev) * 100).toFixed(1)) : 0;
+
+        list.push({
+          model: m,
+          storage,
+          store,
+          prevPrice: pPrev,
+          newPrice: pCurr,
+          diff,
+          diffPercent,
+          isDrop: diff < 0,
+          isHike: diff > 0,
+          history: m.history && m.history.length > 0 ? m.history : [],
+          url,
+        });
+      }
+    }
+
+    return list.sort((a, b) => {
+      if (a.isDrop && !b.isDrop) return -1;
+      if (!a.isDrop && b.isDrop) return 1;
+      if (a.isDrop && b.isDrop) return a.diff - b.diff; // biggest drop first
+      if (a.isHike && !b.isHike) return -1;
+      if (!a.isHike && b.isHike) return 1;
+      return b.diff - a.diff; // largest hike first
+    });
+  }, [allHistoryDates, selectedDay, models]);
+
+  const dayDrops = dayChanges.filter((c) => c.isDrop);
+  const dayHikes = dayChanges.filter((c) => c.isHike);
+  const dayTotalSavings = dayDrops.reduce((acc, c) => acc + Math.abs(c.diff), 0);
+  const biggestDayDrop = dayDrops[0];
+  const dayStoresList = Array.from(new Set(dayChanges.map((c) => c.store)));
+
+  const filteredDayChanges = useMemo(() => {
+    return dayChanges.filter((item) => {
+      if (dayFilterTab === 'drops' && !item.isDrop) return false;
+      if (dayFilterTab === 'hikes' && !item.isHike) return false;
+      if (dayStoreFilter !== 'ALL' && item.store !== dayStoreFilter) return false;
+      return true;
+    });
+  }, [dayChanges, dayFilterTab, dayStoreFilter]);
+
   const displayedStoreProducts =
     filterTab === 'drops'
       ? focusedStoreDrops
@@ -220,7 +323,6 @@ export function StoresView({ meta, models, onSelectStore, onSelectModel }: Store
   const leader = summaries[0];
   const totalDrops = summaries.reduce((acc, s) => acc + s.dropsCount, 0);
   const totalHikes = summaries.reduce((acc, s) => acc + s.hikesCount, 0);
-  const totalOffersCount = summaries.reduce((acc, s) => acc + s.totalPhones, 0);
 
   // Enrich summaries with guaranteed 7-point history & stats
   const enrichedSummaries = summaries.map((st, idx) => {
@@ -289,7 +391,7 @@ export function StoresView({ meta, models, onSelectStore, onSelectModel }: Store
     <div className="space-y-6">
       {/* BENTO KPI HERO ROW */}
       <section aria-label="Verslanayfirlit" className="space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <span className="inline-flex items-center justify-center w-6 h-6 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200/80 dark:border-white/[0.08]">
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -297,13 +399,40 @@ export function StoresView({ meta, models, onSelectStore, onSelectModel }: Store
               </svg>
             </span>
             <h2 className="text-xs sm:text-sm font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
-              Verslanagreining, línurit verðþróunar og samkeppnisstaða
+              {storeViewMode === 'trends'
+                ? 'Verslanagreining, línurit verðþróunar og samkeppnisstaða'
+                : 'Daglegt verðflæði — Hvað breyttist milli daga?'}
             </h2>
           </div>
-          <span className="text-xs text-zinc-500 dark:text-zinc-400 tabular-nums">
-            Samanburður á <strong className="text-zinc-900 dark:text-white">{meta?.totalStores || summaries.length}</strong> virkum verslunum og{' '}
-            <strong className="text-zinc-900 dark:text-white">{totalOffersCount}</strong> tilboðum
-          </span>
+
+          {/* Mode Switcher */}
+          <div className="bg-zinc-100 dark:bg-zinc-950/90 p-1 rounded-xl border border-zinc-200/80 dark:border-white/[0.08] flex items-center gap-1 self-start sm:self-auto">
+            <button
+              type="button"
+              onClick={() => setStoreViewMode('trends')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 ${
+                storeViewMode === 'trends'
+                  ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-2xs'
+                  : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
+              }`}
+            >
+              <span>📊 Verslanir & Línurit</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setStoreViewMode('daily')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 ${
+                storeViewMode === 'daily'
+                  ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-2xs'
+                  : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'
+              }`}
+            >
+              <span>📅 Breytingar milli daga</span>
+              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-mono font-bold">
+                Nýtt
+              </span>
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 tabular-nums">
@@ -347,9 +476,18 @@ export function StoresView({ meta, models, onSelectStore, onSelectModel }: Store
                 ↑ {risingStoresCount} hækka
               </span>
             </div>
-            <span className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1 block">
-              { enrichedSummaries.length - droppingStoresCount - risingStoresCount } verslanir með óbreytt meðalverð
-            </span>
+            <div className="flex items-center justify-between mt-1 text-[11px]">
+              <span className="text-zinc-500 dark:text-zinc-400">
+                { enrichedSummaries.length - droppingStoresCount - risingStoresCount } verslanir óbreyttar
+              </span>
+              <button
+                type="button"
+                onClick={() => setStoreViewMode('daily')}
+                className="font-medium text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-0.5"
+              >
+                <span>Milli daga →</span>
+              </button>
+            </div>
           </div>
 
           {/* Card 3: Price Drops Today */}
@@ -386,8 +524,369 @@ export function StoresView({ meta, models, onSelectStore, onSelectModel }: Store
         </div>
       </section>
 
-      {/* CHART 1: INTERACTIVE MULTI-STORE PRICE TREND LINE CHART (LÍNURIT VERÐÞRÓUNAR HJÁ BÚÐUM) */}
-      {enrichedSummaries.length > 0 && (
+      {/* VIEW MODE 1: DAY-TO-DAY PRICE CHANGES (DAGLEGT VERÐFLÆÐI MILLI DAGA) */}
+      {storeViewMode === 'daily' && (
+        <section
+          aria-label="Dagleg verðþróun milli daga"
+          className="space-y-4 animate-in fade-in duration-200"
+        >
+          {/* Day Timeline Selector Bar */}
+          <div className="rounded-2xl bg-white dark:bg-zinc-900/75 border border-zinc-200/80 dark:border-white/[0.08] p-4 shadow-xs space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400 block">
+                  Tímalína verðbreytinga
+                </span>
+                <h3 className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white">
+                  Veldu dag til að sjá nákvæmlega hvað breyttist miðað við daginn á undan
+                </h3>
+              </div>
+              <span className="text-xs text-zinc-500 dark:text-zinc-400 tabular-nums">
+                {allHistoryDates.length} dagar vaktaðir samfellt
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+              {allHistoryDates
+                .slice(1)
+                .reverse()
+                .map((dateStr) => {
+                  const isSelected = selectedDay === dateStr;
+                  const parts = dateStr.split('-');
+                  const formatted = parts.length === 3 ? `${parts[2]}.${parts[1]}` : dateStr;
+                  const isToday = dateStr === allHistoryDates[allHistoryDates.length - 1];
+                  const isYesterday =
+                    allHistoryDates.length >= 2 &&
+                    dateStr === allHistoryDates[allHistoryDates.length - 2];
+
+                  return (
+                    <button
+                      key={dateStr}
+                      type="button"
+                      onClick={() => {
+                        setSelectedDay(dateStr);
+                        setDayStoreFilter('ALL');
+                      }}
+                      className={`shrink-0 px-3.5 py-2 rounded-xl text-xs font-semibold border transition-all ${
+                        isSelected
+                          ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 border-zinc-900 dark:border-white shadow-sm'
+                          : 'bg-zinc-50 dark:bg-zinc-950/60 text-zinc-700 dark:text-zinc-300 border-zinc-200/80 dark:border-white/[0.07] hover:border-zinc-300'
+                      }`}
+                    >
+                      <span>
+                        {isToday
+                          ? `Í dag (${formatted})`
+                          : isYesterday
+                          ? `Í gær (${formatted})`
+                          : formatted}
+                      </span>
+                    </button>
+                  );
+                })}
+            </div>
+          </div>
+
+          {/* Daily KPI Bento Row */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 tabular-nums">
+            <div className="rounded-2xl bg-white dark:bg-zinc-900/70 border border-zinc-200/80 dark:border-white/[0.08] p-4 shadow-xs">
+              <span className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 block">
+                Lækkanir á milli daga
+              </span>
+              <div className="mt-1 flex items-baseline gap-2">
+                <span className="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                  {dayDrops.length}
+                </span>
+                <span className="text-xs text-zinc-500 dark:text-zinc-400">símar lækkuðu</span>
+              </div>
+              <span className="text-[11px] text-emerald-600 dark:text-emerald-400 mt-1 block font-mono">
+                {dayTotalSavings > 0 ? `Sparnaður: ${formatPrice(dayTotalSavings)}` : 'Enginn verðmunur'}
+              </span>
+            </div>
+
+            <div className="rounded-2xl bg-white dark:bg-zinc-900/70 border border-zinc-200/80 dark:border-white/[0.08] p-4 shadow-xs">
+              <span className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 block">
+                Hækkanir á milli daga
+              </span>
+              <div className="mt-1 flex items-baseline gap-2">
+                <span className="text-xl sm:text-2xl font-bold text-rose-600 dark:text-rose-400">
+                  {dayHikes.length}
+                </span>
+                <span className="text-xs text-zinc-500 dark:text-zinc-400">símar hækkuðu</span>
+              </div>
+              <span className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1 block">
+                {dayHikes.length === 0 ? 'Engar verðhækkanir þennan dag' : 'Breyting á listaverðum'}
+              </span>
+            </div>
+
+            <div className="rounded-2xl bg-white dark:bg-zinc-900/70 border border-zinc-200/80 dark:border-white/[0.08] p-4 shadow-xs">
+              <span className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 block">
+                Mesta lækkun dagsins
+              </span>
+              {biggestDayDrop ? (
+                <div>
+                  <span className="text-sm font-bold text-zinc-900 dark:text-white truncate block mt-0.5">
+                    {biggestDayDrop.model.name}
+                  </span>
+                  <div className="flex items-baseline gap-2 mt-0.5">
+                    <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400 font-mono">
+                      -{formatPrice(Math.abs(biggestDayDrop.diff))}
+                    </span>
+                    <span className="text-[11px] font-mono text-zinc-400">
+                      ({biggestDayDrop.diffPercent}%) hjá {biggestDayDrop.store}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <span className="text-xs text-zinc-400 mt-2 block">Engin lækkun skráð þennan dag</span>
+              )}
+            </div>
+
+            <div className="rounded-2xl bg-white dark:bg-zinc-900/70 border border-zinc-200/80 dark:border-white/[0.08] p-4 shadow-xs">
+              <span className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 block">
+                Virkustu verslanir dagsins
+              </span>
+              <div className="mt-1 flex flex-wrap gap-1.5">
+                {dayStoresList.length > 0 ? (
+                  dayStoresList.map((st) => (
+                    <span
+                      key={st}
+                      className="text-[10px] px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-semibold border border-zinc-200/80 dark:border-white/[0.06]"
+                    >
+                      {st}
+                    </span>
+                  ))
+                ) : (
+                  <span className="text-xs text-zinc-400">Engar verslanir breyttu verðum</span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Daily Products Section with Filters */}
+          <div className="rounded-2xl bg-white dark:bg-zinc-900/75 border border-zinc-200/80 dark:border-white/[0.08] p-5 shadow-xs space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-white">
+                  Verðbreytingar dagsins ({selectedDay})
+                </h3>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                  Sýnir nákvæmlega hvernig verðið breyttist milli þessa dags og dagsins á undan ásamt 7 daga verðferli.
+                </p>
+              </div>
+
+              {/* Filters for the day */}
+              <div className="flex items-center gap-1.5 bg-zinc-100 dark:bg-zinc-950/90 p-1 rounded-xl border border-zinc-200/80 dark:border-white/[0.08] flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => setDayFilterTab('all')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
+                    dayFilterTab === 'all'
+                      ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-2xs'
+                      : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900'
+                  }`}
+                >
+                  Allt ({dayChanges.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDayFilterTab('drops')}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
+                    dayFilterTab === 'drops'
+                      ? 'bg-emerald-500 text-white shadow-2xs'
+                      : 'text-emerald-700 dark:text-emerald-400 hover:text-emerald-900'
+                  }`}
+                >
+                  ↓ Lækkanir ({dayDrops.length})
+                </button>
+                {dayHikes.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setDayFilterTab('hikes')}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ${
+                      dayFilterTab === 'hikes'
+                        ? 'bg-rose-500 text-white shadow-2xs'
+                        : 'text-rose-700 dark:text-rose-400 hover:text-rose-900'
+                    }`}
+                  >
+                    ↑ Hækkanir ({dayHikes.length})
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Store Filter Pills */}
+            {dayStoresList.length > 1 && (
+              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
+                <button
+                  type="button"
+                  onClick={() => setDayStoreFilter('ALL')}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition-colors ${
+                    dayStoreFilter === 'ALL'
+                      ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 border-zinc-900 dark:border-white'
+                      : 'bg-zinc-50 dark:bg-zinc-950/60 text-zinc-700 dark:text-zinc-300 border-zinc-200/80 dark:border-white/[0.07]'
+                  }`}
+                >
+                  Allar búðir
+                </button>
+                {dayStoresList.map((st) => (
+                  <button
+                    key={st}
+                    type="button"
+                    onClick={() => setDayStoreFilter(dayStoreFilter === st ? 'ALL' : st)}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition-colors ${
+                      dayStoreFilter === st
+                        ? 'bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 border-zinc-900 dark:border-white'
+                        : 'bg-zinc-50 dark:bg-zinc-950/60 text-zinc-700 dark:text-zinc-300 border-zinc-200/80 dark:border-white/[0.07]'
+                    }`}
+                  >
+                    {st}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Day Products Cards */}
+            {filteredDayChanges.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {filteredDayChanges.map((item) => {
+                  const strokeColor = item.isDrop ? '#10b981' : item.isHike ? '#f43f5e' : '#0284c7';
+                  const fav = getStoreFavicon(item.store);
+
+                  return (
+                    <article
+                      key={`${item.model.id}-${item.storage}-${item.store}`}
+                      className="rounded-xl bg-zinc-50/70 dark:bg-zinc-950/70 hover:bg-zinc-50 dark:hover:bg-zinc-900/90 border border-zinc-200/75 dark:border-white/[0.06] hover:border-zinc-300 dark:hover:border-white/[0.16] p-3.5 flex flex-col justify-between transition-colors duration-150 space-y-3"
+                    >
+                      <div className="space-y-2.5">
+                        {/* Header: Thumbnail + Title + Store */}
+                        <div className="flex items-start justify-between gap-2.5">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div
+                              onClick={() => onSelectModel?.(item.model, item.storage)}
+                              className="w-11 h-11 rounded-lg bg-white p-1.5 shrink-0 flex items-center justify-center outline-1 -outline-offset-1 outline-black/10 shadow-2xs cursor-pointer hover:scale-105 transition-transform"
+                            >
+                              {item.model.image ? (
+                                /* eslint-disable-next-line @next/next/no-img-element */
+                                <img
+                                  src={item.model.image}
+                                  alt={item.model.name}
+                                  className="max-h-full max-w-full object-contain"
+                                  loading="lazy"
+                                />
+                              ) : (
+                                <span className="text-xs font-bold text-zinc-400">📱</span>
+                              )}
+                            </div>
+
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="text-[10px] font-mono text-zinc-500 dark:text-zinc-400">
+                                  {item.model.brand}
+                                </span>
+                                {item.storage && item.storage !== 'Standard' && (
+                                  <span className="text-[10px] font-mono font-semibold px-1.5 py-0.2 rounded bg-zinc-200/70 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
+                                    {item.storage}
+                                  </span>
+                                )}
+                                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-zinc-700 dark:text-zinc-300">
+                                  · {fav && (
+                                    /* eslint-disable-next-line @next/next/no-img-element */
+                                    <img src={fav} alt={item.store} className="w-3 h-3 object-contain inline" />
+                                  )}
+                                  {item.store}
+                                </span>
+                              </div>
+                              <h4
+                                onClick={() => onSelectModel?.(item.model, item.storage)}
+                                className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white truncate cursor-pointer hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
+                              >
+                                {item.model.name}
+                              </h4>
+                            </div>
+                          </div>
+
+                          {/* Drop/Hike Pill */}
+                          {item.isDrop ? (
+                            <span className="text-[10px] font-bold font-mono px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30 tabular-nums shrink-0">
+                              ↓ {item.diffPercent}%
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-bold font-mono px-2 py-0.5 rounded-full bg-rose-50 dark:bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-500/30 tabular-nums shrink-0">
+                              ↑ +{item.diffPercent}%
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Sparkline Canvas */}
+                        <div className="p-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200/70 dark:border-white/[0.06] space-y-1">
+                          <div className="flex items-center justify-between text-[10px] text-zinc-500 dark:text-zinc-400 font-mono">
+                            <span>Verðbreyting milli daga:</span>
+                            <span
+                              className={`font-bold ${
+                                item.isDrop
+                                  ? 'text-emerald-600 dark:text-emerald-400'
+                                  : 'text-rose-600 dark:text-rose-400'
+                              }`}
+                            >
+                              {item.isDrop
+                                ? `-${formatPrice(Math.abs(item.diff))}`
+                                : `+${formatPrice(item.diff)}`}
+                            </span>
+                          </div>
+
+                          <ProductSparkline
+                            history={item.history}
+                            price={item.newPrice}
+                            previousPrice={item.prevPrice}
+                            strokeColor={strokeColor}
+                          />
+
+                          <div className="flex items-center justify-between text-[10px] text-zinc-400 dark:text-zinc-500 font-mono pt-1 border-t border-zinc-100 dark:border-white/[0.04]">
+                            <span>Var: {formatPrice(item.prevPrice)}</span>
+                            <span className="font-bold text-zinc-900 dark:text-white">
+                              Fór í: {formatPrice(item.newPrice)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Action buttons */}
+                      <div className="pt-2 border-t border-zinc-200/60 dark:border-white/[0.05] flex items-center justify-between gap-2">
+                        <button
+                          type="button"
+                          onClick={() => onSelectModel?.(item.model, item.storage)}
+                          className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:text-zinc-950 dark:hover:text-white transition-colors flex items-center gap-1"
+                        >
+                          <span>Skoða sögu</span>
+                          <span className="text-[10px]">→</span>
+                        </button>
+                        {item.url && (
+                          <a
+                            href={item.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-colors"
+                          >
+                            <span>{item.store}</span>
+                            <span className="text-[9px]">↗</span>
+                          </a>
+                        )}
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-xs text-zinc-500 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-950/50 rounded-xl border border-dashed border-zinc-200 dark:border-white/[0.08]">
+                Engar verðbreytingar fundust með völdum síum á þessum degi ({selectedDay}).
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* VIEW MODE 2: CHARTS & STORE BENCHMARK OVERVIEW (SJÁLFGEFIÐ) */}
+      {storeViewMode === 'trends' && enrichedSummaries.length > 0 && (
         <section
           aria-label="Línurit yfir verðþróun verslana"
           className="rounded-2xl bg-white dark:bg-zinc-900/75 border border-zinc-200/80 dark:border-white/[0.08] p-5 shadow-xs space-y-4"
